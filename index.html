@@ -799,13 +799,29 @@ async function renderResultsTab(content) {
   try {
     const { items } = await api('/api/results?list=1');
     if (!items.length) { listEl.innerHTML = `<div class="empty">완료된 첨삭이 없습니다.</div>`; return; }
-    listEl.innerHTML = items.map(it => {
+    listEl.innerHTML = '';
+    items.forEach(it => {
       const link = location.origin + location.pathname + '#result=' + it.id;
-      return `<div class="preset-item">
+      const row = document.createElement('div');
+      row.className = 'preset-item';
+      row.innerHTML = `
         <div><b>${escapeHtml(it.studentName) || '(이름 없음)'}</b> — ${escapeHtml(it.question).slice(0, 30)}...<div style="font-size:12px;color:var(--muted)">${new Date(it.approvedAt).toLocaleString('ko-KR')}</div></div>
-        <a href="${link}" target="_blank" class="btn-secondary" style="text-decoration:none;padding:8px 14px;border-radius:8px">결과 보기</a>
-      </div>`;
-    }).join('');
+        <div class="btn-row" style="margin:0">
+          <a href="${link}" target="_blank" class="btn-secondary" style="text-decoration:none;padding:8px 14px;border-radius:8px">결과 보기</a>
+          <button class="btn-danger delete-result-btn">삭제</button>
+        </div>
+      `;
+      row.querySelector('.delete-result-btn').addEventListener('click', async () => {
+        if (!confirm(`${it.studentName || '이름 없음'}님의 첨삭 결과를 삭제할까요? 학생에게 보낸 링크도 더 이상 열리지 않게 됩니다.`)) return;
+        try {
+          await api('/api/results?id=' + it.id, { method: 'DELETE' });
+          row.remove();
+        } catch (e) {
+          alert('삭제 실패: ' + e.message);
+        }
+      });
+      listEl.appendChild(row);
+    });
   } catch (e) {
     listEl.innerHTML = `<div class="empty">불러오기 실패: ${escapeHtml(e.message)}</div>`;
   }
