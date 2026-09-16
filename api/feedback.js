@@ -1,4 +1,4 @@
- // 자소서 문항+답변을 받아 STAR 진단 + 첨삭 초안을 생성하는 서버 함수
+// 자소서 문항+답변을 받아 STAR 진단 + 첨삭 초안을 생성하는 서버 함수
 // (모의면접 앱의 /api/feedback.js와 동일한 구조 — 질문/답변 대신 자소서 문항/작성 내용을 사용)
 
 export default async function handler(req, res) {
@@ -76,7 +76,7 @@ MOA FORMULA의 핵심 전제: "면접관은 지원자의 '지금 이 순간'을 
 - alternativeType (대안형): "다른 대안은 없었나요?" 계열
 - quantifyType (수치형): "숫자로 말하면요?" 계열
 
-반드시 아래 JSON 형식으로만 응답하세요. 인사말, 설명, 코드블록 표시(\`\`\`) 등 다른 텍스트는 절대 포함하지 마세요.
+반드시 아래 JSON 형식으로만 응답하세요. 인사말, 설명, 코드블록 표시(\`\`\`) 등 다른 텍스트는 절대 포함하지 마세요. 각 문장형 필드는 간결하게 작성하세요 (missingElements는 최대 3개, strengths·improvements·interviewerInference·followUpQuestions의 각 항목은 1~2문장 이내).
 {
   "frameworkUsed": "${fw}",
   "structure": {위 구조 진단 필드들을 true/false로},
@@ -100,7 +100,7 @@ MOA FORMULA의 핵심 전제: "면접관은 지원자의 '지금 이 순간'을 
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 1200,
+        max_tokens: 3500,
         system: systemPrompt,
         messages: [
           { role: 'user', content: `[자소서 문항]\n${question}\n\n[학생 답변]\n${answer}` }
