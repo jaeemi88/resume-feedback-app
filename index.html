@@ -252,6 +252,19 @@ function riskFlagsHtml(flags) {
   ).join(' ')}</div>`;
 }
 
+function aiTracePhrasesHtml(phrases) {
+  if (!phrases || !phrases.length) return '';
+  return `<div class="field-block" style="background:var(--miss-bg);padding:10px 12px;border-radius:8px">
+    <div class="fb-label">🤖 AI스러운 문구 콕 집어보기</div>
+    ${phrases.map(p => `
+      <div style="margin-top:8px">
+        <span style="text-decoration:underline wavy var(--miss);font-weight:700">"${escapeHtml(p.phrase)}"</span>
+        <p style="margin:4px 0 0;font-size:13px">${escapeHtml(p.note)}</p>
+      </div>
+    `).join('')}
+  </div>`;
+}
+
 function followUpHtml(fu) {
   if (!fu) return '';
   const labels = { reasonType: '이유형', alternativeType: '대안형', quantifyType: '수치형' };
@@ -629,6 +642,7 @@ function buildReviewCard(item, presetName) {
     <div class="star-row">${structureTagsHtml(framework, d.structure)}</div>
     <div class="star-row">${concretenessTagsHtml(d.concreteness)}</div>
     ${riskFlagsHtml(d.riskFlags)}
+    ${aiTracePhrasesHtml(d.aiTracePhrases)}
     ${jobMatchHtml(d.jobMatch)}
     ${item.selfIntent ? `<div class="field-block"><div class="fb-label">학생 자가진단 — 보여주고 싶었던 점</div><p>${escapeHtml(item.selfIntent)}</p></div>` : ''}
     ${d.intentGapComment ? `<div class="field-block" style="background:var(--warn-bg);padding:10px 12px;border-radius:8px"><div class="fb-label">자가진단 vs 실제 답변 코멘트</div><p>${escapeHtml(d.intentGapComment)}</p></div>` : ''}
@@ -677,6 +691,7 @@ function buildReviewCard(item, presetName) {
         structure: d.structure,
         concreteness: d.concreteness,
         riskFlags: d.riskFlags || [],
+        aiTracePhrases: d.aiTracePhrases || [],
         interviewerInference: d.interviewerInference,
         jobMatch: d.jobMatch || null,
         intentGapComment: d.intentGapComment || null,
@@ -959,6 +974,7 @@ async function renderResultView(id) {
           <div class="star-row">${structureTagsHtml(item.frameworkUsed || 'STAR', item.structure)}</div>
           <div class="star-row">${concretenessTagsHtml(item.concreteness)}</div>
           ${riskFlagsHtml(item.riskFlags)}
+          ${aiTracePhrasesHtml(item.aiTracePhrases)}
         </div>
         ${item.jobMatch ? `<div class="result-block"><h3>채용공고 매칭도</h3>${jobMatchHtml(item.jobMatch)}</div>` : ''}
         ${item.intentGapComment ? `<div class="result-block"><h3>내가 밝힌 의도 vs 실제 답변</h3><p style="white-space:pre-wrap;background:var(--warn-bg);padding:12px;border-radius:8px">${escapeHtml(item.intentGapComment)}</p></div>` : ''}
