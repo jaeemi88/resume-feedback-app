@@ -215,7 +215,8 @@ async function api(path, options = {}) {
 const FRAMEWORK_LABELS = {
   STAR: { situation: '상황(S)', task: '과제(T)', action: '행동(A)', result: '결과(R)' },
   'STAR-L': { situation: '상황(S)', task: '과제(T)', action: '행동(A)', result: '결과+배움(R-L)' },
-  PREP: { point: '주장(P)', reason: '근거(R)', example: '사례(E)', pointAgain: '재강조(P)' }
+  PREP: { point: '주장(P)', reason: '근거(R)', example: '사례(E)', pointAgain: '재강조(P)' },
+  RESUME: { actionVerbStart: '행동동사 시작', quantifiedResult: '정량적 성과', concise: '간결성', jobKeyword: '직무 키워드' }
 };
 
 function structureTagsHtml(framework, structure) {
@@ -290,26 +291,34 @@ const QUESTION_EXAMPLES = {
 async function renderStudentView() {
   app.innerHTML = `
     <div class="card">
-      <h2>자소서 문항 첨삭 요청</h2>
+      <h2>첨삭 요청</h2>
+      <label>문서 유형</label>
+      <select id="docTypeSelect">
+        <option value="resume">자소서</option>
+        <option value="cv">이력서 (경력·활동 한 줄 소개)</option>
+      </select>
+
       <label>사용할 첨삭 기준 (강사가 미리 설정)</label>
       <select id="presetSelect"><option>불러오는 중...</option></select>
 
-      <label>문항 유형 (진단 기준이 자동으로 적용됩니다)</label>
-      <select id="questionTypeSelect">
-        <option value="지원동기" data-fw="PREP">지원동기</option>
-        <option value="성격장점" data-fw="PREP">성격 장점</option>
-        <option value="성격단점" data-fw="STAR">성격 단점</option>
-        <option value="협업갈등" data-fw="STAR">협업·갈등 경험</option>
-        <option value="도전경험" data-fw="STAR">도전·성과 경험</option>
-        <option value="실패경험" data-fw="STAR-L">실패 경험</option>
-        <option value="경력활동" data-fw="STAR">경력·활동사항</option>
-        <option value="입사후포부" data-fw="PREP">입사 후 포부</option>
-      </select>
+      <div id="questionTypeRow">
+        <label>문항 유형 (진단 기준이 자동으로 적용됩니다)</label>
+        <select id="questionTypeSelect">
+          <option value="지원동기" data-fw="PREP">지원동기</option>
+          <option value="성격장점" data-fw="PREP">성격 장점</option>
+          <option value="성격단점" data-fw="STAR">성격 단점</option>
+          <option value="협업갈등" data-fw="STAR">협업·갈등 경험</option>
+          <option value="도전경험" data-fw="STAR">도전·성과 경험</option>
+          <option value="실패경험" data-fw="STAR-L">실패 경험</option>
+          <option value="경력활동" data-fw="STAR">경력·활동사항</option>
+          <option value="입사후포부" data-fw="PREP">입사 후 포부</option>
+        </select>
+      </div>
 
-      <label>자소서 문항</label>
+      <label id="questionLabel">자소서 문항</label>
       <textarea id="questionInput"></textarea>
 
-      <label>작성한 답변</label>
+      <label id="answerLabel">작성한 답변</label>
       <textarea id="answerInput" style="min-height:160px" placeholder="여기에 자소서 답변을 붙여넣거나 작성해 주세요."></textarea>
       <div class="counter"><span id="charCount">0</span>자 작성됨</div>
 
@@ -321,6 +330,9 @@ async function renderStudentView() {
 
           <label>지원하는 채용공고의 핵심 내용 (선택)</label>
           <textarea id="jobPostingInput" placeholder="예) [○○기관] 사회복지사 채용 — 사례관리 경험자 우대, 공감·소통 역량 중시"></textarea>
+
+          <label>이전 버전 (재작성한 경우, 수정 전 답변을 붙여넣으면 Before/After 비교를 보여드려요)</label>
+          <textarea id="previousAnswerInput" placeholder="예) 이전에 제출했던 답변을 그대로 붙여넣어 주세요."></textarea>
         </div>
       </details>
 
@@ -340,6 +352,27 @@ async function renderStudentView() {
   const updatePlaceholder = () => { questionInput.placeholder = QUESTION_EXAMPLES[questionTypeSelect.value] || ''; };
   updatePlaceholder();
   questionTypeSelect.addEventListener('change', updatePlaceholder);
+
+  const docTypeSelect = document.getElementById('docTypeSelect');
+  const questionTypeRow = document.getElementById('questionTypeRow');
+  const questionLabel = document.getElementById('questionLabel');
+  const answerLabel = document.getElementById('answerLabel');
+  const updateDocType = () => {
+    if (docTypeSelect.value === 'cv') {
+      questionTypeRow.style.display = 'none';
+      questionLabel.textContent = '경력·활동 항목명';
+      questionInput.placeholder = '예) 마케팅 서포터즈 활동 (2024.03~2024.08)';
+      answerLabel.textContent = '작성한 한 줄 소개 (경력기술서 문장)';
+      answerInput.placeholder = '예) SNS 콘텐츠 기획 및 운영을 담당하여 팔로워를 6개월간 40% 증가시킴';
+    } else {
+      questionTypeRow.style.display = '';
+      questionLabel.textContent = '자소서 문항';
+      updatePlaceholder();
+      answerLabel.textContent = '작성한 답변';
+      answerInput.placeholder = '여기에 자소서 답변을 붙여넣거나 작성해 주세요.';
+    }
+  };
+  docTypeSelect.addEventListener('change', updateDocType);
 
   const presetSelect = document.getElementById('presetSelect');
   try {
@@ -372,20 +405,21 @@ async function renderStudentView() {
       const { config } = await api('/api/config').catch(() => ({ config: { presets: [] } }));
       const preset = (config.presets || []).find(p => p.id === presetSelect.value);
 
-      const questionTypeSelect = document.getElementById('questionTypeSelect');
-      const questionType = questionTypeSelect.value;
-      const framework = questionTypeSelect.selectedOptions[0].dataset.fw;
+      const isCv = docTypeSelect.value === 'cv';
+      const questionType = isCv ? '이력서항목' : questionTypeSelect.value;
+      const framework = isCv ? 'RESUME' : questionTypeSelect.selectedOptions[0].dataset.fw;
       const selfIntent = document.getElementById('selfIntentInput').value.trim();
       const jobPosting = document.getElementById('jobPostingInput').value.trim();
+      const previousAnswer = document.getElementById('previousAnswerInput').value.trim();
 
       const aiDraft = await api('/api/feedback', {
         method: 'POST',
-        body: JSON.stringify({ question, answer, presetPrompt: preset ? preset.prompt : '', framework, questionType, selfIntent, jobPosting })
+        body: JSON.stringify({ question, answer, presetPrompt: preset ? preset.prompt : '', framework, questionType, selfIntent, jobPosting, previousAnswer })
       });
 
       await api('/api/reviews', {
         method: 'POST',
-        body: JSON.stringify({ question, answer, presetId: presetSelect.value, framework, questionType, selfIntent, jobPosting, aiDraft })
+        body: JSON.stringify({ question, answer, presetId: presetSelect.value, framework, questionType, selfIntent, jobPosting, previousAnswer, aiDraft })
       });
 
       statusMsg.textContent = '제출이 완료되었습니다. 강사님 검수 후 결과 링크를 보내드립니다.';
@@ -395,6 +429,7 @@ async function renderStudentView() {
       answerInput.value = '';
       document.getElementById('selfIntentInput').value = '';
       document.getElementById('jobPostingInput').value = '';
+      document.getElementById('previousAnswerInput').value = '';
       charCount.textContent = '0';
     } catch (e) {
       statusMsg.textContent = '오류가 발생했습니다: ' + e.message;
@@ -465,6 +500,37 @@ function jobMatchHtml(jm) {
   </div>`;
 }
 
+function diffWords(oldStr, newStr) {
+  const a = (oldStr || '').split(/\s+/).filter(Boolean);
+  const b = (newStr || '').split(/\s+/).filter(Boolean);
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = m - 1; i >= 0; i--) {
+    for (let j = n - 1; j >= 0; j--) {
+      dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    }
+  }
+  let i = 0, j = 0;
+  const ops = [];
+  while (i < m && j < n) {
+    if (a[i] === b[j]) { ops.push({ type: 'same', text: a[i] }); i++; j++; }
+    else if (dp[i + 1][j] >= dp[i][j + 1]) { ops.push({ type: 'removed', text: a[i] }); i++; }
+    else { ops.push({ type: 'added', text: b[j] }); j++; }
+  }
+  while (i < m) { ops.push({ type: 'removed', text: a[i] }); i++; }
+  while (j < n) { ops.push({ type: 'added', text: b[j] }); j++; }
+  return ops;
+}
+
+function diffHtml(oldStr, newStr) {
+  if (!oldStr) return '';
+  return diffWords(oldStr, newStr).map(o => {
+    if (o.type === 'same') return escapeHtml(o.text);
+    if (o.type === 'removed') return `<span style="text-decoration:line-through;color:var(--miss);background:var(--miss-bg);padding:0 2px;border-radius:3px">${escapeHtml(o.text)}</span>`;
+    return `<span style="color:var(--ok);background:var(--ok-bg);padding:0 2px;border-radius:3px;font-weight:700">${escapeHtml(o.text)}</span>`;
+  }).join(' ');
+}
+
 function buildReviewCard(item) {
   const wrap = document.createElement('div');
   wrap.className = 'review-item';
@@ -486,6 +552,7 @@ function buildReviewCard(item) {
     ${jobMatchHtml(d.jobMatch)}
     ${item.selfIntent ? `<div class="field-block"><div class="fb-label">학생 자가진단 — 보여주고 싶었던 점</div><p>${escapeHtml(item.selfIntent)}</p></div>` : ''}
     ${d.intentGapComment ? `<div class="field-block" style="background:var(--warn-bg);padding:10px 12px;border-radius:8px"><div class="fb-label">자가진단 vs 실제 답변 코멘트</div><p>${escapeHtml(d.intentGapComment)}</p></div>` : ''}
+    ${item.previousAnswer ? `<div class="field-block"><div class="fb-label">Before → After 비교</div><p style="white-space:pre-wrap;line-height:1.9">${diffHtml(item.previousAnswer, item.answer)}</p>${d.revisionComment ? `<p style="margin-top:8px;font-size:13px;color:var(--navy)"><b>수정 평가:</b> ${escapeHtml(d.revisionComment)}</p>` : ''}</div>` : ''}
 
     <div class="field-block" style="background:var(--navy-light);padding:10px 12px;border-radius:8px">
       <div class="fb-label">면접관 시점 — 이 답변으로 추론되는 평소 모습</div>
@@ -528,6 +595,8 @@ function buildReviewCard(item) {
         interviewerInference: d.interviewerInference,
         jobMatch: d.jobMatch || null,
         intentGapComment: d.intentGapComment || null,
+        previousAnswer: item.previousAnswer || null,
+        revisionComment: d.revisionComment || null,
         missingElements: d.missingElements || [],
         strengths: wrap.querySelector('.edit-strengths').value,
         improvements: wrap.querySelector('.edit-improvements').value,
@@ -690,6 +759,7 @@ async function renderResultView(id) {
         </div>
         ${item.jobMatch ? `<div class="result-block"><h3>채용공고 매칭도</h3>${jobMatchHtml(item.jobMatch)}</div>` : ''}
         ${item.intentGapComment ? `<div class="result-block"><h3>내가 밝힌 의도 vs 실제 답변</h3><p style="white-space:pre-wrap;background:var(--warn-bg);padding:12px;border-radius:8px">${escapeHtml(item.intentGapComment)}</p></div>` : ''}
+        ${item.previousAnswer ? `<div class="result-block"><h3>Before → After 비교</h3><p style="white-space:pre-wrap;line-height:1.9;background:var(--green-light);padding:12px;border-radius:8px">${diffHtml(item.previousAnswer, item.answer)}</p>${item.revisionComment ? `<p style="margin-top:8px">${escapeHtml(item.revisionComment)}</p>` : ''}</div>` : ''}
         <div class="result-block">
           <h3>면접관 시점 — 이 답변으로 추론되는 평소 모습</h3>
           <p style="white-space:pre-wrap;background:var(--navy-light);padding:12px;border-radius:8px">${escapeHtml(item.interviewerInference)}</p>
