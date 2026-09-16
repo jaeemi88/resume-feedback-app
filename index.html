@@ -274,6 +274,17 @@ function route() {
 }
 window.addEventListener('hashchange', route);
 
+const QUESTION_EXAMPLES = {
+  '지원동기': '예) 지원 동기를 본인의 경험과 연결하여 서술하시오. (500자 이내)',
+  '성격장점': '예) 본인의 성격상 장점을 서술하시오.',
+  '성격단점': '예) 본인의 성격상 단점과 그 개선 노력을 서술하시오.',
+  '협업갈등': '예) 팀 프로젝트에서 갈등을 해결했던 경험을 서술하시오.',
+  '도전경험': '예) 가장 도전적이었던 경험과 그 결과를 서술하시오.',
+  '실패경험': '예) 실패했던 경험과 그로부터 배운 점을 서술하시오.',
+  '경력활동': '예) 관련 경력·활동사항을 구체적인 수치와 함께 서술하시오.',
+  '입사후포부': '예) 입사 후 포부를 서술하시오.'
+};
+
 // ---------- 학생 화면 ----------
 async function renderStudentView() {
   app.innerHTML = `
@@ -295,7 +306,7 @@ async function renderStudentView() {
       </select>
 
       <label>자소서 문항</label>
-      <textarea id="questionInput" placeholder="예) 지원 동기를 본인의 경험과 연결하여 서술하시오. (500자 이내)"></textarea>
+      <textarea id="questionInput"></textarea>
 
       <label>작성한 답변</label>
       <textarea id="answerInput" style="min-height:160px" placeholder="여기에 자소서 답변을 붙여넣거나 작성해 주세요."></textarea>
@@ -311,6 +322,12 @@ async function renderStudentView() {
   const answerInput = document.getElementById('answerInput');
   const charCount = document.getElementById('charCount');
   answerInput.addEventListener('input', () => { charCount.textContent = answerInput.value.length; });
+
+  const questionTypeSelect = document.getElementById('questionTypeSelect');
+  const questionInput = document.getElementById('questionInput');
+  const updatePlaceholder = () => { questionInput.placeholder = QUESTION_EXAMPLES[questionTypeSelect.value] || ''; };
+  updatePlaceholder();
+  questionTypeSelect.addEventListener('change', updatePlaceholder);
 
   const presetSelect = document.getElementById('presetSelect');
   try {
