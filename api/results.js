@@ -17,14 +17,24 @@ export default async function handler(req, res) {
 
     const indexRaw = await client.get('resume_results_index');
     const index = indexRaw ? JSON.parse(indexRaw) : [];
-    index.push({ id, studentName: item.studentName || '', presetName: item.presetName || '기본', question: item.question, approvedAt: item.approvedAt });
+    index.push({ id, code: item.code || '', studentName: item.studentName || '', presetName: item.presetName || '기본', question: item.question, approvedAt: item.approvedAt });
     await client.set('resume_results_index', JSON.stringify(index));
 
     return res.status(200).json({ ok: true, id });
   }
 
   if (req.method === 'GET') {
-    const { id, list } = req.query;
+    const { id, list, code } = req.query;
+
+    if (code) {
+      const indexRaw = await client.get('resume_results_index');
+      const index = indexRaw ? JSON.parse(indexRaw) : [];
+      const match = index.find(it => it.code === String(code).toUpperCase());
+      if (!match) return res.status(404).json({ error: '해당 코드의 결과를 찾을 수 없습니다.' });
+      const raw = await client.get(`resume_result:${match.id}`);
+      if (!raw) return res.status(404).json({ error: '결과를 찾을 수 없습니다.' });
+      return res.status(200).json({ item: JSON.parse(raw) });
+    }
 
     if (list) {
       const indexRaw = await client.get('resume_results_index');
