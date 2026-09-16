@@ -6,10 +6,12 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'POST 요청만 허용됩니다.' });
   }
 
-  const { question, answer, presetPrompt, framework, questionType, selfIntent, jobPosting, previousAnswer } = req.body || {};
+  const { question, answer, presetPrompt, framework, questionType, selfIntent, jobPosting, previousAnswer, charLimit } = req.body || {};
   if (!question || !answer) {
     return res.status(400).json({ error: '자소서 문항과 답변이 필요합니다.' });
   }
+
+  const isOverLimit = charLimit && answer.length > charLimit;
 
   // framework: 'STAR' | 'STAR-L' | 'PREP' | 'RESUME' — 프런트에서 문서/문항 유형에 따라 자동 매핑되어 전달됨
   const fw = ['STAR', 'STAR-L', 'PREP', 'RESUME'].includes(framework) ? framework : 'STAR';
@@ -62,6 +64,7 @@ ${structureGuide}
 ${selfIntent ? `\n[학생 자가진단 — 학생이 스스로 밝힌 의도]\n학생은 이 답변으로 다음을 보여주고 싶다고 밝혔습니다: "${selfIntent}"\n실제 답변이 이 의도를 잘 달성했는지 비교해서 intentGapComment 필드에 1~2문장으로 코멘트하세요 (의도와 실제 글이 얼마나 일치하는지, 안 맞으면 무엇이 빠졌는지).\n` : ''}
 ${jobPosting ? `\n[채용공고 매칭 — 지원 공고 핵심 내용]\n${jobPosting}\n위 공고 내용과 학생 답변을 비교해서, 공고에서 요구하는 키워드·역량이 답변에 얼마나 반영되어 있는지 jobMatch 필드에 판단하세요.\n` : ''}
 ${previousAnswer ? `\n[Before/After 재작성 비교]\n학생의 이전 버전(수정 전): "${previousAnswer}"\n이번 버전과 비교해서, 이전 지적사항 대비 얼마나 개선되었는지 revisionComment 필드에 1~2문장으로 코멘트하세요. 개선된 점이 있으면 구체적으로 칭찬하고, 여전히 남은 문제가 있으면 짚어주세요.\n` : ''}
+${isOverLimit ? `\n[글자수 초과 경고]\n이 문항의 글자수 제한은 ${charLimit}자인데, 학생 답변은 ${answer.length}자로 ${answer.length - charLimit}자 초과했습니다. charLimitNote 필드에 "OO자 초과했습니다. [어느 문장/표현]을 줄이면 됩니다"처럼, 실제 답변에서 구체적으로 어느 부분을 줄이면 되는지 짚어서 1~2문장으로 안내하세요. polishedText는 반드시 이 글자수 제한(${charLimit}자) 안에 들어오도록 작성하세요.\n` : ''}
 [구체성 체크]
 - hasNumber: 답변에 구체적 숫자(기간·횟수·성과 등)가 1개 이상 포함되는가
 - hasProperNoun: 답변에 고유명사(팀명·프로젝트명·기관명 등 본인만 알 수 있는 명사)가 1개 이상 포함되는가
@@ -84,7 +87,7 @@ MOA FORMULA의 핵심 전제: "면접관은 지원자의 '지금 이 순간'을 
 - alternativeType (대안형): "다른 대안은 없었나요?" 계열
 - quantifyType (수치형): "숫자로 말하면요?" 계열
 
-반드시 아래 JSON 형식으로만 응답하세요. 인사말, 설명, 코드블록 표시(\`\`\`) 등 다른 텍스트는 절대 포함하지 마세요. 각 문장형 필드는 간결하게 작성하세요 (missingElements는 최대 3개, strengths·improvements·interviewerInference·followUpQuestions의 각 항목은 1~2문장 이내). intentGapComment는 학생 자가진단이 제공된 경우에만 채우고, 없으면 null로 두세요. jobMatch는 채용공고 내용이 제공된 경우에만 채우고, 없으면 null로 두세요. revisionComment는 이전 버전이 제공된 경우에만 채우고, 없으면 null로 두세요.
+반드시 아래 JSON 형식으로만 응답하세요. 인사말, 설명, 코드블록 표시(\`\`\`) 등 다른 텍스트는 절대 포함하지 마세요. 각 문장형 필드는 간결하게 작성하세요 (missingElements는 최대 3개, strengths·improvements·interviewerInference·followUpQuestions의 각 항목은 1~2문장 이내). intentGapComment는 학생 자가진단이 제공된 경우에만 채우고, 없으면 null로 두세요. jobMatch는 채용공고 내용이 제공된 경우에만 채우고, 없으면 null로 두세요. revisionComment는 이전 버전이 제공된 경우에만 채우고, 없으면 null로 두세요. charLimitNote는 글자수 초과인 경우에만 채우고, 없으면 null로 두세요.
 {
   "frameworkUsed": "${fw}",
   "structure": {위 구조 진단 필드들을 true/false로},
@@ -95,6 +98,7 @@ MOA FORMULA의 핵심 전제: "면접관은 지원자의 '지금 이 순간'을 
   "intentGapComment": "학생이 밝힌 의도와 실제 답변의 일치 정도 코멘트, 자가진단 없으면 null",
   "jobMatch": {"matchLevel": "높음 또는 보통 또는 낮음", "matchedKeywords": ["공고와 일치하는 키워드"], "missingKeywords": ["공고에 있지만 답변에 없는 키워드"]} 또는 채용공고 없으면 null,
   "revisionComment": "이전 버전 대비 개선 정도 코멘트, 이전 버전 없으면 null",
+  "charLimitNote": "글자수 초과 시 어느 부분을 줄이면 되는지 안내, 초과 없으면 null",
   "missingElements": ["부족하거나 보완이 필요한 요소를 짧은 문장으로, 가능하면 답변 속 실제 표현을 근거로 나열", "..."],
   "strengths": "이 답변에서 잘된 점 (2~3문장, 구체적 표현을 근거로)",
   "improvements": "구체적인 개선 방향 (2~3문장, 추상적 지적 금지, 실제 문장을 근거로)",
