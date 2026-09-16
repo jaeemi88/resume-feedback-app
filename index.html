@@ -704,7 +704,10 @@ async function renderPresetsTab(content) {
     </div>
     <div class="card">
       <h2>첨삭 기준 프리셋 관리</h2>
-      <div id="presetList" class="empty">불러오는 중...</div>
+      <details open>
+        <summary style="cursor:pointer;font-weight:700;color:var(--navy)">등록된 프리셋 목록 (클릭해서 접기/펼치기)</summary>
+        <div id="presetList" class="empty" style="margin-top:10px">불러오는 중...</div>
+      </details>
       <label>새 프리셋 이름</label>
       <input type="text" id="newPresetName" placeholder="예) 사회복지학과, 항공서비스과, 직설적인 톤 등">
       <label>추가 지침 (톤·평가기준·직군 특성 등을 문장으로 작성)</label>
