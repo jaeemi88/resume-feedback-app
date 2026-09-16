@@ -201,13 +201,21 @@
 <script>
 const params = new URLSearchParams(location.search);
 const isAdmin = params.get('admin') === '1';
-document.getElementById('roleBadge').textContent = isAdmin ? '강사용' : '학생용';
+let TEACHER_ID = (params.get('t') || '').trim().toLowerCase().replace(/[^a-z0-9가-힣_-]/g, '').slice(0, 40);
+document.getElementById('roleBadge').textContent = (isAdmin ? '강사용' : '학생용') + (TEACHER_ID ? ' · ' + TEACHER_ID : '');
 
 const app = document.getElementById('app');
 
 // ---------- 공통 유틸 ----------
 async function api(path, options = {}) {
-  const res = await fetch(path, {
+  // 강사별 데이터 분리를 위해 /api/config, /api/reviews, /api/results 호출에는
+  // 항상 t(강사 코드)를 쿼리 파라미터로 자동 첨부함 (호출부를 일일이 고칠 필요 없게)
+  let finalPath = path;
+  if (/^\/api\/(config|reviews|results)/.test(path)) {
+    const sep = path.includes('?') ? '&' : '?';
+    finalPath = path + sep + 't=' + encodeURIComponent(TEACHER_ID);
+  }
+  const res = await fetch(finalPath, {
     ...options,
     headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
   });
@@ -288,14 +296,41 @@ function extractCharLimit(questionText) {
 }
 
 // ---------- 라우팅 ----------
+function renderTeacherSetup() {
+  app.innerHTML = `
+    <div class="card">
+      <h2>강사 코드 설정</h2>
+      <p>여러 강사님이 같은 앱을 함께 쓰기 때문에, 자료가 서로 섞이지 않도록 <b>본인만의 고유 코드</b>가 필요합니다. 영문·숫자로 짧게 만들어 주세요 (예: kimteacher, park01). 한 번 정하시면 계속 같은 코드로 접속하시면 됩니다.</p>
+      <label>강사 코드</label>
+      <input type="text" id="teacherCodeInput" placeholder="예: kimteacher">
+      <div class="btn-row"><button class="btn-primary" id="setTeacherBtn">시작하기</button></div>
+    </div>
+  `;
+  document.getElementById('setTeacherBtn').addEventListener('click', () => {
+    const code = document.getElementById('teacherCodeInput').value.trim().toLowerCase().replace(/[^a-z0-9가-힣_-]/g, '');
+    if (!code) { alert('코드를 입력해 주세요.'); return; }
+    const p = new URLSearchParams(location.search);
+    p.set('admin', '1');
+    p.set('t', code);
+    location.href = location.pathname + '?' + p.toString();
+  });
+}
+
+function renderMissingTeacherNotice() {
+  app.innerHTML = `<div class="card"><div class="empty">이 링크에는 담당 강사 정보가 없어요. 강사님이 안내한 QR코드나 링크로 다시 접속해 주세요.</div></div>`;
+}
+
 function route() {
   const hash = location.hash;
   if (hash.indexOf('#result=') === 0) {
+    if (!TEACHER_ID) { renderMissingTeacherNotice(); return; }
     const id = hash.replace('#result=', '');
     renderResultView(id);
   } else if (isAdmin) {
+    if (!TEACHER_ID) { renderTeacherSetup(); return; }
     renderTeacherView();
   } else {
+    if (!TEACHER_ID) { renderMissingTeacherNotice(); return; }
     renderStudentView();
   }
 }
@@ -573,7 +608,7 @@ const PRESET_LIBRARY = [
 let currentTab = 'reviews';
 
 async function renderTeacherView() {
-  const studentLink = location.origin + location.pathname;
+  const studentLink = location.origin + location.pathname + '?t=' + encodeURIComponent(TEACHER_ID);
   const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=' + encodeURIComponent(studentLink);
   app.innerHTML = `
     <div class="card" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
@@ -782,7 +817,7 @@ function buildReviewCard(item, presetName) {
       const { id } = await api('/api/results', { method: 'POST', body: JSON.stringify(payload) });
       await api('/api/reviews?id=' + item.id, { method: 'DELETE' });
 
-      const link = location.origin + location.pathname + '#result=' + id;
+      const link = location.origin + location.pathname + '?t=' + encodeURIComponent(TEACHER_ID) + '#result=' + id;
       const linkBox = wrap.querySelector('.link-box');
       linkBox.style.display = 'flex';
       linkBox.innerHTML = `<span>학생 결과 링크:</span> <a href="${link}" target="_blank">${link}</a>
@@ -969,7 +1004,7 @@ async function renderResultsTab(content) {
   }
 
   function buildResultRow(it) {
-    const link = location.origin + location.pathname + '#result=' + it.id;
+    const link = location.origin + location.pathname + '?t=' + encodeURIComponent(TEACHER_ID) + '#result=' + it.id;
     const row = document.createElement('div');
     row.className = 'preset-item';
     row.innerHTML = `
