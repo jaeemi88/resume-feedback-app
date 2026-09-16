@@ -149,11 +149,13 @@
   .preset-item{
     display:flex;
     justify-content:space-between;
-    align-items:center;
+    align-items:flex-start;
+    gap:12px;
     padding:10px 12px;
     border:1px solid var(--border);
     border-radius:8px;
     margin-bottom:8px;
+    flex-wrap:wrap;
   }
   .link-box{
     display:flex;
@@ -727,14 +729,36 @@ async function renderPresetsTab(content) {
       const row = document.createElement('div');
       row.className = 'preset-item';
       row.innerHTML = `
-        <div><b>${escapeHtml(p.name)}</b>${p.id === cfg.activePresetId ? ' <span class="star-tag ok">기본값</span>' : ''}
-          <div style="font-size:12px;color:var(--muted);margin-top:2px">${escapeHtml(p.prompt) || '(추가 지침 없음)'}</div>
+        <div style="flex:1">
+          <b>${escapeHtml(p.name)}</b>${p.id === cfg.activePresetId ? ' <span class="star-tag ok">기본값</span>' : ''}
+          <div class="prompt-display" style="font-size:12px;color:var(--muted);margin-top:2px">${escapeHtml(p.prompt) || '(추가 지침 없음)'}</div>
+          <div class="prompt-edit" style="display:none;margin-top:6px">
+            <textarea class="prompt-edit-input" style="min-height:70px">${escapeHtml(p.prompt)}</textarea>
+            <div class="btn-row" style="margin-top:6px">
+              <button class="btn-primary save-prompt-btn">저장</button>
+              <button class="btn-secondary cancel-edit-btn">취소</button>
+            </div>
+          </div>
         </div>
         <div class="btn-row" style="margin:0">
+          <button class="btn-secondary edit-prompt-btn">지침 수정</button>
           <button class="btn-secondary set-default-btn">기본값으로</button>
           <button class="btn-danger delete-btn">삭제</button>
         </div>
       `;
+      row.querySelector('.edit-prompt-btn').addEventListener('click', () => {
+        row.querySelector('.prompt-display').style.display = 'none';
+        row.querySelector('.prompt-edit').style.display = 'block';
+      });
+      row.querySelector('.cancel-edit-btn').addEventListener('click', () => {
+        row.querySelector('.prompt-display').style.display = '';
+        row.querySelector('.prompt-edit').style.display = 'none';
+      });
+      row.querySelector('.save-prompt-btn').addEventListener('click', async () => {
+        p.prompt = row.querySelector('.prompt-edit-input').value.trim();
+        await api('/api/config', { method: 'POST', body: JSON.stringify(cfg) });
+        renderPresetsTab(content);
+      });
       row.querySelector('.set-default-btn').addEventListener('click', async () => {
         cfg.activePresetId = p.id;
         await api('/api/config', { method: 'POST', body: JSON.stringify(cfg) });
