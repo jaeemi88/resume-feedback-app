@@ -468,13 +468,13 @@ let currentTab = 'reviews';
 
 async function renderTeacherView() {
   const studentLink = location.origin + location.pathname;
-  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(studentLink);
+  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=' + encodeURIComponent(studentLink);
   app.innerHTML = `
     <div class="card" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
-      <img src="${qrUrl}" alt="학생용 QR코드" style="width:120px;height:120px;border:1px solid var(--border);border-radius:8px">
+      <img id="qrImage" src="${qrUrl}" alt="학생용 QR코드" title="클릭하면 다운로드됩니다" style="width:120px;height:120px;border:1px solid var(--border);border-radius:8px;cursor:pointer">
       <div style="flex:1;min-width:200px">
         <div class="fb-label" style="margin-bottom:6px">학생용 접속 QR코드</div>
-        <div style="font-size:13px;color:var(--muted);margin-bottom:8px">학생들에게 이 화면을 보여주거나 프린트해서 교실에 붙여두면, 카메라로 스캔해서 바로 접속할 수 있습니다.</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:8px">학생들에게 이 화면을 보여주거나 프린트해서 교실에 붙여두면, 카메라로 스캔해서 바로 접속할 수 있습니다. QR코드 이미지를 클릭하면 다운로드됩니다.</div>
         <div class="link-box" style="display:flex">
           <span style="word-break:break-all">${studentLink}</span>
           <button class="btn-secondary" style="margin-left:auto" onclick="navigator.clipboard.writeText('${studentLink}')">링크 복사</button>
@@ -488,6 +488,24 @@ async function renderTeacherView() {
     </div>
     <div id="tabContent"></div>
   `;
+
+  document.getElementById('qrImage').addEventListener('click', async () => {
+    try {
+      const res = await fetch(qrUrl);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = '자소서첨삭-학생용-QR코드.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      window.open(qrUrl, '_blank');
+    }
+  });
+
   document.querySelectorAll('.tab').forEach(t => {
     t.classList.toggle('active', t.dataset.tab === currentTab);
     t.addEventListener('click', () => { currentTab = t.dataset.tab; renderTeacherView(); });
