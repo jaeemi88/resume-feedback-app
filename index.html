@@ -881,7 +881,7 @@ async function renderPresetsTab(content) {
       const row = document.createElement('div');
       row.className = 'preset-item';
       row.innerHTML = `
-        <div style="flex:1">
+        <div style="flex:1 1 100%;min-width:0">
           <b>${escapeHtml(p.name)}</b>${p.id === cfg.activePresetId ? ' <span class="star-tag ok">기본값</span>' : ''}
           <div class="prompt-display" style="font-size:12px;color:var(--muted);margin-top:2px">${escapeHtml(p.prompt) || '(추가 지침 없음)'}</div>
           <div class="prompt-edit" style="display:none;margin-top:6px">
