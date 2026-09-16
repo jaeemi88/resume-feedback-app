@@ -1,4 +1,4 @@
-// 자소서 문항+답변을 받아 STAR 진단 + 첨삭 초안을 생성하는 서버 함수
+ // 자소서 문항+답변을 받아 STAR 진단 + 첨삭 초안을 생성하는 서버 함수
 // (모의면접 앱의 /api/feedback.js와 동일한 구조 — 질문/답변 대신 자소서 문항/작성 내용을 사용)
 
 export default async function handler(req, res) {
@@ -109,9 +109,32 @@ MOA FORMULA의 핵심 전제: "면접관은 지원자의 '지금 이 순간'을 
     });
 
     const data = await response.json();
+
+    if (data.type === 'error') {
+      return res.status(500).json({
+        error: 'AI 응답 처리 중 오류가 발생했습니다.',
+        detail: `Anthropic API 오류: ${data.error?.type || ''} — ${data.error?.message || JSON.stringify(data)}`
+      });
+    }
+
     const raw = (data.content || []).map(c => c.text || '').join('').trim();
+    if (!raw) {
+      return res.status(500).json({
+        error: 'AI 응답 처리 중 오류가 발생했습니다.',
+        detail: `빈 응답을 받았습니다. 전체 응답: ${JSON.stringify(data).slice(0, 500)}`
+      });
+    }
     const clean = raw.replace(/```json|```/g, '').trim();
-    const feedback = JSON.parse(clean); // AI가 JSON 형식으로만 답하도록 프롬프트에서 강제함
+
+    let feedback;
+    try {
+      feedback = JSON.parse(clean);
+    } catch (parseErr) {
+      return res.status(500).json({
+        error: 'AI 응답 처리 중 오류가 발생했습니다.',
+        detail: `JSON 파싱 실패. AI 원본 응답: ${clean.slice(0, 500)}`
+      });
+    }
 
     return res.status(200).json(feedback);
   } catch (err) {
