@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>자소서·이력서 첨삭 — 진로모아커리어센터</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard.css">
 <style>
   :root{
     --bg:#ffffff;
@@ -26,11 +27,11 @@
     margin:0;
     background:var(--bg);
     color:var(--text);
-    font-family:'맑은 고딕','Malgun Gothic',-apple-system,sans-serif;
+    font-family:'Pretendard','맑은 고딕','Malgun Gothic',-apple-system,sans-serif;
     line-height:1.6;
   }
   header{
-    background:var(--navy);
+    background:var(--green);
     color:#fff;
     padding:18px 24px;
     display:flex;
@@ -46,15 +47,29 @@
     letter-spacing:.2px;
   }
   header h1{
-    font-size:22px;
+    font-size:20px;
     margin:0;
-    font-weight:800;
+    font-weight:600;
   }
   header .badge{
     font-size:12px;
-    background:rgba(255,255,255,.15);
+    font-weight:600;
+    background:rgba(255,255,255,.16);
+    color:#fff;
     padding:4px 10px;
     border-radius:999px;
+  }
+  /* 학생용: 같은 그린 톤이지만 연하게 — 강사용: 원래의 진한 그린 유지 */
+  body.role-student header{
+    background:var(--green-light);
+    color:var(--green);
+  }
+  body.role-student header .header-sub{
+    color:#5b8570;
+  }
+  body.role-student header .badge{
+    background:rgba(27,67,50,0.1);
+    color:var(--green);
   }
   main{
     max-width:880px;
@@ -203,6 +218,7 @@ const params = new URLSearchParams(location.search);
 const isAdmin = params.get('admin') === '1';
 let TEACHER_ID = (params.get('t') || '').trim().toLowerCase().replace(/[^a-z0-9가-힣_-]/g, '').slice(0, 40);
 document.getElementById('roleBadge').textContent = (isAdmin ? '강사용' : '학생용') + (TEACHER_ID ? ' · ' + TEACHER_ID : '');
+document.body.classList.add(isAdmin ? 'role-teacher' : 'role-student');
 
 const app = document.getElementById('app');
 
