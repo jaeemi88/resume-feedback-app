@@ -7,12 +7,21 @@ function getRedis() {
   return redis;
 }
 
+// 학생이 카톡 친구가 아니어도 스스로 조회할 수 있도록 짧은 확인 코드 생성 (혼동되는 문자 제외)
+function genCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
 export default async function handler(req, res) {
   const client = getRedis();
 
   if (req.method === 'POST') {
     const id = 'r_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-    const item = { id, ...req.body, createdAt: Date.now() };
+    const code = genCode();
+    const item = { id, code, ...req.body, createdAt: Date.now() };
     await client.set(`resume_review:${id}`, JSON.stringify(item));
 
     const indexRaw = await client.get('resume_reviews_index');
@@ -20,10 +29,11 @@ export default async function handler(req, res) {
     index.push(id);
     await client.set('resume_reviews_index', JSON.stringify(index));
 
-    return res.status(200).json({ ok: true, id });
+    return res.status(200).json({ ok: true, id, code });
   }
 
   if (req.method === 'GET') {
+    const { code } = req.query;
     const indexRaw = await client.get('resume_reviews_index');
     const index = indexRaw ? JSON.parse(indexRaw) : [];
     const items = [];
@@ -31,6 +41,13 @@ export default async function handler(req, res) {
       const raw = await client.get(`resume_review:${id}`);
       if (raw) items.push(JSON.parse(raw));
     }
+
+    if (code) {
+      const match = items.find(it => it.code === String(code).toUpperCase());
+      if (!match) return res.status(404).json({ error: '해당 코드를 찾을 수 없습니다.' });
+      return res.status(200).json({ status: 'pending', studentName: match.studentName });
+    }
+
     items.sort((a, b) => b.createdAt - a.createdAt);
     return res.status(200).json({ items });
   }
