@@ -41,5 +41,15 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'id 또는 list 파라미터가 필요합니다.' });
   }
 
+  if (req.method === 'DELETE') {
+    const { id } = req.query;
+    if (!id) return res.status(400).json({ error: 'id 파라미터가 필요합니다.' });
+    await client.del(`resume_result:${id}`);
+    const indexRaw = await client.get('resume_results_index');
+    const index = indexRaw ? JSON.parse(indexRaw) : [];
+    await client.set('resume_results_index', JSON.stringify(index.filter(x => x.id !== id)));
+    return res.status(200).json({ ok: true });
+  }
+
   return res.status(405).json({ error: '허용되지 않는 요청입니다.' });
 }
