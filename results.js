@@ -13,12 +13,12 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     const id = 'res_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     const item = { id, ...req.body, approvedAt: Date.now() };
-    await client.set(`result:${id}`, JSON.stringify(item));
+    await client.set(`resume_result:${id}`, JSON.stringify(item));
 
-    const indexRaw = await client.get('results_index');
+    const indexRaw = await client.get('resume_results_index');
     const index = indexRaw ? JSON.parse(indexRaw) : [];
     index.push({ id, question: item.question, approvedAt: item.approvedAt });
-    await client.set('results_index', JSON.stringify(index));
+    await client.set('resume_results_index', JSON.stringify(index));
 
     return res.status(200).json({ ok: true, id });
   }
@@ -27,13 +27,13 @@ export default async function handler(req, res) {
     const { id, list } = req.query;
 
     if (list) {
-      const indexRaw = await client.get('results_index');
+      const indexRaw = await client.get('resume_results_index');
       const index = indexRaw ? JSON.parse(indexRaw) : [];
       return res.status(200).json({ items: index.reverse() });
     }
 
     if (id) {
-      const raw = await client.get(`result:${id}`);
+      const raw = await client.get(`resume_result:${id}`);
       if (!raw) return res.status(404).json({ error: '결과를 찾을 수 없습니다.' });
       return res.status(200).json({ item: JSON.parse(raw) });
     }
