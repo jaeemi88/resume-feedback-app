@@ -17,7 +17,7 @@ export default async function handler(req, res) {
 
     const indexRaw = await client.get('resume_results_index');
     const index = indexRaw ? JSON.parse(indexRaw) : [];
-    index.push({ id, studentName: item.studentName || '', question: item.question, approvedAt: item.approvedAt });
+    index.push({ id, studentName: item.studentName || '', presetName: item.presetName || '기본', question: item.question, approvedAt: item.approvedAt });
     await client.set('resume_results_index', JSON.stringify(index));
 
     return res.status(200).json({ ok: true, id });
