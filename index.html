@@ -292,6 +292,9 @@ async function renderStudentView() {
   app.innerHTML = `
     <div class="card">
       <h2>첨삭 요청</h2>
+      <label>이름</label>
+      <input type="text" id="studentNameInput" placeholder="본인 이름을 입력해 주세요">
+
       <label>문서 유형</label>
       <select id="docTypeSelect">
         <option value="resume">자소서</option>
@@ -385,10 +388,18 @@ async function renderStudentView() {
   }
 
   document.getElementById('submitBtn').addEventListener('click', async () => {
+    const studentName = document.getElementById('studentNameInput').value.trim();
     const question = document.getElementById('questionInput').value.trim();
     const answer = answerInput.value.trim();
     const statusMsg = document.getElementById('statusMsg');
     const submitBtn = document.getElementById('submitBtn');
+
+    if (!studentName) {
+      statusMsg.textContent = '이름을 입력해 주세요.';
+      statusMsg.className = 'status-msg error';
+      statusMsg.style.display = 'block';
+      return;
+    }
 
     if (!question || !answer) {
       statusMsg.textContent = '문항과 답변을 모두 입력해 주세요.';
@@ -419,7 +430,7 @@ async function renderStudentView() {
 
       await api('/api/reviews', {
         method: 'POST',
-        body: JSON.stringify({ question, answer, presetId: presetSelect.value, framework, questionType, selfIntent, jobPosting, previousAnswer, aiDraft })
+        body: JSON.stringify({ studentName, question, answer, presetId: presetSelect.value, framework, questionType, selfIntent, jobPosting, previousAnswer, aiDraft })
       });
 
       statusMsg.textContent = '제출이 완료되었습니다. 강사님 검수 후 결과 링크를 보내드립니다.';
@@ -454,7 +465,20 @@ const PRESET_LIBRARY = [
 let currentTab = 'reviews';
 
 async function renderTeacherView() {
+  const studentLink = location.origin + location.pathname;
+  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(studentLink);
   app.innerHTML = `
+    <div class="card" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+      <img src="${qrUrl}" alt="학생용 QR코드" style="width:120px;height:120px;border:1px solid var(--border);border-radius:8px">
+      <div style="flex:1;min-width:200px">
+        <div class="fb-label" style="margin-bottom:6px">학생용 접속 QR코드</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:8px">학생들에게 이 화면을 보여주거나 프린트해서 교실에 붙여두면, 카메라로 스캔해서 바로 접속할 수 있습니다.</div>
+        <div class="link-box" style="display:flex">
+          <span style="word-break:break-all">${studentLink}</span>
+          <button class="btn-secondary" style="margin-left:auto" onclick="navigator.clipboard.writeText('${studentLink}')">링크 복사</button>
+        </div>
+      </div>
+    </div>
     <div class="tabs">
       <div class="tab" data-tab="reviews">검수 대기함</div>
       <div class="tab" data-tab="presets">첨삭 기준 프리셋</div>
@@ -537,7 +561,7 @@ function buildReviewCard(item) {
   const d = item.aiDraft || {};
   const framework = d.frameworkUsed || item.framework || 'STAR';
   wrap.innerHTML = `
-    <div class="meta">제출 시각: ${new Date(item.createdAt).toLocaleString('ko-KR')} · 진단 기준: ${framework}</div>
+    <div class="meta">제출자: <b style="color:var(--navy)">${escapeHtml(item.studentName) || '(이름 없음)'}</b> · 제출 시각: ${new Date(item.createdAt).toLocaleString('ko-KR')} · 진단 기준: ${framework}</div>
     <div class="field-block">
       <div class="fb-label">자소서 문항</div>
       <p style="white-space:pre-wrap">${escapeHtml(item.question)}</p>
@@ -586,6 +610,7 @@ function buildReviewCard(item) {
     btn.textContent = '처리 중...';
     try {
       const payload = {
+        studentName: item.studentName || '',
         question: item.question,
         answer: item.answer,
         frameworkUsed: framework,
@@ -635,9 +660,11 @@ function buildReviewCard(item) {
 async function renderPresetsTab(content) {
   content.innerHTML = `
     <div class="card">
-      <h2>추천 프리셋 라이브러리</h2>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">자주 쓰이는 직군별 평가기준입니다. 클릭하면 바로 추가됩니다.</div>
-      <div id="libraryList"></div>
+      <details>
+        <summary style="cursor:pointer;font-weight:700;color:var(--navy)">추천 프리셋 라이브러리 (클릭해서 펼치기)</summary>
+        <div style="font-size:13px;color:var(--muted);margin:10px 0">자주 쓰이는 직군별 평가기준입니다. 클릭하면 바로 추가됩니다.</div>
+        <div id="libraryList"></div>
+      </details>
     </div>
     <div class="card">
       <h2>첨삭 기준 프리셋 관리</h2>
@@ -726,7 +753,7 @@ async function renderResultsTab(content) {
     listEl.innerHTML = items.map(it => {
       const link = location.origin + location.pathname + '#result=' + it.id;
       return `<div class="preset-item">
-        <div>${escapeHtml(it.question).slice(0, 40)}...<div style="font-size:12px;color:var(--muted)">${new Date(it.approvedAt).toLocaleString('ko-KR')}</div></div>
+        <div><b>${escapeHtml(it.studentName) || '(이름 없음)'}</b> — ${escapeHtml(it.question).slice(0, 30)}...<div style="font-size:12px;color:var(--muted)">${new Date(it.approvedAt).toLocaleString('ko-KR')}</div></div>
         <a href="${link}" target="_blank" class="btn-secondary" style="text-decoration:none;padding:8px 14px;border-radius:8px">결과 보기</a>
       </div>`;
     }).join('');
@@ -742,7 +769,7 @@ async function renderResultView(id) {
     const { item } = await api('/api/results?id=' + encodeURIComponent(id));
     app.innerHTML = `
       <div class="card">
-        <h2>첨삭 결과</h2>
+        <h2>첨삭 결과${item.studentName ? ` — ${escapeHtml(item.studentName)}님` : ''}</h2>
         <div class="result-block">
           <h3>자소서 문항</h3>
           <p style="white-space:pre-wrap">${escapeHtml(item.question)}</p>
