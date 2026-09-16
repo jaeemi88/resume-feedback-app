@@ -521,13 +521,19 @@ async function renderReviewsTab(content) {
   content.innerHTML = `<div class="card"><h2>검수 대기함</h2><div id="reviewsList" class="empty">불러오는 중...</div></div>`;
   const listEl = document.getElementById('reviewsList');
   try {
-    const { items } = await api('/api/reviews');
+    const [{ items }, configRes] = await Promise.all([
+      api('/api/reviews'),
+      api('/api/config').catch(() => ({ config: { presets: [] } }))
+    ]);
+    const presetNameMap = {};
+    (configRes.config.presets || []).forEach(p => { presetNameMap[p.id] = p.name; });
+
     if (!items.length) {
       listEl.innerHTML = `<div class="empty">대기 중인 첨삭이 없습니다.</div>`;
       return;
     }
     listEl.innerHTML = '';
-    items.forEach(item => listEl.appendChild(buildReviewCard(item)));
+    items.forEach(item => listEl.appendChild(buildReviewCard(item, presetNameMap[item.presetId] || '기본')));
   } catch (e) {
     listEl.innerHTML = `<div class="empty">불러오기 실패: ${escapeHtml(e.message)}</div>`;
   }
@@ -575,7 +581,7 @@ function diffHtml(oldStr, newStr) {
   }).join(' ');
 }
 
-function buildReviewCard(item) {
+function buildReviewCard(item, presetName) {
   const wrap = document.createElement('div');
   wrap.className = 'review-item';
   const d = item.aiDraft || {};
@@ -584,6 +590,7 @@ function buildReviewCard(item) {
     <details>
       <summary style="cursor:pointer">
         <span style="font-weight:700;color:var(--navy);font-size:15px">${escapeHtml(item.studentName) || '(이름 없음)'}</span>
+        <span class="star-tag ok" style="margin-left:6px">${escapeHtml(presetName || '기본')}</span>
         <span style="font-size:12px;color:var(--muted);margin-left:8px">${new Date(item.createdAt).toLocaleString('ko-KR')} · ${framework} · 클릭해서 펼치기</span>
       </summary>
       <div style="margin-top:14px">
@@ -638,6 +645,7 @@ function buildReviewCard(item) {
     try {
       const payload = {
         studentName: item.studentName || '',
+        presetName: presetName || '기본',
         question: item.question,
         answer: item.answer,
         frameworkUsed: framework,
@@ -794,37 +802,110 @@ async function renderPresetsTab(content) {
 }
 
 async function renderResultsTab(content) {
-  content.innerHTML = `<div class="card"><h2>완료된 첨삭 목록</h2><div id="resultsList" class="empty">불러오는 중...</div></div>`;
+  content.innerHTML = `
+    <div class="card">
+      <h2>완료된 첨삭 목록</h2>
+      <div class="btn-row" style="margin-top:0;align-items:center">
+        <div style="flex:1;min-width:160px">
+          <label style="margin-top:0">전공(첨삭 기준) 필터</label>
+          <select id="filterPreset"><option value="__all__">전체 (전공별로 묶어보기)</option></select>
+        </div>
+        <div style="flex:1;min-width:160px">
+          <label style="margin-top:0">정렬</label>
+          <select id="sortOrder">
+            <option value="recent">최신순</option>
+            <option value="oldest">오래된순</option>
+            <option value="name">이름 가나다순</option>
+          </select>
+        </div>
+      </div>
+      <div id="resultsList" class="empty" style="margin-top:14px">불러오는 중...</div>
+    </div>
+  `;
   const listEl = document.getElementById('resultsList');
+  const filterSelect = document.getElementById('filterPreset');
+  const sortSelect = document.getElementById('sortOrder');
+
+  let allItems = [];
   try {
     const { items } = await api('/api/results?list=1');
-    if (!items.length) { listEl.innerHTML = `<div class="empty">완료된 첨삭이 없습니다.</div>`; return; }
-    listEl.innerHTML = '';
-    items.forEach(it => {
-      const link = location.origin + location.pathname + '#result=' + it.id;
-      const row = document.createElement('div');
-      row.className = 'preset-item';
-      row.innerHTML = `
-        <div><b>${escapeHtml(it.studentName) || '(이름 없음)'}</b> — ${escapeHtml(it.question).slice(0, 30)}...<div style="font-size:12px;color:var(--muted)">${new Date(it.approvedAt).toLocaleString('ko-KR')}</div></div>
-        <div class="btn-row" style="margin:0">
-          <a href="${link}" target="_blank" class="btn-secondary" style="text-decoration:none;padding:8px 14px;border-radius:8px">결과 보기</a>
-          <button class="btn-danger delete-result-btn">삭제</button>
-        </div>
-      `;
-      row.querySelector('.delete-result-btn').addEventListener('click', async () => {
-        if (!confirm(`${it.studentName || '이름 없음'}님의 첨삭 결과를 삭제할까요? 학생에게 보낸 링크도 더 이상 열리지 않게 됩니다.`)) return;
-        try {
-          await api('/api/results?id=' + it.id, { method: 'DELETE' });
-          row.remove();
-        } catch (e) {
-          alert('삭제 실패: ' + e.message);
-        }
-      });
-      listEl.appendChild(row);
-    });
+    allItems = items;
   } catch (e) {
     listEl.innerHTML = `<div class="empty">불러오기 실패: ${escapeHtml(e.message)}</div>`;
+    return;
   }
+
+  if (!allItems.length) { listEl.innerHTML = `<div class="empty">완료된 첨삭이 없습니다.</div>`; return; }
+
+  const presetNames = [...new Set(allItems.map(it => it.presetName || '기본'))].sort((a, b) => a.localeCompare(b, 'ko'));
+  filterSelect.innerHTML = `<option value="__all__">전체 (전공별로 묶어보기)</option>` +
+    presetNames.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+
+  function sortItems(items) {
+    const sorted = [...items];
+    if (sortSelect.value === 'name') {
+      sorted.sort((a, b) => (a.studentName || '').localeCompare(b.studentName || '', 'ko'));
+    } else if (sortSelect.value === 'oldest') {
+      sorted.sort((a, b) => a.approvedAt - b.approvedAt);
+    } else {
+      sorted.sort((a, b) => b.approvedAt - a.approvedAt);
+    }
+    return sorted;
+  }
+
+  function buildResultRow(it) {
+    const link = location.origin + location.pathname + '#result=' + it.id;
+    const row = document.createElement('div');
+    row.className = 'preset-item';
+    row.innerHTML = `
+      <div><b>${escapeHtml(it.studentName) || '(이름 없음)'}</b> — ${escapeHtml(it.question).slice(0, 30)}...<div style="font-size:12px;color:var(--muted)">${new Date(it.approvedAt).toLocaleString('ko-KR')}</div></div>
+      <div class="btn-row" style="margin:0">
+        <a href="${link}" target="_blank" class="btn-secondary" style="text-decoration:none;padding:8px 14px;border-radius:8px">결과 보기</a>
+        <button class="btn-danger delete-result-btn">삭제</button>
+      </div>
+    `;
+    row.querySelector('.delete-result-btn').addEventListener('click', async () => {
+      if (!confirm(`${it.studentName || '이름 없음'}님의 첨삭 결과를 삭제할까요? 학생에게 보낸 링크도 더 이상 열리지 않게 됩니다.`)) return;
+      try {
+        await api('/api/results?id=' + it.id, { method: 'DELETE' });
+        renderList();
+      } catch (e) {
+        alert('삭제 실패: ' + e.message);
+      }
+    });
+    return row;
+  }
+
+  function renderList() {
+    const filterVal = filterSelect.value;
+    listEl.innerHTML = '';
+
+    if (filterVal === '__all__') {
+      presetNames.forEach(name => {
+        const groupItems = sortItems(allItems.filter(it => (it.presetName || '기본') === name));
+        if (!groupItems.length) return;
+        const groupWrap = document.createElement('details');
+        groupWrap.open = true;
+        groupWrap.style.marginBottom = '14px';
+        const summary = document.createElement('summary');
+        summary.style.cursor = 'pointer';
+        summary.innerHTML = `<b style="color:var(--navy)">📁 ${escapeHtml(name)}</b> <span class="star-tag ok">${groupItems.length}명</span>`;
+        groupWrap.appendChild(summary);
+        const inner = document.createElement('div');
+        inner.style.marginTop = '8px';
+        groupItems.forEach(it => inner.appendChild(buildResultRow(it)));
+        groupWrap.appendChild(inner);
+        listEl.appendChild(groupWrap);
+      });
+    } else {
+      const filtered = sortItems(allItems.filter(it => (it.presetName || '기본') === filterVal));
+      filtered.forEach(it => listEl.appendChild(buildResultRow(it)));
+    }
+  }
+
+  filterSelect.addEventListener('change', renderList);
+  sortSelect.addEventListener('change', renderList);
+  renderList();
 }
 
 // ---------- 학생 결과 열람 화면 ----------
