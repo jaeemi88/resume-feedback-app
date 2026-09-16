@@ -313,6 +313,17 @@ async function renderStudentView() {
       <textarea id="answerInput" style="min-height:160px" placeholder="여기에 자소서 답변을 붙여넣거나 작성해 주세요."></textarea>
       <div class="counter"><span id="charCount">0</span>자 작성됨</div>
 
+      <details style="margin-top:14px">
+        <summary style="cursor:pointer;font-weight:700;color:var(--navy);font-size:13px">선택 입력 — 채우면 첨삭이 더 정확해져요</summary>
+        <div style="margin-top:10px">
+          <label>이 답변으로 보여주고 싶었던 점 (자가진단, 선택)</label>
+          <textarea id="selfIntentInput" placeholder="예) 저는 이 답변으로 위기 상황에서도 침착하게 대처하는 모습을 보여주고 싶었습니다."></textarea>
+
+          <label>지원하는 채용공고의 핵심 내용 (선택)</label>
+          <textarea id="jobPostingInput" placeholder="예) [○○기관] 사회복지사 채용 — 사례관리 경험자 우대, 공감·소통 역량 중시"></textarea>
+        </div>
+      </details>
+
       <div class="btn-row">
         <button class="btn-primary" id="submitBtn">첨삭 요청하기</button>
       </div>
@@ -364,15 +375,17 @@ async function renderStudentView() {
       const questionTypeSelect = document.getElementById('questionTypeSelect');
       const questionType = questionTypeSelect.value;
       const framework = questionTypeSelect.selectedOptions[0].dataset.fw;
+      const selfIntent = document.getElementById('selfIntentInput').value.trim();
+      const jobPosting = document.getElementById('jobPostingInput').value.trim();
 
       const aiDraft = await api('/api/feedback', {
         method: 'POST',
-        body: JSON.stringify({ question, answer, presetPrompt: preset ? preset.prompt : '', framework, questionType })
+        body: JSON.stringify({ question, answer, presetPrompt: preset ? preset.prompt : '', framework, questionType, selfIntent, jobPosting })
       });
 
       await api('/api/reviews', {
         method: 'POST',
-        body: JSON.stringify({ question, answer, presetId: presetSelect.value, framework, questionType, aiDraft })
+        body: JSON.stringify({ question, answer, presetId: presetSelect.value, framework, questionType, selfIntent, jobPosting, aiDraft })
       });
 
       statusMsg.textContent = '제출이 완료되었습니다. 강사님 검수 후 결과 링크를 보내드립니다.';
@@ -380,6 +393,8 @@ async function renderStudentView() {
       statusMsg.style.display = 'block';
       document.getElementById('questionInput').value = '';
       answerInput.value = '';
+      document.getElementById('selfIntentInput').value = '';
+      document.getElementById('jobPostingInput').value = '';
       charCount.textContent = '0';
     } catch (e) {
       statusMsg.textContent = '오류가 발생했습니다: ' + e.message;
@@ -391,6 +406,14 @@ async function renderStudentView() {
     }
   });
 }
+
+const PRESET_LIBRARY = [
+  { name: '사회복지학과', prompt: '사회복지 직무 특성상 공감·소통 역량, 사례관리·대상자 지원 경험, 윤리의식이 드러나는지 특히 중점적으로 봐 주세요. 대상자와의 관계 형성 경험이 있다면 구체적으로 짚어주세요.' },
+  { name: '물리치료과', prompt: '물리치료사 직무 특성상 환자와의 신뢰 형성, 임상실습 경험, 의료진과의 협업·소통 역량이 드러나는지 확인해주세요.' },
+  { name: '항공서비스', prompt: '항공서비스직 특성상 이미지메이킹(표정·태도), 위기대응 능력, 고객응대 경험이 구체적으로 드러나는지 확인해주세요.' },
+  { name: '사무행정', prompt: '사무행정 직무 특성상 꼼꼼함, 문서작성·데이터 처리 경험, 협업 프로세스 이해도가 드러나는지 확인해주세요.' },
+  { name: '직업상담사', prompt: '직업상담사 직무 특성상 상담·경청 역량, 노동시장에 대한 이해, 사례 개입 경험이 드러나는지 확인해주세요.' }
+];
 
 // ---------- 강사 화면 ----------
 let currentTab = 'reviews';
@@ -431,6 +454,17 @@ async function renderReviewsTab(content) {
   }
 }
 
+function jobMatchHtml(jm) {
+  if (!jm) return '';
+  return `<div class="field-block" style="background:var(--green-light);padding:10px 12px;border-radius:8px">
+    <div class="fb-label">채용공고 매칭 — 일치도: ${escapeHtml(jm.matchLevel)}</div>
+    <div class="star-row">
+      ${(jm.matchedKeywords || []).map(k => `<span class="star-tag ok">✓ ${escapeHtml(k)}</span>`).join('')}
+      ${(jm.missingKeywords || []).map(k => `<span class="star-tag miss">✗ ${escapeHtml(k)}</span>`).join('')}
+    </div>
+  </div>`;
+}
+
 function buildReviewCard(item) {
   const wrap = document.createElement('div');
   wrap.className = 'review-item';
@@ -449,6 +483,9 @@ function buildReviewCard(item) {
     <div class="star-row">${structureTagsHtml(framework, d.structure)}</div>
     <div class="star-row">${concretenessTagsHtml(d.concreteness)}</div>
     ${riskFlagsHtml(d.riskFlags)}
+    ${jobMatchHtml(d.jobMatch)}
+    ${item.selfIntent ? `<div class="field-block"><div class="fb-label">학생 자가진단 — 보여주고 싶었던 점</div><p>${escapeHtml(item.selfIntent)}</p></div>` : ''}
+    ${d.intentGapComment ? `<div class="field-block" style="background:var(--warn-bg);padding:10px 12px;border-radius:8px"><div class="fb-label">자가진단 vs 실제 답변 코멘트</div><p>${escapeHtml(d.intentGapComment)}</p></div>` : ''}
 
     <div class="field-block" style="background:var(--navy-light);padding:10px 12px;border-radius:8px">
       <div class="fb-label">면접관 시점 — 이 답변으로 추론되는 평소 모습</div>
@@ -489,6 +526,8 @@ function buildReviewCard(item) {
         concreteness: d.concreteness,
         riskFlags: d.riskFlags || [],
         interviewerInference: d.interviewerInference,
+        jobMatch: d.jobMatch || null,
+        intentGapComment: d.intentGapComment || null,
         missingElements: d.missingElements || [],
         strengths: wrap.querySelector('.edit-strengths').value,
         improvements: wrap.querySelector('.edit-improvements').value,
@@ -527,6 +566,11 @@ function buildReviewCard(item) {
 async function renderPresetsTab(content) {
   content.innerHTML = `
     <div class="card">
+      <h2>추천 프리셋 라이브러리</h2>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">자주 쓰이는 직군별 평가기준입니다. 클릭하면 바로 추가됩니다.</div>
+      <div id="libraryList"></div>
+    </div>
+    <div class="card">
       <h2>첨삭 기준 프리셋 관리</h2>
       <div id="presetList" class="empty">불러오는 중...</div>
       <label>새 프리셋 이름</label>
@@ -542,6 +586,23 @@ async function renderPresetsTab(content) {
     const r = await api('/api/config');
     config = r.config;
   } catch (e) { /* 기본값 사용 */ }
+
+  const libraryEl = document.getElementById('libraryList');
+  libraryEl.innerHTML = PRESET_LIBRARY.map((lib, i) => {
+    const already = config.presets.some(p => p.name === lib.name);
+    return `<div class="preset-item">
+      <div><b>${escapeHtml(lib.name)}</b><div style="font-size:12px;color:var(--muted);margin-top:2px">${escapeHtml(lib.prompt)}</div></div>
+      <button class="btn-secondary lib-add-btn" data-i="${i}" ${already ? 'disabled' : ''}>${already ? '추가됨' : '추가하기'}</button>
+    </div>`;
+  }).join('');
+  libraryEl.querySelectorAll('.lib-add-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const lib = PRESET_LIBRARY[btn.dataset.i];
+      config.presets.push({ id: 'p_' + Date.now(), name: lib.name, prompt: lib.prompt });
+      await api('/api/config', { method: 'POST', body: JSON.stringify(config) });
+      renderPresetsTab(content);
+    });
+  });
 
   renderPresetList(config);
 
@@ -627,6 +688,8 @@ async function renderResultView(id) {
           <div class="star-row">${concretenessTagsHtml(item.concreteness)}</div>
           ${riskFlagsHtml(item.riskFlags)}
         </div>
+        ${item.jobMatch ? `<div class="result-block"><h3>채용공고 매칭도</h3>${jobMatchHtml(item.jobMatch)}</div>` : ''}
+        ${item.intentGapComment ? `<div class="result-block"><h3>내가 밝힌 의도 vs 실제 답변</h3><p style="white-space:pre-wrap;background:var(--warn-bg);padding:12px;border-radius:8px">${escapeHtml(item.intentGapComment)}</p></div>` : ''}
         <div class="result-block">
           <h3>면접관 시점 — 이 답변으로 추론되는 평소 모습</h3>
           <p style="white-space:pre-wrap;background:var(--navy-light);padding:12px;border-radius:8px">${escapeHtml(item.interviewerInference)}</p>
