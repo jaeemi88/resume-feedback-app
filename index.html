@@ -642,6 +642,7 @@ async function renderTeacherView() {
       <div class="tab" data-tab="reviews">검수 대기함</div>
       <div class="tab" data-tab="presets">첨삭 기준 프리셋</div>
       <div class="tab" data-tab="results">완료된 첨삭</div>
+      <div class="tab" data-tab="notify">알림 설정</div>
     </div>
     <div id="tabContent"></div>
   `;
@@ -671,7 +672,43 @@ async function renderTeacherView() {
   const content = document.getElementById('tabContent');
   if (currentTab === 'reviews') await renderReviewsTab(content);
   else if (currentTab === 'presets') await renderPresetsTab(content);
+  else if (currentTab === 'notify') await renderNotifyTab(content);
   else await renderResultsTab(content);
+}
+
+async function renderNotifyTab(content) {
+  content.innerHTML = `
+    <div class="card">
+      <h2>새 검수 요청 이메일 알림</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">학생이 검수 요청을 보낼 때마다 이 주소로 알림 메일이 발송돼요. 강사용 화면에 매번 들어가서 확인하지 않아도 됩니다.</p>
+      <label>알림 받을 이메일 주소</label>
+      <input type="text" id="notifyEmailInput" placeholder="예) teacher@example.com">
+      <div class="btn-row"><button class="btn-primary" id="saveNotifyEmailBtn">저장하기</button></div>
+      <div id="notifySavedMsg" style="font-size:13px;color:var(--green);margin-top:8px;display:none">저장됐어요.</div>
+    </div>
+  `;
+  try {
+    const res = await api('/api/config');
+    const data = await res.json();
+    document.getElementById('notifyEmailInput').value = (data.config && data.config.notifyEmail) || '';
+  } catch (e) { console.error(e); }
+
+  document.getElementById('saveNotifyEmailBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('saveNotifyEmailBtn');
+    btn.disabled = true; btn.textContent = '저장 중...';
+    try {
+      const res = await api('/api/config');
+      const data = await res.json();
+      const config = data.config || {};
+      config.notifyEmail = document.getElementById('notifyEmailInput').value.trim();
+      await api('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
+      document.getElementById('notifySavedMsg').style.display = 'block';
+    } catch (e) {
+      console.error(e);
+      alert('저장 중 문제가 발생했어요.');
+    }
+    btn.disabled = false; btn.textContent = '저장하기';
+  });
 }
 
 async function renderReviewsTab(content) {
