@@ -53,11 +53,15 @@
   }
   header .badge{
     font-size:12px;
-    font-weight:600;
-    background:rgba(255,255,255,.16);
+    font-weight:700;
+    background:#2f8fd1;
     color:#fff;
     padding:4px 10px;
     border-radius:999px;
+  }
+  body.role-teacher header .badge{
+    background:#f5b34a;
+    color:#40260a;
   }
   /* 학생용: 같은 그린 톤이지만 연하게 — 강사용: 원래의 진한 그린 유지 */
   body.role-student header{
@@ -66,10 +70,6 @@
   }
   body.role-student header .header-sub{
     color:#5b8570;
-  }
-  body.role-student header .badge{
-    background:rgba(27,67,50,0.1);
-    color:var(--green);
   }
   main{
     max-width:880px;
