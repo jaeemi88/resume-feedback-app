@@ -425,6 +425,9 @@ async function renderStudentSubmitForm() {
       <h2>첨삭 요청</h2>
       <label>이름</label>
       <input type="text" id="studentNameInput" placeholder="본인 이름을 입력해 주세요">
+      <label>이메일 주소 (선택)</label>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">입력하시면 첨삭이 완료됐을 때 결과 링크를 자동으로 이메일로 보내드려요. 안 쓰셔도 제출은 됩니다.</div>
+      <input type="text" id="studentEmailInput" placeholder="예) student@example.com (선택)">
 
       <label>문서 유형</label>
       <select id="docTypeSelect">
@@ -540,6 +543,7 @@ async function renderStudentSubmitForm() {
 
   document.getElementById('submitBtn').addEventListener('click', async () => {
     const studentName = document.getElementById('studentNameInput').value.trim();
+    const studentEmail = document.getElementById('studentEmailInput').value.trim();
     const question = document.getElementById('questionInput').value.trim();
     const answer = answerInput.value.trim();
     const statusMsg = document.getElementById('statusMsg');
@@ -582,7 +586,7 @@ async function renderStudentSubmitForm() {
 
       const reviewRes = await api('/api/reviews', {
         method: 'POST',
-        body: JSON.stringify({ studentName, question, answer, presetId: presetSelect.value, framework, questionType, selfIntent, jobPosting, previousAnswer, charLimit, aiDraft })
+        body: JSON.stringify({ studentName, studentEmail, question, answer, presetId: presetSelect.value, framework, questionType, selfIntent, jobPosting, previousAnswer, charLimit, aiDraft })
       });
 
       statusMsg.innerHTML = `
@@ -839,6 +843,7 @@ function buildReviewCard(item, presetName) {
     try {
       const payload = {
         studentName: item.studentName || '',
+        studentEmail: item.studentEmail || '',
         code: item.code || '',
         presetName: presetName || '기본',
         question: item.question,
