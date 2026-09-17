@@ -690,10 +690,19 @@ async function renderNotifyTab(content) {
       <div class="btn-row"><button class="btn-primary" id="saveNotifyEmailBtn">저장하기</button></div>
       <div id="notifySavedMsg" style="font-size:13px;color:var(--green);margin-top:8px;display:none">저장됐어요.</div>
     </div>
+    <div class="card">
+      <h2>수강생 사후관리 트래커 연동</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">여기에 기관명을 입력해두면, 첨삭이 승인될 때마다 학생이 선택한 전공(프리셋)과 함께 "수강생 사후관리 트래커"의 진로모아관리 통계에 인원수가 자동으로 누적돼요. 첨삭 내용 자체는 저장되지 않고, 기관·전공·인원수만 집계됩니다. 특강이 끝나고 다른 기관으로 넘어가면 이 값을 바꿔주세요.</p>
+      <label>현재 진행 중인 특강 기관명 (선택)</label>
+      <input type="text" id="institutionNameInput" placeholder="예) 대구대학교 사회복지학과">
+      <div class="btn-row"><button class="btn-primary" id="saveInstitutionBtn">저장하기</button></div>
+      <div id="institutionSavedMsg" style="font-size:13px;color:var(--green);margin-top:8px;display:none">저장됐어요.</div>
+    </div>
   `;
   try {
     const data = await api('/api/config');
     document.getElementById('notifyEmailInput').value = (data.config && data.config.notifyEmail) || '';
+    document.getElementById('institutionNameInput').value = (data.config && data.config.institutionName) || '';
   } catch (e) { console.error(e); }
 
   document.getElementById('saveNotifyEmailBtn').addEventListener('click', async () => {
@@ -705,6 +714,22 @@ async function renderNotifyTab(content) {
       config.notifyEmail = document.getElementById('notifyEmailInput').value.trim();
       await api('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
       document.getElementById('notifySavedMsg').style.display = 'block';
+    } catch (e) {
+      console.error(e);
+      alert('저장 중 문제가 발생했어요: ' + e.message);
+    }
+    btn.disabled = false; btn.textContent = '저장하기';
+  });
+
+  document.getElementById('saveInstitutionBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('saveInstitutionBtn');
+    btn.disabled = true; btn.textContent = '저장 중...';
+    try {
+      const data = await api('/api/config');
+      const config = data.config || {};
+      config.institutionName = document.getElementById('institutionNameInput').value.trim();
+      await api('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
+      document.getElementById('institutionSavedMsg').style.display = 'block';
     } catch (e) {
       console.error(e);
       alert('저장 중 문제가 발생했어요: ' + e.message);
