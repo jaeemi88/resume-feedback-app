@@ -688,8 +688,7 @@ async function renderNotifyTab(content) {
     </div>
   `;
   try {
-    const res = await api('/api/config');
-    const data = await res.json();
+    const data = await api('/api/config');
     document.getElementById('notifyEmailInput').value = (data.config && data.config.notifyEmail) || '';
   } catch (e) { console.error(e); }
 
@@ -697,15 +696,14 @@ async function renderNotifyTab(content) {
     const btn = document.getElementById('saveNotifyEmailBtn');
     btn.disabled = true; btn.textContent = '저장 중...';
     try {
-      const res = await api('/api/config');
-      const data = await res.json();
+      const data = await api('/api/config');
       const config = data.config || {};
       config.notifyEmail = document.getElementById('notifyEmailInput').value.trim();
       await api('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
       document.getElementById('notifySavedMsg').style.display = 'block';
     } catch (e) {
       console.error(e);
-      alert('저장 중 문제가 발생했어요.');
+      alert('저장 중 문제가 발생했어요: ' + e.message);
     }
     btn.disabled = false; btn.textContent = '저장하기';
   });
