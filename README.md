@@ -1,4 +1,4 @@
-[README.md](https://github.com/user-attachments/files/32311773/README.md)
+[README.md](https://github.com/user-attachments/files/32316154/README.md)
 # 자소서·이력서 첨삭 앱 (1단계 MVP)
 
 모의면접 시뮬레이터와 동일한 구조(Vercel + GitHub + Redis)로 배포합니다.
