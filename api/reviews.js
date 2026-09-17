@@ -20,6 +20,33 @@ function safeTeacherId(raw) {
   return String(raw || '').trim().toLowerCase().replace(/[^a-z0-9가-힣_-]/g, '').slice(0, 40);
 }
 
+// 검수 요청이 새로 들어오면, 강사가 설정해둔 이메일로 알림을 보냄.
+// RESEND_API_KEY가 없거나 강사가 이메일을 설정하지 않았으면 조용히 건너뜀 (알림은 부가기능이라 실패해도 검수 요청 저장 자체는 막지 않음).
+async function notifyByEmail(client, t, item) {
+  try {
+    if (!process.env.RESEND_API_KEY) return;
+    const configRaw = await client.get(`resume_app_config:${t}`);
+    const config = configRaw ? JSON.parse(configRaw) : null;
+    const to = config && config.notifyEmail;
+    if (!to) return;
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: 'MOA FORMULA <onboarding@resend.dev>',
+        to: [to],
+        subject: `[자소서 첨삭] ${item.studentName || '학생'}님의 검수 요청이 도착했어요`,
+        text: `${item.studentName || '학생'}님이 자소서 첨삭 검수를 요청했어요.\n\n강사용 화면의 "검수 대기함" 탭에서 확인해 주세요.`
+      })
+    });
+  } catch (err) {
+    console.error('알림 메일 발송 실패:', err);
+  }
+}
+
 export default async function handler(req, res) {
   const client = getRedis();
   const t = safeTeacherId(req.query.t);
@@ -38,6 +65,8 @@ export default async function handler(req, res) {
     const index = indexRaw ? JSON.parse(indexRaw) : [];
     index.push(id);
     await client.set(indexKey, JSON.stringify(index));
+
+    notifyByEmail(client, t, item); // 응답을 기다리지 않고 백그라운드로 발송 시도
 
     return res.status(200).json({ ok: true, id, code });
   }
