@@ -12,6 +12,32 @@ function safeTeacherId(raw) {
   return String(raw || '').trim().toLowerCase().replace(/[^a-z0-9가-힣_-]/g, '').slice(0, 40);
 }
 
+// 첨삭이 승인 완료되면, 학생이 이메일을 남겼을 경우에만 결과 링크를 자동으로 보내줌.
+// RESEND_API_KEY가 없거나 학생이 이메일을 안 남겼으면 조용히 건너뜀 (알림은 부가기능이라 실패해도 저장 자체는 막지 않음).
+async function notifyStudentByEmail(t, id, item, host) {
+  try {
+    if (!process.env.RESEND_API_KEY) return;
+    const to = item.studentEmail;
+    if (!to) return;
+    const link = `https://${host}/?t=${encodeURIComponent(t)}#result=${id}`;
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: 'MOA FORMULA <onboarding@resend.dev>',
+        to: [to],
+        subject: `[자소서 첨삭] ${item.studentName || '학생'}님의 첨삭 결과가 도착했어요`,
+        text: `${item.studentName || '학생'}님, 요청하신 자소서 첨삭 결과가 준비됐어요.\n\n아래 링크에서 확인해 주세요.\n${link}`
+      })
+    });
+  } catch (err) {
+    console.error('학생 알림 메일 발송 실패:', err);
+  }
+}
+
 export default async function handler(req, res) {
   const client = getRedis();
   const t = safeTeacherId(req.query.t);
@@ -29,6 +55,8 @@ export default async function handler(req, res) {
     const index = indexRaw ? JSON.parse(indexRaw) : [];
     index.push({ id, code: item.code || '', studentName: item.studentName || '', presetName: item.presetName || '기본', question: item.question, approvedAt: item.approvedAt });
     await client.set(indexKey, JSON.stringify(index));
+
+    notifyStudentByEmail(t, id, item, req.headers.host); // 응답을 기다리지 않고 백그라운드로 발송 시도
 
     return res.status(200).json({ ok: true, id });
   }
