@@ -87,7 +87,7 @@ export default async function handler(req, res) {
 
     const indexRaw = await client.get(indexKey);
     const index = indexRaw ? JSON.parse(indexRaw) : [];
-    index.push({ id, code: item.code || '', studentName: item.studentName || '', presetName: item.presetName || '기본', question: item.question, approvedAt: item.approvedAt });
+    index.push({ id, code: item.code || '', studentName: item.studentName || '', presetName: item.presetName || '기본', itemCount: (item.items || []).length, docType: item.docType || 'resume', approvedAt: item.approvedAt });
     await client.set(indexKey, JSON.stringify(index));
 
     notifyStudentByEmail(t, id, item, req.headers.host); // 응답을 기다리지 않고 백그라운드로 발송 시도
