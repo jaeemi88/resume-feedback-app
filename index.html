@@ -569,11 +569,123 @@ async function renderStudentLookup() {
   });
 }
 
+let itemCounter = 0;
+
+function itemBlockHtml(id) {
+  return `
+    <div class="item-block" data-item-id="${id}" style="border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px;position:relative">
+      <button type="button" class="item-remove-btn" data-item-id="${id}" title="이 문항 삭제" style="position:absolute;top:12px;right:12px;background:none;border:none;color:var(--miss);font-size:18px;cursor:pointer;line-height:1">✕</button>
+      <div class="item-questionType-row" data-item-id="${id}">
+        <label>문항 유형 (진단 기준이 자동으로 적용됩니다)</label>
+        <select class="item-questionType" data-item-id="${id}">
+          <option value="지원동기" data-fw="PREP">지원동기</option>
+          <option value="성격장점" data-fw="PREP">성격 장점</option>
+          <option value="성격단점" data-fw="STAR">성격 단점</option>
+          <option value="협업갈등" data-fw="STAR">협업·갈등 경험</option>
+          <option value="도전경험" data-fw="STAR">도전·성과 경험</option>
+          <option value="실패경험" data-fw="STAR-L">실패 경험</option>
+          <option value="경력활동" data-fw="STAR">경력·활동사항</option>
+          <option value="입사후포부" data-fw="PREP">입사 후 포부</option>
+        </select>
+      </div>
+      <label class="item-question-label">자소서 문항</label>
+      <textarea class="item-question" data-item-id="${id}"></textarea>
+      <label class="item-answer-label">작성한 답변</label>
+      <textarea class="item-answer" data-item-id="${id}" style="min-height:140px" placeholder="여기에 답변을 붙여넣거나 작성해 주세요."></textarea>
+      <div class="counter item-char-counter" data-item-id="${id}"><span class="item-char-count">0</span>자 작성됨</div>
+      <details style="margin-top:10px">
+        <summary style="cursor:pointer;font-weight:700;color:var(--navy);font-size:13px">선택 입력 — 채우면 첨삭이 더 정확해져요</summary>
+        <div style="margin-top:8px">
+          <label>이 답변으로 보여주고 싶었던 점 (자가진단, 선택)</label>
+          <textarea class="item-selfIntent" data-item-id="${id}" placeholder="예) 저는 이 답변으로 위기 상황에서도 침착하게 대처하는 모습을 보여주고 싶었습니다."></textarea>
+          <label>이전 버전 (재작성한 경우, 수정 전 답변을 붙여넣으면 Before/After 비교를 보여드려요)</label>
+          <textarea class="item-prevAnswer" data-item-id="${id}" placeholder="예) 이전에 제출했던 답변을 그대로 붙여넣어 주세요."></textarea>
+        </div>
+      </details>
+    </div>
+  `;
+}
+
+function wireItemBlock(id, docTypeSelect) {
+  const block = document.querySelector(`.item-block[data-item-id="${id}"]`);
+  const questionInput = block.querySelector('.item-question');
+  const answerInput = block.querySelector('.item-answer');
+  const counterBox = block.querySelector('.item-char-counter');
+  const questionTypeSelect = block.querySelector('.item-questionType');
+
+  function updateCounter() {
+    const len = answerInput.value.length;
+    const limit = extractCharLimit(questionInput.value);
+    if (limit) {
+      const over = len > limit;
+      counterBox.innerHTML = `<span class="item-char-count">${len}</span>자 작성됨 / <b>${limit}자 제한</b>${over ? ` <span style="color:var(--miss);font-weight:700">(${len - limit}자 초과!)</span>` : ''}`;
+      counterBox.style.color = over ? 'var(--miss)' : '';
+    } else {
+      counterBox.innerHTML = `<span class="item-char-count">${len}</span>자 작성됨`;
+      counterBox.style.color = '';
+    }
+  }
+  answerInput.addEventListener('input', updateCounter);
+  questionInput.addEventListener('input', updateCounter);
+
+  const updatePlaceholder = () => { questionInput.placeholder = QUESTION_EXAMPLES[questionTypeSelect.value] || ''; };
+  updatePlaceholder();
+  questionTypeSelect.addEventListener('change', () => { updatePlaceholder(); updateCounter(); });
+
+  applyDocTypeToBlock(id, docTypeSelect.value);
+
+  block.querySelector('.item-remove-btn').addEventListener('click', () => {
+    const allBlocks = document.querySelectorAll('.item-block');
+    if (allBlocks.length <= 1) { alert('최소 1개의 문항은 있어야 해요.'); return; }
+    block.remove();
+  });
+}
+
+function applyDocTypeToBlock(id, docTypeVal) {
+  const block = document.querySelector(`.item-block[data-item-id="${id}"]`);
+  const typeRow = block.querySelector('.item-questionType-row');
+  const qLabel = block.querySelector('.item-question-label');
+  const aLabel = block.querySelector('.item-answer-label');
+  const questionInput = block.querySelector('.item-question');
+  const answerInput = block.querySelector('.item-answer');
+  const questionTypeSelect = block.querySelector('.item-questionType');
+  if (docTypeVal === 'cv') {
+    typeRow.style.display = 'none';
+    qLabel.textContent = '경력·활동 항목명';
+    questionInput.placeholder = '예) 마케팅 서포터즈 활동 (2024.03~2024.08)';
+    aLabel.textContent = '작성한 한 줄 소개 (경력기술서 문장)';
+    answerInput.placeholder = '예) SNS 콘텐츠 기획 및 운영을 담당하여 팔로워를 6개월간 40% 증가시킴';
+  } else {
+    typeRow.style.display = '';
+    qLabel.textContent = '자소서 문항';
+    questionInput.placeholder = QUESTION_EXAMPLES[questionTypeSelect.value] || '';
+    aLabel.textContent = '작성한 답변';
+    answerInput.placeholder = '여기에 답변을 붙여넣거나 작성해 주세요.';
+  }
+}
+
 async function renderStudentSubmitForm() {
+  const alreadySubmittedKey = 'moa_resume_submitted_' + TEACHER_ID;
+  if (localStorage.getItem(alreadySubmittedKey)) {
+    app.innerHTML = `
+      ${studentTabsHtml()}
+      <div class="card">
+        <h2>이미 첨삭 요청을 제출하셨어요</h2>
+        <p style="font-size:14px;color:var(--muted);line-height:1.7">이 기기·브라우저로는 이미 한 번 제출하셨어요. 받으신 확인 코드로 "내 결과 확인" 탭에서 결과를 확인해 주세요. 다시 제출이 꼭 필요하시면 강사님께 말씀해 주세요.</p>
+      </div>
+    `;
+    wireStudentTabs();
+    return;
+  }
+
+  itemCounter = 0;
+  const firstId = itemCounter++;
+
   app.innerHTML = `
     ${studentTabsHtml()}
     <div class="card">
       <h2>첨삭 요청</h2>
+      <p style="font-size:13px;color:var(--muted);margin:-4px 0 14px">자소서 문항이 여러 개면 아래 "+ 문항 추가"로 다 모아서 한 번에 제출해 주세요. 제출 후에는 이 기기에서 다시 제출할 수 없으니, 신중하게 작성한 뒤 한 번에 보내주세요.</p>
       <label>이름</label>
       <input type="text" id="studentNameInput" placeholder="본인 이름을 입력해 주세요">
       <label>이메일 주소 (선택)</label>
@@ -590,43 +702,14 @@ async function renderStudentSubmitForm() {
       <select id="presetSelect"><option>불러오는 중...</option></select>
       <div style="font-size:12px;color:var(--muted);margin-top:4px">전공마다 평가 기준이 달라요. 목록에 본인 전공이 없으면 "기본"을 선택하세요.</div>
 
-      <div id="questionTypeRow">
-        <label>문항 유형 (진단 기준이 자동으로 적용됩니다)</label>
-        <select id="questionTypeSelect">
-          <option value="지원동기" data-fw="PREP">지원동기</option>
-          <option value="성격장점" data-fw="PREP">성격 장점</option>
-          <option value="성격단점" data-fw="STAR">성격 단점</option>
-          <option value="협업갈등" data-fw="STAR">협업·갈등 경험</option>
-          <option value="도전경험" data-fw="STAR">도전·성과 경험</option>
-          <option value="실패경험" data-fw="STAR-L">실패 경험</option>
-          <option value="경력활동" data-fw="STAR">경력·활동사항</option>
-          <option value="입사후포부" data-fw="PREP">입사 후 포부</option>
-        </select>
-      </div>
+      <label>지원하는 채용공고의 핵심 내용 (선택, 모든 문항에 공통 적용)</label>
+      <textarea id="jobPostingInput" placeholder="예) [○○기관] 사회복지사 채용 — 사례관리 경험자 우대, 공감·소통 역량 중시"></textarea>
 
-      <label id="questionLabel">자소서 문항</label>
-      <textarea id="questionInput"></textarea>
-
-      <label id="answerLabel">작성한 답변</label>
-      <textarea id="answerInput" style="min-height:160px" placeholder="여기에 자소서 답변을 붙여넣거나 작성해 주세요."></textarea>
-      <div class="counter" id="charCounterBox"><span id="charCount">0</span>자 작성됨</div>
-
-      <details style="margin-top:14px">
-        <summary style="cursor:pointer;font-weight:700;color:var(--navy);font-size:13px">선택 입력 — 채우면 첨삭이 더 정확해져요</summary>
-        <div style="margin-top:10px">
-          <label>이 답변으로 보여주고 싶었던 점 (자가진단, 선택)</label>
-          <textarea id="selfIntentInput" placeholder="예) 저는 이 답변으로 위기 상황에서도 침착하게 대처하는 모습을 보여주고 싶었습니다."></textarea>
-
-          <label>지원하는 채용공고의 핵심 내용 (선택)</label>
-          <textarea id="jobPostingInput" placeholder="예) [○○기관] 사회복지사 채용 — 사례관리 경험자 우대, 공감·소통 역량 중시"></textarea>
-
-          <label>이전 버전 (재작성한 경우, 수정 전 답변을 붙여넣으면 Before/After 비교를 보여드려요)</label>
-          <textarea id="previousAnswerInput" placeholder="예) 이전에 제출했던 답변을 그대로 붙여넣어 주세요."></textarea>
-        </div>
-      </details>
+      <div id="itemsContainer" style="margin-top:18px"></div>
+      <button type="button" class="btn-add-preset" id="addItemBtn" style="margin-bottom:14px">+ 문항 추가</button>
 
       <div class="btn-row">
-        <button class="btn-primary" id="submitBtn">첨삭 요청하기</button>
+        <button class="btn-primary" id="submitBtn">전체 제출하기</button>
       </div>
       <div class="status-msg" id="statusMsg"></div>
     </div>
@@ -634,53 +717,23 @@ async function renderStudentSubmitForm() {
 
   wireStudentTabs();
 
-  const answerInput = document.getElementById('answerInput');
-  const charCount = document.getElementById('charCount');
-  const charCounterBox = document.getElementById('charCounterBox');
-
-  const questionTypeSelect = document.getElementById('questionTypeSelect');
-  const questionInput = document.getElementById('questionInput');
-
-  function updateCharCounter() {
-    const len = answerInput.value.length;
-    const limit = extractCharLimit(questionInput.value);
-    charCount.textContent = len;
-    if (limit) {
-      const over = len > limit;
-      charCounterBox.innerHTML = `<span id="charCount">${len}</span>자 작성됨 / <b>${limit}자 제한</b>${over ? ` <span style="color:var(--miss);font-weight:700">(${len - limit}자 초과!)</span>` : ''}`;
-      charCounterBox.style.color = over ? 'var(--miss)' : '';
-    } else {
-      charCounterBox.innerHTML = `<span id="charCount">${len}</span>자 작성됨`;
-      charCounterBox.style.color = '';
-    }
-  }
-  answerInput.addEventListener('input', updateCharCounter);
-  questionInput.addEventListener('input', updateCharCounter);
-
-  const updatePlaceholder = () => { questionInput.placeholder = QUESTION_EXAMPLES[questionTypeSelect.value] || ''; };
-  updatePlaceholder();
-  questionTypeSelect.addEventListener('change', () => { updatePlaceholder(); updateCharCounter(); });
-
   const docTypeSelect = document.getElementById('docTypeSelect');
-  const questionTypeRow = document.getElementById('questionTypeRow');
-  const questionLabel = document.getElementById('questionLabel');
-  const answerLabel = document.getElementById('answerLabel');
-  const updateDocType = () => {
-    if (docTypeSelect.value === 'cv') {
-      questionTypeRow.style.display = 'none';
-      questionLabel.textContent = '경력·활동 항목명';
-      questionInput.placeholder = '예) 마케팅 서포터즈 활동 (2024.03~2024.08)';
-      answerLabel.textContent = '작성한 한 줄 소개 (경력기술서 문장)';
-      answerInput.placeholder = '예) SNS 콘텐츠 기획 및 운영을 담당하여 팔로워를 6개월간 40% 증가시킴';
-    } else {
-      questionTypeRow.style.display = '';
-      questionLabel.textContent = '자소서 문항';
-      updatePlaceholder();
-      answerLabel.textContent = '작성한 답변';
-      answerInput.placeholder = '여기에 자소서 답변을 붙여넣거나 작성해 주세요.';
-    }
-  };
-  docTypeSelect.addEventListener('change', updateDocType);
+  const itemsContainer = document.getElementById('itemsContainer');
+
+  itemsContainer.insertAdjacentHTML('beforeend', itemBlockHtml(firstId));
+  wireItemBlock(firstId, docTypeSelect);
+
+  document.getElementById('addItemBtn').addEventListener('click', () => {
+    const id = itemCounter++;
+    itemsContainer.insertAdjacentHTML('beforeend', itemBlockHtml(id));
+    wireItemBlock(id, docTypeSelect);
+  });
+
+  docTypeSelect.addEventListener('change', () => {
+    document.querySelectorAll('.item-block').forEach(b => {
+      applyDocTypeToBlock(parseInt(b.getAttribute('data-item-id'), 10), docTypeSelect.value);
+    });
+  });
 
   const presetSelect = document.getElementById('presetSelect');
   try {
@@ -695,10 +748,10 @@ async function renderStudentSubmitForm() {
   document.getElementById('submitBtn').addEventListener('click', async () => {
     const studentName = document.getElementById('studentNameInput').value.trim();
     const studentEmail = document.getElementById('studentEmailInput').value.trim();
-    const question = document.getElementById('questionInput').value.trim();
-    const answer = answerInput.value.trim();
+    const jobPosting = document.getElementById('jobPostingInput').value.trim();
     const statusMsg = document.getElementById('statusMsg');
     const submitBtn = document.getElementById('submitBtn');
+    const isCv = docTypeSelect.value === 'cv';
 
     if (!studentName) {
       statusMsg.textContent = '이름을 입력해 주세요.';
@@ -707,38 +760,46 @@ async function renderStudentSubmitForm() {
       return;
     }
 
-    if (!question || !answer) {
-      statusMsg.textContent = '문항과 답변을 모두 입력해 주세요.';
+    const blocks = Array.from(document.querySelectorAll('.item-block'));
+    const rawItems = blocks.map(b => ({
+      question: b.querySelector('.item-question').value.trim(),
+      answer: b.querySelector('.item-answer').value.trim(),
+      questionType: isCv ? '이력서항목' : b.querySelector('.item-questionType').value,
+      framework: isCv ? 'RESUME' : b.querySelector('.item-questionType').selectedOptions[0].dataset.fw,
+      selfIntent: b.querySelector('.item-selfIntent').value.trim(),
+      previousAnswer: b.querySelector('.item-prevAnswer').value.trim(),
+      charLimit: extractCharLimit(b.querySelector('.item-question').value)
+    }));
+
+    if (rawItems.some(it => !it.question || !it.answer)) {
+      statusMsg.textContent = '모든 문항에 문항 내용과 답변을 입력해 주세요.';
       statusMsg.className = 'status-msg error';
       statusMsg.style.display = 'block';
       return;
     }
 
     submitBtn.disabled = true;
-    submitBtn.textContent = '첨삭 초안 생성 중... (최대 1분)';
+    submitBtn.textContent = `첨삭 초안 생성 중... (문항 ${rawItems.length}개, 최대 ${rawItems.length}분)`;
     statusMsg.style.display = 'none';
 
     try {
       const { config } = await api('/api/config').catch(() => ({ config: { presets: [] } }));
       const preset = (config.presets || []).find(p => p.id === presetSelect.value);
 
-      const isCv = docTypeSelect.value === 'cv';
-      const questionType = isCv ? '이력서항목' : questionTypeSelect.value;
-      const framework = isCv ? 'RESUME' : questionTypeSelect.selectedOptions[0].dataset.fw;
-      const selfIntent = document.getElementById('selfIntentInput').value.trim();
-      const jobPosting = document.getElementById('jobPostingInput').value.trim();
-      const previousAnswer = document.getElementById('previousAnswerInput').value.trim();
-      const charLimit = extractCharLimit(question);
-
-      const aiDraft = await api('/api/feedback', {
-        method: 'POST',
-        body: JSON.stringify({ question, answer, presetPrompt: preset ? preset.prompt : '', framework, questionType, selfIntent, jobPosting, previousAnswer, charLimit })
-      });
+      const itemsWithDraft = await Promise.all(rawItems.map(async (it) => {
+        const aiDraft = await api('/api/feedback', {
+          method: 'POST',
+          body: JSON.stringify({ ...it, presetPrompt: preset ? preset.prompt : '', jobPosting })
+        });
+        return { ...it, aiDraft };
+      }));
 
       const reviewRes = await api('/api/reviews', {
         method: 'POST',
-        body: JSON.stringify({ studentName, studentEmail, question, answer, presetId: presetSelect.value, framework, questionType, selfIntent, jobPosting, previousAnswer, charLimit, aiDraft })
+        body: JSON.stringify({ studentName, studentEmail, presetId: presetSelect.value, docType: docTypeSelect.value, jobPosting, items: itemsWithDraft })
       });
+
+      localStorage.setItem(alreadySubmittedKey, '1');
 
       statusMsg.innerHTML = `
         제출이 완료되었습니다. 강사님 검수 후 결과를 확인하실 수 있어요.<br>
@@ -750,19 +811,15 @@ async function renderStudentSubmitForm() {
       `;
       statusMsg.className = 'status-msg';
       statusMsg.style.display = 'block';
-      document.getElementById('questionInput').value = '';
-      answerInput.value = '';
-      document.getElementById('selfIntentInput').value = '';
-      document.getElementById('jobPostingInput').value = '';
-      document.getElementById('previousAnswerInput').value = '';
-      updateCharCounter();
+      document.getElementById('itemsContainer').innerHTML = '';
+      document.getElementById('addItemBtn').style.display = 'none';
+      submitBtn.style.display = 'none';
     } catch (e) {
       statusMsg.textContent = '오류가 발생했습니다: ' + e.message;
       statusMsg.className = 'status-msg error';
       statusMsg.style.display = 'block';
-    } finally {
       submitBtn.disabled = false;
-      submitBtn.textContent = '첨삭 요청하기';
+      submitBtn.textContent = '전체 제출하기';
     }
   });
 }
@@ -953,61 +1010,71 @@ function diffHtml(oldStr, newStr) {
   }).join(' ');
 }
 
-function buildReviewCard(item, presetName) {
-  const wrap = document.createElement('div');
-  wrap.className = 'review-item';
+function reviewItemBlockHtml(item, idx) {
   const d = item.aiDraft || {};
   const framework = d.frameworkUsed || item.framework || 'STAR';
+  return `
+    <div class="review-sub-item" data-idx="${idx}" style="border-top:1px solid var(--line);padding-top:14px;margin-top:14px">
+      <div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:8px">문항 ${idx + 1} · ${escapeHtml(item.questionType || '')} · ${framework}</div>
+      <div class="field-block">
+        <div class="fb-label">자소서 문항</div>
+        <p style="white-space:pre-wrap">${escapeHtml(item.question)}</p>
+      </div>
+      <div class="field-block">
+        <div class="fb-label">학생 답변</div>
+        <p style="white-space:pre-wrap">${escapeHtml(item.answer)}</p>
+      </div>
+      <div class="star-row">${structureTagsHtml(framework, d.structure)}</div>
+      <div class="star-row">${concretenessTagsHtml(d.concreteness)}</div>
+      ${riskFlagsHtml(d.riskFlags)}
+      ${aiTracePhrasesHtml(d.aiTracePhrases)}
+      ${jobMatchHtml(d.jobMatch)}
+      ${item.selfIntent ? `<div class="field-block"><div class="fb-label">학생 자가진단 — 보여주고 싶었던 점</div><p>${escapeHtml(item.selfIntent)}</p></div>` : ''}
+      ${d.intentGapComment ? `<div class="field-block" style="background:var(--warn-bg);padding:10px 12px;border-radius:8px"><div class="fb-label">자가진단 vs 실제 답변 코멘트</div><p>${escapeHtml(d.intentGapComment)}</p></div>` : ''}
+      ${item.previousAnswer ? `<div class="field-block"><div class="fb-label">Before → After 비교</div><p style="white-space:pre-wrap;line-height:1.9">${diffHtml(item.previousAnswer, item.answer)}</p>${d.revisionComment ? `<p style="margin-top:8px;font-size:13px;color:var(--navy)"><b>수정 평가:</b> ${escapeHtml(d.revisionComment)}</p>` : ''}</div>` : ''}
+      ${d.charLimitNote ? `<div class="field-block" style="background:var(--warn-bg);padding:10px 12px;border-radius:8px"><div class="fb-label">⚠ 글자수 초과 (제한 ${item.charLimit}자)</div><p>${escapeHtml(d.charLimitNote)}</p></div>` : ''}
+
+      <div class="field-block" style="background:var(--navy-light);padding:10px 12px;border-radius:8px">
+        <div class="fb-label">면접관 시점 — 이 답변으로 추론되는 평소 모습</div>
+        <p>${escapeHtml(d.interviewerInference)}</p>
+      </div>
+
+      <label>강점 (수정 가능)</label>
+      <textarea class="edit-strengths" data-idx="${idx}">${escapeHtml(d.strengths)}</textarea>
+      <label>개선점 (수정 가능)</label>
+      <textarea class="edit-improvements" data-idx="${idx}">${escapeHtml(d.improvements)}</textarea>
+      <label>다듬은 문장 (수정 가능)</label>
+      <textarea class="edit-polished" data-idx="${idx}" style="min-height:120px">${escapeHtml(d.polishedText)}</textarea>
+
+      <label>예상 꼬리질문 · 이유형 (수정 가능)</label>
+      <textarea class="edit-fu-reason" data-idx="${idx}">${escapeHtml((d.followUpQuestions || {}).reasonType)}</textarea>
+      <label>예상 꼬리질문 · 대안형 (수정 가능)</label>
+      <textarea class="edit-fu-alt" data-idx="${idx}">${escapeHtml((d.followUpQuestions || {}).alternativeType)}</textarea>
+      <label>예상 꼬리질문 · 수치형 (수정 가능)</label>
+      <textarea class="edit-fu-quant" data-idx="${idx}">${escapeHtml((d.followUpQuestions || {}).quantifyType)}</textarea>
+    </div>
+  `;
+}
+
+function buildReviewCard(record, presetName) {
+  const wrap = document.createElement('div');
+  wrap.className = 'review-item';
+  const items = record.items || [];
   wrap.innerHTML = `
     <details>
       <summary style="cursor:pointer">
-        <span style="font-weight:700;color:var(--navy);font-size:15px">${escapeHtml(item.studentName) || '(이름 없음)'}</span>
+        <span style="font-weight:700;color:var(--navy);font-size:15px">${escapeHtml(record.studentName) || '(이름 없음)'}</span>
         <span class="star-tag ok" style="margin-left:6px">${escapeHtml(presetName || '기본')}</span>
-        <span style="font-size:12px;color:var(--muted);margin-left:8px">코드 ${escapeHtml(item.code) || '-'} · ${new Date(item.createdAt).toLocaleString('ko-KR')} · ${framework} · 클릭해서 펼치기</span>
+        <span style="font-size:12px;color:var(--muted);margin-left:8px">문항 ${items.length}개 · 코드 ${escapeHtml(record.code) || '-'} · ${new Date(record.createdAt).toLocaleString('ko-KR')} · 클릭해서 펼치기</span>
       </summary>
       <div style="margin-top:14px">
-    <div class="field-block">
-      <div class="fb-label">자소서 문항</div>
-      <p style="white-space:pre-wrap">${escapeHtml(item.question)}</p>
-    </div>
-    <div class="field-block">
-      <div class="fb-label">학생 답변</div>
-      <p style="white-space:pre-wrap">${escapeHtml(item.answer)}</p>
-    </div>
-    <div class="star-row">${structureTagsHtml(framework, d.structure)}</div>
-    <div class="star-row">${concretenessTagsHtml(d.concreteness)}</div>
-    ${riskFlagsHtml(d.riskFlags)}
-    ${aiTracePhrasesHtml(d.aiTracePhrases)}
-    ${jobMatchHtml(d.jobMatch)}
-    ${item.selfIntent ? `<div class="field-block"><div class="fb-label">학생 자가진단 — 보여주고 싶었던 점</div><p>${escapeHtml(item.selfIntent)}</p></div>` : ''}
-    ${d.intentGapComment ? `<div class="field-block" style="background:var(--warn-bg);padding:10px 12px;border-radius:8px"><div class="fb-label">자가진단 vs 실제 답변 코멘트</div><p>${escapeHtml(d.intentGapComment)}</p></div>` : ''}
-    ${item.previousAnswer ? `<div class="field-block"><div class="fb-label">Before → After 비교</div><p style="white-space:pre-wrap;line-height:1.9">${diffHtml(item.previousAnswer, item.answer)}</p>${d.revisionComment ? `<p style="margin-top:8px;font-size:13px;color:var(--navy)"><b>수정 평가:</b> ${escapeHtml(d.revisionComment)}</p>` : ''}</div>` : ''}
-    ${d.charLimitNote ? `<div class="field-block" style="background:var(--warn-bg);padding:10px 12px;border-radius:8px"><div class="fb-label">⚠ 글자수 초과 (제한 ${item.charLimit}자)</div><p>${escapeHtml(d.charLimitNote)}</p></div>` : ''}
-
-    <div class="field-block" style="background:var(--navy-light);padding:10px 12px;border-radius:8px">
-      <div class="fb-label">면접관 시점 — 이 답변으로 추론되는 평소 모습</div>
-      <p>${escapeHtml(d.interviewerInference)}</p>
-    </div>
-
-    <label>강점 (수정 가능)</label>
-    <textarea class="edit-strengths">${escapeHtml(d.strengths)}</textarea>
-    <label>개선점 (수정 가능)</label>
-    <textarea class="edit-improvements">${escapeHtml(d.improvements)}</textarea>
-    <label>다듬은 문장 (수정 가능)</label>
-    <textarea class="edit-polished" style="min-height:120px">${escapeHtml(d.polishedText)}</textarea>
-
-    <label>예상 꼬리질문 · 이유형 (수정 가능)</label>
-    <textarea class="edit-fu-reason">${escapeHtml((d.followUpQuestions || {}).reasonType)}</textarea>
-    <label>예상 꼬리질문 · 대안형 (수정 가능)</label>
-    <textarea class="edit-fu-alt">${escapeHtml((d.followUpQuestions || {}).alternativeType)}</textarea>
-    <label>예상 꼬리질문 · 수치형 (수정 가능)</label>
-    <textarea class="edit-fu-quant">${escapeHtml((d.followUpQuestions || {}).quantifyType)}</textarea>
-
-    <div class="btn-row">
-      <button class="btn-primary approve-btn">승인 및 링크 생성</button>
-      <button class="btn-danger reject-btn">삭제</button>
-    </div>
-    <div class="link-box" style="display:none"></div>
+        ${record.jobPosting ? `<div class="field-block"><div class="fb-label">지원 채용공고 핵심 내용 (전체 문항 공통)</div><p style="white-space:pre-wrap">${escapeHtml(record.jobPosting)}</p></div>` : ''}
+        ${items.map((it, idx) => reviewItemBlockHtml(it, idx)).join('')}
+        <div class="btn-row">
+          <button class="btn-primary approve-btn">전체 승인 및 링크 생성</button>
+          <button class="btn-danger reject-btn">삭제</button>
+        </div>
+        <div class="link-box" style="display:none"></div>
       </div>
     </details>
   `;
@@ -1017,37 +1084,48 @@ function buildReviewCard(item, presetName) {
     btn.disabled = true;
     btn.textContent = '처리 중...';
     try {
+      const finalItems = items.map((it, idx) => {
+        const d = it.aiDraft || {};
+        const framework = d.frameworkUsed || it.framework || 'STAR';
+        return {
+          questionType: it.questionType,
+          question: it.question,
+          answer: it.answer,
+          frameworkUsed: framework,
+          structure: d.structure,
+          concreteness: d.concreteness,
+          riskFlags: d.riskFlags || [],
+          aiTracePhrases: d.aiTracePhrases || [],
+          interviewerInference: d.interviewerInference,
+          jobMatch: d.jobMatch || null,
+          intentGapComment: d.intentGapComment || null,
+          previousAnswer: it.previousAnswer || null,
+          revisionComment: d.revisionComment || null,
+          charLimit: it.charLimit || null,
+          charLimitNote: d.charLimitNote || null,
+          missingElements: d.missingElements || [],
+          strengths: wrap.querySelector(`.edit-strengths[data-idx="${idx}"]`).value,
+          improvements: wrap.querySelector(`.edit-improvements[data-idx="${idx}"]`).value,
+          polishedText: wrap.querySelector(`.edit-polished[data-idx="${idx}"]`).value,
+          followUpQuestions: {
+            reasonType: wrap.querySelector(`.edit-fu-reason[data-idx="${idx}"]`).value,
+            alternativeType: wrap.querySelector(`.edit-fu-alt[data-idx="${idx}"]`).value,
+            quantifyType: wrap.querySelector(`.edit-fu-quant[data-idx="${idx}"]`).value
+          }
+        };
+      });
+
       const payload = {
-        studentName: item.studentName || '',
-        studentEmail: item.studentEmail || '',
-        code: item.code || '',
+        studentName: record.studentName || '',
+        studentEmail: record.studentEmail || '',
+        code: record.code || '',
         presetName: presetName || '기본',
-        question: item.question,
-        answer: item.answer,
-        frameworkUsed: framework,
-        structure: d.structure,
-        concreteness: d.concreteness,
-        riskFlags: d.riskFlags || [],
-        aiTracePhrases: d.aiTracePhrases || [],
-        interviewerInference: d.interviewerInference,
-        jobMatch: d.jobMatch || null,
-        intentGapComment: d.intentGapComment || null,
-        previousAnswer: item.previousAnswer || null,
-        revisionComment: d.revisionComment || null,
-        charLimit: item.charLimit || null,
-        charLimitNote: d.charLimitNote || null,
-        missingElements: d.missingElements || [],
-        strengths: wrap.querySelector('.edit-strengths').value,
-        improvements: wrap.querySelector('.edit-improvements').value,
-        polishedText: wrap.querySelector('.edit-polished').value,
-        followUpQuestions: {
-          reasonType: wrap.querySelector('.edit-fu-reason').value,
-          alternativeType: wrap.querySelector('.edit-fu-alt').value,
-          quantifyType: wrap.querySelector('.edit-fu-quant').value
-        }
+        docType: record.docType || 'resume',
+        jobPosting: record.jobPosting || '',
+        items: finalItems
       };
       const { id } = await api('/api/results', { method: 'POST', body: JSON.stringify(payload) });
-      await api('/api/reviews?id=' + item.id, { method: 'DELETE' });
+      await api('/api/reviews?id=' + record.id, { method: 'DELETE' });
 
       const link = location.origin + location.pathname + '?t=' + encodeURIComponent(TEACHER_ID) + '#result=' + id;
       const linkBox = wrap.querySelector('.link-box');
@@ -1058,13 +1136,13 @@ function buildReviewCard(item, presetName) {
     } catch (err) {
       alert('오류: ' + err.message);
       btn.disabled = false;
-      btn.textContent = '승인 및 링크 생성';
+      btn.textContent = '전체 승인 및 링크 생성';
     }
   });
 
   wrap.querySelector('.reject-btn').addEventListener('click', async () => {
     if (!confirm('이 검수 항목을 삭제할까요?')) return;
-    await api('/api/reviews?id=' + item.id, { method: 'DELETE' });
+    await api('/api/reviews?id=' + record.id, { method: 'DELETE' });
     wrap.remove();
   });
 
@@ -1240,7 +1318,7 @@ async function renderResultsTab(content) {
     const row = document.createElement('div');
     row.className = 'preset-item';
     row.innerHTML = `
-      <div><b>${escapeHtml(it.studentName) || '(이름 없음)'}</b> — ${escapeHtml(it.question).slice(0, 30)}...<div style="font-size:12px;color:var(--muted)">${new Date(it.approvedAt).toLocaleString('ko-KR')}</div></div>
+      <div><b>${escapeHtml(it.studentName) || '(이름 없음)'}</b> — 문항 ${it.itemCount || 1}개<div style="font-size:12px;color:var(--muted)">${new Date(it.approvedAt).toLocaleString('ko-KR')}</div></div>
       <div class="btn-row" style="margin:0">
         <a href="${link}" target="_blank" class="btn-secondary" style="text-decoration:none;padding:8px 14px;border-radius:8px">결과 보기</a>
         <button class="btn-danger delete-result-btn">삭제</button>
@@ -1291,49 +1369,59 @@ async function renderResultsTab(content) {
 }
 
 // ---------- 학생 결과 열람 화면 ----------
-function resultContentHtml(item) {
+function resultItemBlockHtml(item, idx, total) {
+  return `
+    <div class="result-block" style="${idx > 0 ? 'border-top:2px solid var(--line);padding-top:18px;margin-top:18px' : ''}">
+      ${total > 1 ? `<div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:8px">문항 ${idx + 1} / ${total} · ${escapeHtml(item.questionType || '')}</div>` : ''}
+      <h3>${escapeHtml(item.questionType === '이력서항목' ? '경력·활동 항목' : '자소서 문항')}</h3>
+      <p style="white-space:pre-wrap">${escapeHtml(item.question)}</p>
+    </div>
+    <div class="result-block">
+      <h3>제출한 답변</h3>
+      <p style="white-space:pre-wrap">${escapeHtml(item.answer)}</p>
+    </div>
+    <div class="result-block">
+      <h3>${(item.frameworkUsed || 'STAR')} 구조 진단</h3>
+      <div class="star-row">${structureTagsHtml(item.frameworkUsed || 'STAR', item.structure)}</div>
+      <div class="star-row">${concretenessTagsHtml(item.concreteness)}</div>
+      ${riskFlagsHtml(item.riskFlags)}
+      ${aiTracePhrasesHtml(item.aiTracePhrases)}
+    </div>
+    ${item.jobMatch ? `<div class="result-block"><h3>채용공고 매칭도</h3>${jobMatchHtml(item.jobMatch)}</div>` : ''}
+    ${item.intentGapComment ? `<div class="result-block"><h3>내가 밝힌 의도 vs 실제 답변</h3><p style="white-space:pre-wrap;background:var(--warn-bg);padding:12px;border-radius:8px">${escapeHtml(item.intentGapComment)}</p></div>` : ''}
+    ${item.previousAnswer ? `<div class="result-block"><h3>Before → After 비교</h3><p style="white-space:pre-wrap;line-height:1.9;background:var(--green-light);padding:12px;border-radius:8px">${diffHtml(item.previousAnswer, item.answer)}</p>${item.revisionComment ? `<p style="margin-top:8px">${escapeHtml(item.revisionComment)}</p>` : ''}</div>` : ''}
+    ${item.charLimitNote ? `<div class="result-block"><h3>⚠ 글자수 초과 (제한 ${item.charLimit}자)</h3><p style="white-space:pre-wrap;background:var(--warn-bg);padding:12px;border-radius:8px">${escapeHtml(item.charLimitNote)}</p></div>` : ''}
+    <div class="result-block">
+      <h3>면접관 시점 — 이 답변으로 추론되는 평소 모습</h3>
+      <p style="white-space:pre-wrap;background:var(--navy-light);padding:12px;border-radius:8px">${escapeHtml(item.interviewerInference)}</p>
+    </div>
+    <div class="result-block">
+      <h3>잘된 점</h3>
+      <p style="white-space:pre-wrap">${escapeHtml(item.strengths)}</p>
+    </div>
+    <div class="result-block">
+      <h3>개선 방향</h3>
+      <p style="white-space:pre-wrap">${escapeHtml(item.improvements)}</p>
+    </div>
+    <div class="result-block">
+      <h3>다듬은 문장 제안</h3>
+      <p style="white-space:pre-wrap;background:var(--green-light);padding:12px;border-radius:8px">${escapeHtml(item.polishedText)}</p>
+    </div>
+    <div class="result-block">
+      <h3>예상 꼬리질문 (면접 대비)</h3>
+      ${followUpHtml(item.followUpQuestions)}
+    </div>
+  `;
+}
+
+function resultContentHtml(record) {
+  const items = record.items || [];
   return `
     <div class="card">
-      <h2>첨삭 결과${item.studentName ? ` — ${escapeHtml(item.studentName)}님` : ''}</h2>
-      <div class="result-block">
-        <h3>자소서 문항</h3>
-        <p style="white-space:pre-wrap">${escapeHtml(item.question)}</p>
-      </div>
-      <div class="result-block">
-        <h3>제출한 답변</h3>
-        <p style="white-space:pre-wrap">${escapeHtml(item.answer)}</p>
-      </div>
-      <div class="result-block">
-        <h3>${(item.frameworkUsed || 'STAR')} 구조 진단</h3>
-        <div class="star-row">${structureTagsHtml(item.frameworkUsed || 'STAR', item.structure)}</div>
-        <div class="star-row">${concretenessTagsHtml(item.concreteness)}</div>
-        ${riskFlagsHtml(item.riskFlags)}
-        ${aiTracePhrasesHtml(item.aiTracePhrases)}
-      </div>
-      ${item.jobMatch ? `<div class="result-block"><h3>채용공고 매칭도</h3>${jobMatchHtml(item.jobMatch)}</div>` : ''}
-      ${item.intentGapComment ? `<div class="result-block"><h3>내가 밝힌 의도 vs 실제 답변</h3><p style="white-space:pre-wrap;background:var(--warn-bg);padding:12px;border-radius:8px">${escapeHtml(item.intentGapComment)}</p></div>` : ''}
-      ${item.previousAnswer ? `<div class="result-block"><h3>Before → After 비교</h3><p style="white-space:pre-wrap;line-height:1.9;background:var(--green-light);padding:12px;border-radius:8px">${diffHtml(item.previousAnswer, item.answer)}</p>${item.revisionComment ? `<p style="margin-top:8px">${escapeHtml(item.revisionComment)}</p>` : ''}</div>` : ''}
-      ${item.charLimitNote ? `<div class="result-block"><h3>⚠ 글자수 초과 (제한 ${item.charLimit}자)</h3><p style="white-space:pre-wrap;background:var(--warn-bg);padding:12px;border-radius:8px">${escapeHtml(item.charLimitNote)}</p></div>` : ''}
-      <div class="result-block">
-        <h3>면접관 시점 — 이 답변으로 추론되는 평소 모습</h3>
-        <p style="white-space:pre-wrap;background:var(--navy-light);padding:12px;border-radius:8px">${escapeHtml(item.interviewerInference)}</p>
-      </div>
-      <div class="result-block">
-        <h3>잘된 점</h3>
-        <p style="white-space:pre-wrap">${escapeHtml(item.strengths)}</p>
-      </div>
-      <div class="result-block">
-        <h3>개선 방향</h3>
-        <p style="white-space:pre-wrap">${escapeHtml(item.improvements)}</p>
-      </div>
-      <div class="result-block">
-        <h3>다듬은 문장 제안</h3>
-        <p style="white-space:pre-wrap;background:var(--green-light);padding:12px;border-radius:8px">${escapeHtml(item.polishedText)}</p>
-      </div>
-      <div class="result-block">
-        <h3>예상 꼬리질문 (면접 대비)</h3>
-        ${followUpHtml(item.followUpQuestions)}
-      </div>
+      <h2>첨삭 결과${record.studentName ? ` — ${escapeHtml(record.studentName)}님` : ''}</h2>
+      ${items.length > 1 ? `<p style="font-size:13px;color:var(--muted);margin-top:-6px">총 ${items.length}개 문항의 첨삭 결과예요.</p>` : ''}
+      ${record.jobPosting ? `<div class="result-block"><h3>지원 채용공고 핵심 내용</h3><p style="white-space:pre-wrap">${escapeHtml(record.jobPosting)}</p></div>` : ''}
+      ${items.map((it, idx) => resultItemBlockHtml(it, idx, items.length)).join('')}
     </div>
   `;
 }
