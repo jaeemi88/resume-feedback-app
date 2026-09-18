@@ -482,7 +482,12 @@ function renderMasterTeacherList() {
 
 function route() {
   const params = new URLSearchParams(location.search);
-  if (params.get('master') === '1') { renderMasterTeacherList(); return; }
+  if (params.get('master') === '1') {
+    document.body.classList.add('role-teacher');
+    document.getElementById('roleBadge').textContent = '관리자';
+    renderMasterTeacherList();
+    return;
+  }
   const hash = location.hash;
   if (hash.indexOf('#result=') === 0) {
     if (!TEACHER_ID) { renderMissingTeacherNotice(); return; }
