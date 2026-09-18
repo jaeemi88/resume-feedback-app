@@ -45,6 +45,18 @@
     color:rgba(255,255,255,.65);
     margin-bottom:4px;
     letter-spacing:.2px;
+    display:flex;
+    align-items:center;
+    gap:5px;
+  }
+  header .header-sub .brand-logo{
+    width:14px;
+    height:14px;
+    flex-shrink:0;
+  }
+  header .header-sub .brand-name{
+    color:#F5B34A;
+    font-weight:700;
   }
   header h1{
     font-size:20px;
@@ -206,7 +218,7 @@
 <body>
 <header>
   <div>
-    <div class="header-sub">진로모아커리어센터 · MOA FORMULA</div>
+    <div class="header-sub"><img class="brand-logo" src="data:image/png;base64,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" alt=""><span class="brand-name">진로모아커리어센터</span> · MOA FORMULA</div>
     <h1>자소서·이력서 첨삭</h1>
   </div>
   <span class="badge" id="roleBadge">학생용</span>
@@ -317,18 +329,42 @@ function renderTeacherSetup() {
     <div class="card">
       <h2>강사 코드 설정</h2>
       <p>여러 강사님이 같은 앱을 함께 쓰기 때문에, 자료가 서로 섞이지 않도록 <b>본인만의 고유 코드</b>가 필요합니다. 영문·숫자로 짧게 만들어 주세요 (예: kimteacher, park01). 한 번 정하시면 계속 같은 코드로 접속하시면 됩니다.</p>
+      <label>강사 이름</label>
+      <input type="text" id="teacherNameInput" placeholder="예: 김강사">
       <label>강사 코드</label>
       <input type="text" id="teacherCodeInput" placeholder="예: kimteacher">
+      <label>관리자 비밀번호 <span style="font-weight:400;color:var(--muted)">(처음 등록하는 코드일 때만 필요, 이미 등록된 코드면 비워두세요)</span></label>
+      <input type="text" id="teacherPasswordInput" placeholder="원장님께 받은 비밀번호">
       <div class="btn-row"><button class="btn-primary" id="setTeacherBtn">시작하기</button></div>
+      <div id="teacherSetupError" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
     </div>
   `;
-  document.getElementById('setTeacherBtn').addEventListener('click', () => {
+  document.getElementById('setTeacherBtn').addEventListener('click', async () => {
     const code = document.getElementById('teacherCodeInput').value.trim().toLowerCase().replace(/[^a-z0-9가-힣_-]/g, '');
-    if (!code) { alert('코드를 입력해 주세요.'); return; }
-    const p = new URLSearchParams(location.search);
-    p.set('admin', '1');
-    p.set('t', code);
-    location.href = location.pathname + '?' + p.toString();
+    const name = document.getElementById('teacherNameInput').value.trim();
+    const password = document.getElementById('teacherPasswordInput').value;
+    const errEl = document.getElementById('teacherSetupError');
+    const btn = document.getElementById('setTeacherBtn');
+    errEl.style.display = 'none';
+    if (!code) { errEl.textContent = '코드를 입력해 주세요.'; errEl.style.display = 'block'; return; }
+    btn.disabled = true; btn.textContent = '확인 중...';
+    try {
+      const res = await fetch('/api/teacher-registry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, name, password, app: '자소서·이력서 첨삭' })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '등록에 실패했습니다.');
+      const p = new URLSearchParams(location.search);
+      p.set('admin', '1');
+      p.set('t', code);
+      location.href = location.pathname + '?' + p.toString();
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = '시작하기';
+    }
   });
 }
 
@@ -336,7 +372,49 @@ function renderMissingTeacherNotice() {
   app.innerHTML = `<div class="card"><div class="empty">이 링크에는 담당 강사 정보가 없어요. 강사님이 안내한 QR코드나 링크로 다시 접속해 주세요.</div></div>`;
 }
 
+function renderMasterTeacherList() {
+  app.innerHTML = `
+    <div class="card">
+      <h2>승인된 강사 목록</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">원장님만 보실 수 있는 화면입니다. 관리자 비밀번호를 입력하면 지금까지 등록된 모든 강사님이 나옵니다 (모의면접·자소서·트래커 세 앱 공통 목록입니다).</p>
+      <label>관리자 비밀번호</label>
+      <input type="text" id="masterPasswordInput" placeholder="관리자 비밀번호">
+      <div class="btn-row"><button class="btn-primary" id="masterListBtn">목록 보기</button></div>
+      <div id="masterListError" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
+      <div id="masterListResult" style="margin-top:16px"></div>
+    </div>
+  `;
+  document.getElementById('masterListBtn').addEventListener('click', async () => {
+    const pw = document.getElementById('masterPasswordInput').value;
+    const errEl = document.getElementById('masterListError');
+    const resultEl = document.getElementById('masterListResult');
+    errEl.style.display = 'none';
+    resultEl.innerHTML = '불러오는 중...';
+    try {
+      const res = await fetch('/api/teacher-registry?master=' + encodeURIComponent(pw));
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '조회에 실패했습니다.');
+      if (!data.teachers.length) {
+        resultEl.innerHTML = '<div class="empty">아직 등록된 강사가 없습니다.</div>';
+        return;
+      }
+      resultEl.innerHTML = data.teachers.map(t => `
+        <div style="border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:8px">
+          <b>${t.name}</b> <span style="color:var(--muted);font-size:12px">(코드: ${t.code})</span><br>
+          <span style="font-size:12px;color:var(--muted)">등록일: ${new Date(t.approvedAt).toLocaleDateString('ko-KR')} · 첫 등록 앱: ${t.firstApp || '-'}</span>
+        </div>
+      `).join('');
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.style.display = 'block';
+      resultEl.innerHTML = '';
+    }
+  });
+}
+
 function route() {
+  const params = new URLSearchParams(location.search);
+  if (params.get('master') === '1') { renderMasterTeacherList(); return; }
   const hash = location.hash;
   if (hash.indexOf('#result=') === 0) {
     if (!TEACHER_ID) { renderMissingTeacherNotice(); return; }
