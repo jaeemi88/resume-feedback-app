@@ -1,6 +1,42 @@
 // 자소서 문항+답변을 받아 STAR 진단 + 첨삭 초안을 생성하는 서버 함수
 // (모의면접 앱의 /api/feedback.js와 동일한 구조 — 질문/답변 대신 자소서 문항/작성 내용을 사용)
 
+// AI가 만든 JSON 응답 안에 줄바꿈이 이스케이프 없이 그대로 들어가는 경우가 있어
+// (문자열 안의 실제 개행문자), JSON.parse가 "Unterminated string" 오류를 내는 걸 막기 위한
+// 안전장치입니다. 문자열(따옴표) 안에 있는 개행·탭만 골라 \n, \t로 바꿔줍니다.
+function sanitizeJsonString(raw) {
+  let result = '';
+  let inString = false;
+  let escaped = false;
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+    if (inString) {
+      if (escaped) {
+        result += ch;
+        escaped = false;
+      } else if (ch === '\\') {
+        result += ch;
+        escaped = true;
+      } else if (ch === '"') {
+        result += ch;
+        inString = false;
+      } else if (ch === '\n') {
+        result += '\\n';
+      } else if (ch === '\r') {
+        result += '\\r';
+      } else if (ch === '\t') {
+        result += '\\t';
+      } else {
+        result += ch;
+      }
+    } else {
+      if (ch === '"') inString = true;
+      result += ch;
+    }
+  }
+  return result;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'POST 요청만 허용됩니다.' });
@@ -149,10 +185,14 @@ MOA FORMULA의 핵심 전제: "면접관은 지원자의 '지금 이 순간'을 
     try {
       feedback = JSON.parse(clean);
     } catch (parseErr) {
-      return res.status(500).json({
-        error: 'AI 응답 처리 중 오류가 발생했습니다.',
-        detail: `JSON 파싱 실패. AI 원본 응답: ${clean.slice(0, 500)}`
-      });
+      try {
+        feedback = JSON.parse(sanitizeJsonString(clean));
+      } catch (parseErr2) {
+        return res.status(500).json({
+          error: 'AI 응답 처리 중 오류가 발생했습니다.',
+          detail: `JSON 파싱 실패. AI 원본 응답: ${clean.slice(0, 500)}`
+        });
+      }
     }
 
     return res.status(200).json(feedback);
