@@ -385,105 +385,213 @@ function renderMissingTeacherNotice() {
 function renderMasterTeacherList() {
   app.innerHTML = `
     <div class="card">
-      <h2>새 초대코드 발급</h2>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">원장님만 보실 수 있는 화면입니다. 새 강사님 한 분당 코드를 하나씩 발급해서 전달해 주세요. 한 번 쓰면 그 코드는 다시 못 씁니다.</p>
-      <label>관리자 비밀번호</label>
+      <h2>관리자 비밀번호</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">원장님만 보실 수 있는 화면입니다. 비밀번호를 입력한 뒤 아래 기능을 사용하세요.</p>
       <input type="text" id="masterPasswordInput" placeholder="관리자 비밀번호">
-      <div class="btn-row"><button class="btn-primary" id="genInviteBtn">초대코드 발급하기</button></div>
+    </div>
+    <div class="card">
+      <h2>새 초대코드 발급</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">새 강사님 한 분당 코드를 하나씩 발급해서 전달해 주세요. 한 번 쓰면 그 코드는 다시 못 씁니다.</p>
+      <div class="btn-row" style="margin-top:0"><button class="btn-primary" id="genInviteBtn">초대코드 발급하기</button></div>
       <div id="genInviteError" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
       <div id="genInviteResult" style="margin-top:12px;font-size:15px;font-weight:700;display:none"></div>
     </div>
     <div class="card">
       <h2>승인된 강사 목록</h2>
-      <div class="btn-row"><button class="btn-primary" id="masterListBtn">강사 목록 보기</button></div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">강사를 삭제하면 세 앱(모의면접·자소서·트래커) 강사 목록에서 빠지고, 이 앱의 강사 화면과 학생 제출 링크가 막혀요. 프리셋·첨삭 기록은 보관되어 언제든 복구할 수 있어요.</p>
+      <div class="btn-row" style="margin-top:0"><button class="btn-primary" id="masterListBtn">강사 목록 보기</button></div>
       <div id="masterListError" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
       <div id="masterListResult" style="margin-top:16px"></div>
     </div>
     <div class="card">
       <h2>발급된 초대코드 목록</h2>
-      <div class="btn-row"><button class="btn-primary" id="inviteListBtn">초대코드 목록 보기</button></div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">아직 사용되지 않은 코드는 "취소"로 무효화할 수 있어요.</p>
+      <div class="btn-row" style="margin-top:0"><button class="btn-primary" id="inviteListBtn">초대코드 목록 보기</button></div>
       <div id="inviteListError" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
       <div id="inviteListResult" style="margin-top:16px"></div>
     </div>
+    <div class="card">
+      <h2>삭제된 강사 (복구 가능)</h2>
+      <div class="btn-row" style="margin-top:0"><button class="btn-primary" id="removedListBtn">삭제된 강사 보기</button></div>
+      <div id="removedListError" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
+      <div id="removedListResult" style="margin-top:16px"></div>
+    </div>
   `;
 
-  document.getElementById('genInviteBtn').addEventListener('click', async () => {
-    const pw = document.getElementById('masterPasswordInput').value;
-    const errEl = document.getElementById('genInviteError');
-    const resultEl = document.getElementById('genInviteResult');
-    errEl.style.display = 'none'; resultEl.style.display = 'none';
+  const pw = () => document.getElementById('masterPasswordInput').value;
+  const rowStyle = 'border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap';
+
+  async function registryPost(body) {
+    const res = await fetch('/api/teacher-registry', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...body, master: pw() })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || '요청에 실패했습니다.');
+    return data;
+  }
+
+  async function registryGet(listParam) {
+    const res = await fetch('/api/teacher-registry?' + (listParam ? 'list=' + listParam + '&' : '') + 'master=' + encodeURIComponent(pw()));
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || '조회에 실패했습니다.');
+    return data;
+  }
+
+  function showError(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.style.display = msg ? 'block' : 'none';
+  }
+
+  async function loadTeachers() {
+    const resultEl = document.getElementById('masterListResult');
+    showError('masterListError', '');
+    resultEl.innerHTML = '불러오는 중...';
     try {
-      const res = await fetch('/api/teacher-registry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'generateInvite', master: pw })
+      const data = await registryGet('');
+      if (!data.teachers.length) { resultEl.innerHTML = '<div class="empty">아직 등록된 강사가 없습니다.</div>'; return; }
+      resultEl.innerHTML = data.teachers.map(t => `
+        <div style="${rowStyle}">
+          <div>
+            <b>${escapeHtml(t.name)}</b> <span style="color:var(--muted);font-size:12px">(코드: ${escapeHtml(t.code)})</span><br>
+            <span style="font-size:12px;color:var(--muted)">등록일: ${new Date(t.approvedAt).toLocaleDateString('ko-KR')} · 첫 등록 앱: ${escapeHtml(t.firstApp) || '-'}</span>
+          </div>
+          <button class="btn-danger teacher-del-btn" data-code="${escapeHtml(t.code)}" data-name="${escapeHtml(t.name)}">삭제</button>
+        </div>
+      `).join('');
+      resultEl.querySelectorAll('.teacher-del-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const { code, name } = btn.dataset;
+          if (!confirm(`${name}(${code}) 강사를 삭제할까요?\n\n· 세 앱(모의면접·자소서·트래커) 강사 목록에서 모두 빠져요.\n· 이 앱의 강사 화면과 학생 제출 링크가 막혀요.\n· 프리셋·첨삭 기록은 보관되며, "삭제된 강사"에서 복구할 수 있어요.`)) return;
+          btn.disabled = true; btn.textContent = '삭제 중...';
+          try {
+            await registryPost({ action: 'deleteTeacher', code });
+            await loadTeachers();
+            if (document.getElementById('removedListResult').innerHTML) await loadRemoved();
+          } catch (err) {
+            alert(err.message);
+            btn.disabled = false; btn.textContent = '삭제';
+          }
+        });
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '발급에 실패했습니다.');
+    } catch (err) {
+      showError('masterListError', err.message);
+      resultEl.innerHTML = '';
+    }
+  }
+
+  async function loadInvites() {
+    const resultEl = document.getElementById('inviteListResult');
+    showError('inviteListError', '');
+    resultEl.innerHTML = '불러오는 중...';
+    try {
+      const data = await registryGet('invites');
+      if (!data.invites.length) { resultEl.innerHTML = '<div class="empty">아직 발급된 초대코드가 없습니다.</div>'; return; }
+      resultEl.innerHTML = data.invites.map(iv => `
+        <div style="${rowStyle}">
+          <div>
+            <b>${escapeHtml(iv.code)}</b> ${iv.used ? '<span style="color:#b91c1c;font-size:12px">(사용됨 · ' + escapeHtml(iv.usedBy || '') + ')</span>' : '<span style="color:var(--green);font-size:12px">(미사용)</span>'}<br>
+            <span style="font-size:12px;color:var(--muted)">발급일: ${new Date(iv.createdAt).toLocaleDateString('ko-KR')}</span>
+          </div>
+          ${iv.used ? '' : `<button class="btn-danger invite-cancel-btn" data-code="${escapeHtml(iv.code)}">취소</button>`}
+        </div>
+      `).join('');
+      resultEl.querySelectorAll('.invite-cancel-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const code = btn.dataset.code;
+          if (!confirm(`초대코드 ${code}를 취소할까요?\n취소하면 이 코드로는 더 이상 등록할 수 없어요.`)) return;
+          btn.disabled = true; btn.textContent = '취소 중...';
+          try {
+            await registryPost({ action: 'cancelInvite', inviteCode: code });
+            await loadInvites();
+          } catch (err) {
+            alert(err.message);
+            btn.disabled = false; btn.textContent = '취소';
+          }
+        });
+      });
+    } catch (err) {
+      showError('inviteListError', err.message);
+      resultEl.innerHTML = '';
+    }
+  }
+
+  async function loadRemoved() {
+    const resultEl = document.getElementById('removedListResult');
+    showError('removedListError', '');
+    resultEl.innerHTML = '불러오는 중...';
+    try {
+      const data = await registryGet('removed');
+      if (!data.teachers.length) { resultEl.innerHTML = '<div class="empty">삭제된 강사가 없습니다.</div>'; return; }
+      resultEl.innerHTML = data.teachers.map(t => `
+        <div style="${rowStyle}">
+          <div>
+            <b>${escapeHtml(t.name)}</b> <span style="color:var(--muted);font-size:12px">(코드: ${escapeHtml(t.code)})</span><br>
+            <span style="font-size:12px;color:var(--muted)">삭제일: ${new Date(t.removedAt).toLocaleDateString('ko-KR')}</span>
+          </div>
+          <button class="btn-secondary teacher-restore-btn" data-code="${escapeHtml(t.code)}" data-name="${escapeHtml(t.name)}">복구</button>
+        </div>
+      `).join('');
+      resultEl.querySelectorAll('.teacher-restore-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const { code, name } = btn.dataset;
+          if (!confirm(`${name}(${code}) 강사를 복구할까요?\n기존 프리셋·첨삭 기록과 함께 다시 사용할 수 있게 돼요.`)) return;
+          btn.disabled = true; btn.textContent = '복구 중...';
+          try {
+            await registryPost({ action: 'restoreTeacher', code });
+            await loadRemoved();
+            if (document.getElementById('masterListResult').innerHTML) await loadTeachers();
+          } catch (err) {
+            alert(err.message);
+            btn.disabled = false; btn.textContent = '복구';
+          }
+        });
+      });
+    } catch (err) {
+      showError('removedListError', err.message);
+      resultEl.innerHTML = '';
+    }
+  }
+
+  document.getElementById('genInviteBtn').addEventListener('click', async () => {
+    const resultEl = document.getElementById('genInviteResult');
+    showError('genInviteError', '');
+    resultEl.style.display = 'none';
+    try {
+      const data = await registryPost({ action: 'generateInvite' });
       resultEl.textContent = '발급된 초대코드: ' + data.inviteCode;
       resultEl.style.display = 'block';
+      if (document.getElementById('inviteListResult').innerHTML) await loadInvites();
     } catch (err) {
-      errEl.textContent = err.message;
-      errEl.style.display = 'block';
+      showError('genInviteError', err.message);
     }
   });
-
-  document.getElementById('masterListBtn').addEventListener('click', async () => {
-    const pw = document.getElementById('masterPasswordInput').value;
-    const errEl = document.getElementById('masterListError');
-    const resultEl = document.getElementById('masterListResult');
-    errEl.style.display = 'none';
-    resultEl.innerHTML = '불러오는 중...';
-    try {
-      const res = await fetch('/api/teacher-registry?master=' + encodeURIComponent(pw));
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '조회에 실패했습니다.');
-      if (!data.teachers.length) {
-        resultEl.innerHTML = '<div class="empty">아직 등록된 강사가 없습니다.</div>';
-        return;
-      }
-      resultEl.innerHTML = data.teachers.map(t => `
-        <div style="border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:8px">
-          <b>${t.name}</b> <span style="color:var(--muted);font-size:12px">(코드: ${t.code})</span><br>
-          <span style="font-size:12px;color:var(--muted)">등록일: ${new Date(t.approvedAt).toLocaleDateString('ko-KR')} · 첫 등록 앱: ${t.firstApp || '-'}</span>
-        </div>
-      `).join('');
-    } catch (err) {
-      errEl.textContent = err.message;
-      errEl.style.display = 'block';
-      resultEl.innerHTML = '';
-    }
-  });
-
-  document.getElementById('inviteListBtn').addEventListener('click', async () => {
-    const pw = document.getElementById('masterPasswordInput').value;
-    const errEl = document.getElementById('inviteListError');
-    const resultEl = document.getElementById('inviteListResult');
-    errEl.style.display = 'none';
-    resultEl.innerHTML = '불러오는 중...';
-    try {
-      const res = await fetch('/api/teacher-registry?list=invites&master=' + encodeURIComponent(pw));
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '조회에 실패했습니다.');
-      if (!data.invites.length) {
-        resultEl.innerHTML = '<div class="empty">아직 발급된 초대코드가 없습니다.</div>';
-        return;
-      }
-      resultEl.innerHTML = data.invites.map(iv => `
-        <div style="border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:8px">
-          <b>${iv.code}</b> ${iv.used ? '<span style="color:#b91c1c;font-size:12px">(사용됨 · ' + (iv.usedBy || '') + ')</span>' : '<span style="color:var(--green);font-size:12px">(미사용)</span>'}<br>
-          <span style="font-size:12px;color:var(--muted)">발급일: ${new Date(iv.createdAt).toLocaleDateString('ko-KR')}</span>
-        </div>
-      `).join('');
-    } catch (err) {
-      errEl.textContent = err.message;
-      errEl.style.display = 'block';
-      resultEl.innerHTML = '';
-    }
-  });
+  document.getElementById('masterListBtn').addEventListener('click', loadTeachers);
+  document.getElementById('inviteListBtn').addEventListener('click', loadInvites);
+  document.getElementById('removedListBtn').addEventListener('click', loadRemoved);
 }
 
-function route() {
+// 삭제(사용 중지)된 강사 코드인지 확인 — 확인에 실패하면 막지 않고 통과시킴
+async function isTeacherBlocked(code) {
+  try {
+    const res = await fetch('/api/teacher-registry?check=' + encodeURIComponent(code));
+    if (!res.ok) return false;
+    const data = await res.json();
+    return !!data.blocked;
+  } catch (e) {
+    return false;
+  }
+}
+
+function renderBlockedNotice(forTeacher) {
+  app.innerHTML = `<div class="card"><div class="empty">${forTeacher
+    ? '사용이 중지된 강사 코드예요. 원장님께 문의해 주세요.'
+    : '이 링크는 더 이상 사용할 수 없어요. 담당 강사님께 문의해 주세요.'}</div></div>`;
+}
+
+async function route() {
   const params = new URLSearchParams(location.search);
   if (params.get('master') === '1') {
     document.body.classList.add('role-teacher');
@@ -493,14 +601,17 @@ function route() {
   }
   const hash = location.hash;
   if (hash.indexOf('#result=') === 0) {
+    // 이미 승인된 첨삭 결과는 강사가 삭제돼도 학생이 계속 볼 수 있게 둠
     if (!TEACHER_ID) { renderMissingTeacherNotice(); return; }
     const id = hash.replace('#result=', '');
     renderResultView(id);
   } else if (isAdmin) {
     if (!TEACHER_ID) { renderTeacherSetup(); return; }
+    if (await isTeacherBlocked(TEACHER_ID)) { renderBlockedNotice(true); return; }
     renderTeacherView();
   } else {
     if (!TEACHER_ID) { renderMissingTeacherNotice(); return; }
+    if (await isTeacherBlocked(TEACHER_ID)) { renderBlockedNotice(false); return; }
     renderStudentView();
   }
 }
@@ -949,6 +1060,29 @@ ${PRESET_COMMON}
 - 성격 주장을 실제 사례와 가능하면 수치로 바꾸도록 유도해 주세요.
 - 전문대는 실무 프로그램 활용·자격증을, 4년제는 기획·분석·보고서 작성 경험을 조금 더 봐 주세요.
 - 지원자가 다른 전공 출신이면 학과 총무·동아리 회계처럼 행정 성격의 경험을 찾아 연결하도록 안내해 주세요.`
+  },
+  {
+    name: '방위산업',
+    prompt: `[방위산업 첨삭 지침 v1]
+${PRESET_COMMON}
+■ 평가 포인트
+1. 산업·직무 이해도: 방산의 특성(국가 안보, 긴 개발 주기, 엄격한 규격·품질 요구)을 이해하고, 지원 직무(연구개발·생산·품질·사업관리·해외사업 등)가 구체적인가
+2. 보안의식·책임감: 규칙과 절차를 지킨 경험, 정보를 신중하게 다룬 태도
+3. 품질·정확성: 작은 오류도 놓치지 않으려 한 경험, 기준과 절차를 지켜 결과를 낸 사례
+4. 장기 과제 수행력: 오래 걸리는 과제를 끝까지 책임지고 완수한 경험
+5. 협업 역량: 여러 부서·외부 기관과 조율한 경험, 사용자(군) 입장을 고려하는 시각
+
+■ 주의 표현
+- "애국심이 투철해서"만 있고 직무와 연결되지 않는 지원동기
+- "K-방산이 뜨고 있어서"처럼 산업 트렌드나 뉴스만 나열한 동기
+- 무기·장비 자체에 대한 개인적 흥미만 강조한 표현
+- 군 복무 중 부대 위치·장비 운용 세부 등 보안상 민감할 수 있는 내용 (이런 내용이 있으면 일반적인 표현으로 바꾸도록 안내)
+
+■ 첨삭 방향
+- 사명감은 말이 아니라 "규칙을 지키며 끝까지 책임진 행동" 사례로 증명하도록 유도해 주세요.
+- 군 복무 경험은 단순 나열이 아니라, 사용자 입장을 이해하게 된 점이나 조직·절차 속에서 배운 점으로 연결하도록 안내해 주세요.
+- 전문대는 생산·정비·품질검사 현장 역량과 관련 자격증을, 4년제는 연구개발·설계 프로젝트, 사업관리 역량, 해외사업을 위한 어학을 조금 더 봐 주세요.
+- 이공계가 아닌 지원자(사업관리·계약·해외영업 등)는 문서작성·협상·어학 경험을 방산 사업의 신뢰·절차 준수와 연결하도록 안내해 주세요.`
   },
   {
     name: '직업상담사',
