@@ -72,7 +72,7 @@ export default async function handler(req, res) {
     index.push(id);
     await client.set(indexKey, JSON.stringify(index));
 
-    notifyByEmail(client, t, item); // 응답을 기다리지 않고 백그라운드로 발송 시도
+    await notifyByEmail(client, t, item); // 서버리스 환경에서는 응답 전에 완료를 기다려야 중간에 끊기지 않음
 
     return res.status(200).json({ ok: true, id, code });
   }
