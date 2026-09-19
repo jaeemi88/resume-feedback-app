@@ -132,13 +132,15 @@ export default async function handler(req, res) {
     const item = { id, teacherId: t, ...req.body, approvedAt: Date.now() };
 
     // 트래커 연동 정보를 먼저 계산해서 item에 포함 — 학생 결과 화면에서 만족도 설문 링크를 바로 만들 수 있게 함
+    // 학생이 직접 소속 기관을 선택했으면(여러 기관 동시 운영) 그 값을 우선 쓰고, 없으면 강사가 설정해둔 단일 기관명을 씀
     let institutionNameForSurvey = null;
     try {
       const configRaw = await client.get(`resume_app_config:${t}`);
       const config = configRaw ? JSON.parse(configRaw) : null;
-      if (config && config.institutionName) {
-        institutionNameForSurvey = config.institutionName;
-        item.trackerProgramId = `auto_resume_${slugPart(config.institutionName)}_${slugPart(item.presetName || '(전공 미지정)')}`;
+      const orgName = (item.studentInstitution && item.studentInstitution.trim()) || (config && config.institutionName) || null;
+      if (orgName) {
+        institutionNameForSurvey = orgName;
+        item.trackerProgramId = `auto_resume_${slugPart(orgName)}_${slugPart(item.presetName || '(전공 미지정)')}`;
       }
     } catch (err) {
       console.error('트래커 연동용 설정 조회 실패:', err);
