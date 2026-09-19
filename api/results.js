@@ -88,4 +88,66 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST') {
     const id = 'res_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-    const item =
+    const item = { id, teacherId: t, ...req.body, approvedAt: Date.now() };
+    await client.set(itemKey(id), JSON.stringify(item));
+
+    const indexRaw = await client.get(indexKey);
+    const index = indexRaw ? JSON.parse(indexRaw) : [];
+    index.push({ id, code: item.code || '', studentName: item.studentName || '', presetName: item.presetName || '기본', itemCount: (item.items || []).length, docType: item.docType || 'resume', approvedAt: item.approvedAt });
+    await client.set(indexKey, JSON.stringify(index));
+
+    await notifyStudentByEmail(t, id, item, req.headers.host); // 서버리스 환경에서는 응답 전에 완료를 기다려야 중간에 끊기지 않음
+
+    try {
+      const configRaw = await client.get(`resume_app_config:${t}`);
+      const config = configRaw ? JSON.parse(configRaw) : null;
+      if (config && config.institutionName) {
+        upsertTrackerStat(client, t, config.institutionName, item.presetName);
+      }
+    } catch (err) {
+      console.error('트래커 연동용 설정 조회 실패:', err);
+    }
+
+    return res.status(200).json({ ok: true, id });
+  }
+
+  if (req.method === 'GET') {
+    const { id, list, code } = req.query;
+
+    if (code) {
+      const indexRaw = await client.get(indexKey);
+      const index = indexRaw ? JSON.parse(indexRaw) : [];
+      const match = index.find(it => it.code === String(code).toUpperCase());
+      if (!match) return res.status(404).json({ error: '해당 코드의 결과를 찾을 수 없습니다.' });
+      const raw = await client.get(itemKey(match.id));
+      if (!raw) return res.status(404).json({ error: '결과를 찾을 수 없습니다.' });
+      return res.status(200).json({ item: JSON.parse(raw) });
+    }
+
+    if (list) {
+      const indexRaw = await client.get(indexKey);
+      const index = indexRaw ? JSON.parse(indexRaw) : [];
+      return res.status(200).json({ items: index.reverse() });
+    }
+
+    if (id) {
+      const raw = await client.get(itemKey(id));
+      if (!raw) return res.status(404).json({ error: '결과를 찾을 수 없습니다.' });
+      return res.status(200).json({ item: JSON.parse(raw) });
+    }
+
+    return res.status(400).json({ error: 'id 또는 list 파라미터가 필요합니다.' });
+  }
+
+  if (req.method === 'DELETE') {
+    const { id } = req.query;
+    if (!id) return res.status(400).json({ error: 'id 파라미터가 필요합니다.' });
+    await client.del(itemKey(id));
+    const indexRaw = await client.get(indexKey);
+    const index = indexRaw ? JSON.parse(indexRaw) : [];
+    await client.set(indexKey, JSON.stringify(index.filter(x => x.id !== id)));
+    return res.status(200).json({ ok: true });
+  }
+
+  return res.status(405).json({ error: '허용되지 않는 요청입니다.' });
+}
