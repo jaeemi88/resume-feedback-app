@@ -50,11 +50,11 @@ async function upsertTrackerStat(client, t, orgName, field) {
 // RESEND_API_KEY가 없거나 학생이 이메일을 안 남겼으면 조용히 건너뜀 (알림은 부가기능이라 실패해도 저장 자체는 막지 않음).
 async function notifyStudentByEmail(t, id, item, host) {
   try {
-    if (!process.env.RESEND_API_KEY) return;
+    if (!process.env.RESEND_API_KEY) { console.error('학생 알림 건너뜀: RESEND_API_KEY 없음'); return; }
     const to = item.studentEmail;
-    if (!to) return;
+    if (!to) { console.log('학생 알림 건너뜀: studentEmail 없음'); return; }
     const link = `https://${host}/?t=${encodeURIComponent(t)}#result=${id}`;
-    await fetch('https://api.resend.com/emails', {
+    const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
@@ -67,6 +67,12 @@ async function notifyStudentByEmail(t, id, item, host) {
         text: `${item.studentName || '학생'}님, 요청하신 자소서 첨삭 결과가 준비됐어요.\n\n아래 링크에서 확인해 주세요.\n${link}`
       })
     });
+    if (!res.ok) {
+      const body = await res.text();
+      console.error('Resend 발송 실패(학생):', res.status, body);
+    } else {
+      console.log('Resend 발송 성공(학생):', to);
+    }
   } catch (err) {
     console.error('학생 알림 메일 발송 실패:', err);
   }
@@ -90,7 +96,7 @@ export default async function handler(req, res) {
     index.push({ id, code: item.code || '', studentName: item.studentName || '', presetName: item.presetName || '기본', itemCount: (item.items || []).length, docType: item.docType || 'resume', approvedAt: item.approvedAt });
     await client.set(indexKey, JSON.stringify(index));
 
-    notifyStudentByEmail(t, id, item, req.headers.host); // 응답을 기다리지 않고 백그라운드로 발송 시도
+    await notifyStudentByEmail(t, id, item, req.headers.host); // 서버리스 환경에서는 응답 전에 완료를 기다려야 중간에 끊기지 않음
 
     try {
       const configRaw = await client.get(`resume_app_config:${t}`);
