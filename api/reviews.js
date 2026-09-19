@@ -36,7 +36,7 @@ async function notifyByEmail(client, t, item) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: 'MOA FORMULA <onboarding@resend.dev>',
+        from: 'MOA FORMULA <moaformula@jinromoa.co.kr>',
         to: [to],
         subject: `[자소서 첨삭] ${item.studentName || '학생'}님의 검수 요청이 도착했어요`,
         text: `${item.studentName || '학생'}님이 자소서 첨삭 검수를 요청했어요.\n\n강사용 화면의 "검수 대기함" 탭에서 확인해 주세요.`
