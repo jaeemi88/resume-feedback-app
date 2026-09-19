@@ -385,213 +385,105 @@ function renderMissingTeacherNotice() {
 function renderMasterTeacherList() {
   app.innerHTML = `
     <div class="card">
-      <h2>관리자 비밀번호</h2>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">원장님만 보실 수 있는 화면입니다. 비밀번호를 입력한 뒤 아래 기능을 사용하세요.</p>
-      <input type="text" id="masterPasswordInput" placeholder="관리자 비밀번호">
-    </div>
-    <div class="card">
       <h2>새 초대코드 발급</h2>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">새 강사님 한 분당 코드를 하나씩 발급해서 전달해 주세요. 한 번 쓰면 그 코드는 다시 못 씁니다.</p>
-      <div class="btn-row" style="margin-top:0"><button class="btn-primary" id="genInviteBtn">초대코드 발급하기</button></div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">원장님만 보실 수 있는 화면입니다. 새 강사님 한 분당 코드를 하나씩 발급해서 전달해 주세요. 한 번 쓰면 그 코드는 다시 못 씁니다.</p>
+      <label>관리자 비밀번호</label>
+      <input type="text" id="masterPasswordInput" placeholder="관리자 비밀번호">
+      <div class="btn-row"><button class="btn-primary" id="genInviteBtn">초대코드 발급하기</button></div>
       <div id="genInviteError" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
       <div id="genInviteResult" style="margin-top:12px;font-size:15px;font-weight:700;display:none"></div>
     </div>
     <div class="card">
       <h2>승인된 강사 목록</h2>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">강사를 삭제하면 세 앱(모의면접·자소서·트래커) 강사 목록에서 빠지고, 이 앱의 강사 화면과 학생 제출 링크가 막혀요. 프리셋·첨삭 기록은 보관되어 언제든 복구할 수 있어요.</p>
-      <div class="btn-row" style="margin-top:0"><button class="btn-primary" id="masterListBtn">강사 목록 보기</button></div>
+      <div class="btn-row"><button class="btn-primary" id="masterListBtn">강사 목록 보기</button></div>
       <div id="masterListError" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
       <div id="masterListResult" style="margin-top:16px"></div>
     </div>
     <div class="card">
       <h2>발급된 초대코드 목록</h2>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">아직 사용되지 않은 코드는 "취소"로 무효화할 수 있어요.</p>
-      <div class="btn-row" style="margin-top:0"><button class="btn-primary" id="inviteListBtn">초대코드 목록 보기</button></div>
+      <div class="btn-row"><button class="btn-primary" id="inviteListBtn">초대코드 목록 보기</button></div>
       <div id="inviteListError" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
       <div id="inviteListResult" style="margin-top:16px"></div>
     </div>
-    <div class="card">
-      <h2>삭제된 강사 (복구 가능)</h2>
-      <div class="btn-row" style="margin-top:0"><button class="btn-primary" id="removedListBtn">삭제된 강사 보기</button></div>
-      <div id="removedListError" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
-      <div id="removedListResult" style="margin-top:16px"></div>
-    </div>
   `;
 
-  const pw = () => document.getElementById('masterPasswordInput').value;
-  const rowStyle = 'border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap';
-
-  async function registryPost(body) {
-    const res = await fetch('/api/teacher-registry', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...body, master: pw() })
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || '요청에 실패했습니다.');
-    return data;
-  }
-
-  async function registryGet(listParam) {
-    const res = await fetch('/api/teacher-registry?' + (listParam ? 'list=' + listParam + '&' : '') + 'master=' + encodeURIComponent(pw()));
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || '조회에 실패했습니다.');
-    return data;
-  }
-
-  function showError(id, msg) {
-    const el = document.getElementById(id);
-    el.textContent = msg;
-    el.style.display = msg ? 'block' : 'none';
-  }
-
-  async function loadTeachers() {
-    const resultEl = document.getElementById('masterListResult');
-    showError('masterListError', '');
-    resultEl.innerHTML = '불러오는 중...';
-    try {
-      const data = await registryGet('');
-      if (!data.teachers.length) { resultEl.innerHTML = '<div class="empty">아직 등록된 강사가 없습니다.</div>'; return; }
-      resultEl.innerHTML = data.teachers.map(t => `
-        <div style="${rowStyle}">
-          <div>
-            <b>${escapeHtml(t.name)}</b> <span style="color:var(--muted);font-size:12px">(코드: ${escapeHtml(t.code)})</span><br>
-            <span style="font-size:12px;color:var(--muted)">등록일: ${new Date(t.approvedAt).toLocaleDateString('ko-KR')} · 첫 등록 앱: ${escapeHtml(t.firstApp) || '-'}</span>
-          </div>
-          <button class="btn-danger teacher-del-btn" data-code="${escapeHtml(t.code)}" data-name="${escapeHtml(t.name)}">삭제</button>
-        </div>
-      `).join('');
-      resultEl.querySelectorAll('.teacher-del-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const { code, name } = btn.dataset;
-          if (!confirm(`${name}(${code}) 강사를 삭제할까요?\n\n· 세 앱(모의면접·자소서·트래커) 강사 목록에서 모두 빠져요.\n· 이 앱의 강사 화면과 학생 제출 링크가 막혀요.\n· 프리셋·첨삭 기록은 보관되며, "삭제된 강사"에서 복구할 수 있어요.`)) return;
-          btn.disabled = true; btn.textContent = '삭제 중...';
-          try {
-            await registryPost({ action: 'deleteTeacher', code });
-            await loadTeachers();
-            if (document.getElementById('removedListResult').innerHTML) await loadRemoved();
-          } catch (err) {
-            alert(err.message);
-            btn.disabled = false; btn.textContent = '삭제';
-          }
-        });
-      });
-    } catch (err) {
-      showError('masterListError', err.message);
-      resultEl.innerHTML = '';
-    }
-  }
-
-  async function loadInvites() {
-    const resultEl = document.getElementById('inviteListResult');
-    showError('inviteListError', '');
-    resultEl.innerHTML = '불러오는 중...';
-    try {
-      const data = await registryGet('invites');
-      if (!data.invites.length) { resultEl.innerHTML = '<div class="empty">아직 발급된 초대코드가 없습니다.</div>'; return; }
-      resultEl.innerHTML = data.invites.map(iv => `
-        <div style="${rowStyle}">
-          <div>
-            <b>${escapeHtml(iv.code)}</b> ${iv.used ? '<span style="color:#b91c1c;font-size:12px">(사용됨 · ' + escapeHtml(iv.usedBy || '') + ')</span>' : '<span style="color:var(--green);font-size:12px">(미사용)</span>'}<br>
-            <span style="font-size:12px;color:var(--muted)">발급일: ${new Date(iv.createdAt).toLocaleDateString('ko-KR')}</span>
-          </div>
-          ${iv.used ? '' : `<button class="btn-danger invite-cancel-btn" data-code="${escapeHtml(iv.code)}">취소</button>`}
-        </div>
-      `).join('');
-      resultEl.querySelectorAll('.invite-cancel-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const code = btn.dataset.code;
-          if (!confirm(`초대코드 ${code}를 취소할까요?\n취소하면 이 코드로는 더 이상 등록할 수 없어요.`)) return;
-          btn.disabled = true; btn.textContent = '취소 중...';
-          try {
-            await registryPost({ action: 'cancelInvite', inviteCode: code });
-            await loadInvites();
-          } catch (err) {
-            alert(err.message);
-            btn.disabled = false; btn.textContent = '취소';
-          }
-        });
-      });
-    } catch (err) {
-      showError('inviteListError', err.message);
-      resultEl.innerHTML = '';
-    }
-  }
-
-  async function loadRemoved() {
-    const resultEl = document.getElementById('removedListResult');
-    showError('removedListError', '');
-    resultEl.innerHTML = '불러오는 중...';
-    try {
-      const data = await registryGet('removed');
-      if (!data.teachers.length) { resultEl.innerHTML = '<div class="empty">삭제된 강사가 없습니다.</div>'; return; }
-      resultEl.innerHTML = data.teachers.map(t => `
-        <div style="${rowStyle}">
-          <div>
-            <b>${escapeHtml(t.name)}</b> <span style="color:var(--muted);font-size:12px">(코드: ${escapeHtml(t.code)})</span><br>
-            <span style="font-size:12px;color:var(--muted)">삭제일: ${new Date(t.removedAt).toLocaleDateString('ko-KR')}</span>
-          </div>
-          <button class="btn-secondary teacher-restore-btn" data-code="${escapeHtml(t.code)}" data-name="${escapeHtml(t.name)}">복구</button>
-        </div>
-      `).join('');
-      resultEl.querySelectorAll('.teacher-restore-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const { code, name } = btn.dataset;
-          if (!confirm(`${name}(${code}) 강사를 복구할까요?\n기존 프리셋·첨삭 기록과 함께 다시 사용할 수 있게 돼요.`)) return;
-          btn.disabled = true; btn.textContent = '복구 중...';
-          try {
-            await registryPost({ action: 'restoreTeacher', code });
-            await loadRemoved();
-            if (document.getElementById('masterListResult').innerHTML) await loadTeachers();
-          } catch (err) {
-            alert(err.message);
-            btn.disabled = false; btn.textContent = '복구';
-          }
-        });
-      });
-    } catch (err) {
-      showError('removedListError', err.message);
-      resultEl.innerHTML = '';
-    }
-  }
-
   document.getElementById('genInviteBtn').addEventListener('click', async () => {
+    const pw = document.getElementById('masterPasswordInput').value;
+    const errEl = document.getElementById('genInviteError');
     const resultEl = document.getElementById('genInviteResult');
-    showError('genInviteError', '');
-    resultEl.style.display = 'none';
+    errEl.style.display = 'none'; resultEl.style.display = 'none';
     try {
-      const data = await registryPost({ action: 'generateInvite' });
+      const res = await fetch('/api/teacher-registry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'generateInvite', master: pw })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '발급에 실패했습니다.');
       resultEl.textContent = '발급된 초대코드: ' + data.inviteCode;
       resultEl.style.display = 'block';
-      if (document.getElementById('inviteListResult').innerHTML) await loadInvites();
     } catch (err) {
-      showError('genInviteError', err.message);
+      errEl.textContent = err.message;
+      errEl.style.display = 'block';
     }
   });
-  document.getElementById('masterListBtn').addEventListener('click', loadTeachers);
-  document.getElementById('inviteListBtn').addEventListener('click', loadInvites);
-  document.getElementById('removedListBtn').addEventListener('click', loadRemoved);
+
+  document.getElementById('masterListBtn').addEventListener('click', async () => {
+    const pw = document.getElementById('masterPasswordInput').value;
+    const errEl = document.getElementById('masterListError');
+    const resultEl = document.getElementById('masterListResult');
+    errEl.style.display = 'none';
+    resultEl.innerHTML = '불러오는 중...';
+    try {
+      const res = await fetch('/api/teacher-registry?master=' + encodeURIComponent(pw));
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '조회에 실패했습니다.');
+      if (!data.teachers.length) {
+        resultEl.innerHTML = '<div class="empty">아직 등록된 강사가 없습니다.</div>';
+        return;
+      }
+      resultEl.innerHTML = data.teachers.map(t => `
+        <div style="border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:8px">
+          <b>${t.name}</b> <span style="color:var(--muted);font-size:12px">(코드: ${t.code})</span><br>
+          <span style="font-size:12px;color:var(--muted)">등록일: ${new Date(t.approvedAt).toLocaleDateString('ko-KR')} · 첫 등록 앱: ${t.firstApp || '-'}</span>
+        </div>
+      `).join('');
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.style.display = 'block';
+      resultEl.innerHTML = '';
+    }
+  });
+
+  document.getElementById('inviteListBtn').addEventListener('click', async () => {
+    const pw = document.getElementById('masterPasswordInput').value;
+    const errEl = document.getElementById('inviteListError');
+    const resultEl = document.getElementById('inviteListResult');
+    errEl.style.display = 'none';
+    resultEl.innerHTML = '불러오는 중...';
+    try {
+      const res = await fetch('/api/teacher-registry?list=invites&master=' + encodeURIComponent(pw));
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '조회에 실패했습니다.');
+      if (!data.invites.length) {
+        resultEl.innerHTML = '<div class="empty">아직 발급된 초대코드가 없습니다.</div>';
+        return;
+      }
+      resultEl.innerHTML = data.invites.map(iv => `
+        <div style="border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:8px">
+          <b>${iv.code}</b> ${iv.used ? '<span style="color:#b91c1c;font-size:12px">(사용됨 · ' + (iv.usedBy || '') + ')</span>' : '<span style="color:var(--green);font-size:12px">(미사용)</span>'}<br>
+          <span style="font-size:12px;color:var(--muted)">발급일: ${new Date(iv.createdAt).toLocaleDateString('ko-KR')}</span>
+        </div>
+      `).join('');
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.style.display = 'block';
+      resultEl.innerHTML = '';
+    }
+  });
 }
 
-// 삭제(사용 중지)된 강사 코드인지 확인 — 확인에 실패하면 막지 않고 통과시킴
-async function isTeacherBlocked(code) {
-  try {
-    const res = await fetch('/api/teacher-registry?check=' + encodeURIComponent(code));
-    if (!res.ok) return false;
-    const data = await res.json();
-    return !!data.blocked;
-  } catch (e) {
-    return false;
-  }
-}
-
-function renderBlockedNotice(forTeacher) {
-  app.innerHTML = `<div class="card"><div class="empty">${forTeacher
-    ? '사용이 중지된 강사 코드예요. 원장님께 문의해 주세요.'
-    : '이 링크는 더 이상 사용할 수 없어요. 담당 강사님께 문의해 주세요.'}</div></div>`;
-}
-
-async function route() {
+function route() {
   const params = new URLSearchParams(location.search);
   if (params.get('master') === '1') {
     document.body.classList.add('role-teacher');
@@ -601,17 +493,14 @@ async function route() {
   }
   const hash = location.hash;
   if (hash.indexOf('#result=') === 0) {
-    // 이미 승인된 첨삭 결과는 강사가 삭제돼도 학생이 계속 볼 수 있게 둠
     if (!TEACHER_ID) { renderMissingTeacherNotice(); return; }
     const id = hash.replace('#result=', '');
     renderResultView(id);
   } else if (isAdmin) {
     if (!TEACHER_ID) { renderTeacherSetup(); return; }
-    if (await isTeacherBlocked(TEACHER_ID)) { renderBlockedNotice(true); return; }
     renderTeacherView();
   } else {
     if (!TEACHER_ID) { renderMissingTeacherNotice(); return; }
-    if (await isTeacherBlocked(TEACHER_ID)) { renderBlockedNotice(false); return; }
     renderStudentView();
   }
 }
@@ -947,162 +836,12 @@ async function renderStudentSubmitForm() {
   });
 }
 
-// ---------- 추천 프리셋 라이브러리 (v1 · 2026.09) ----------
-// 이름 규칙: 끝의 '학과' → '과'로 통일 / 직무형은 직무명 그대로
-// 공통 원칙은 한 곳(PRESET_COMMON)에만 쓰고 모든 프리셋에 자동으로 붙음
-
-const PRESET_COMMON = `■ 공통 원칙
-- 학생 원문에 없는 경험·수치·사실은 절대 추가하지 말고, 필요하면 "실제 사례를 넣어보세요"로 안내해 주세요.
-- 경험의 규모보다, 그 경험에서 느끼고 변화·성장한 점이 드러났는지를 봐 주세요.
-- 면접관이 "일을 잘할 것 같고 크게 흠이 없는 사람"으로 느낄지 점검하고, 부정적으로 읽힐 표현은 순화안을 제시해 주세요.
-`;
-
 const PRESET_LIBRARY = [
-  {
-    name: '물리치료과',
-    prompt: `[물리치료과 첨삭 지침 v1]
-${PRESET_COMMON}
-■ 평가 포인트
-1. 직무 이해도: 물리치료사의 평가·치료·교육 역할 이해, 희망 분야(근골격·신경계·소아·스포츠 등)의 구체성
-2. 환자 중심 태도: 환자 입장에서 느낀 점, 설명·동기부여 경험
-3. 임상실습 성찰: 관찰 나열이 아니라 배우고 달라진 점
-4. 재활팀 협업: 의사·간호사·작업치료사 등과의 소통 인식
-5. 성장 계획: 보수교육, 관심 분야 심화 계획
-
-■ 주의 표현
-- "환자를 낫게 해주고 싶다"처럼 일방적인 시혜 표현
-- "체력이 좋아서"만 근거로 든 지원동기
-
-■ 첨삭 방향
-- 실습 경험을 환자 입장에서 배운 점과 본인의 변화로 연결하도록 유도해 주세요.
-- 전문대는 실습 태도·환자 응대를, 4년제는 연구·케이스 스터디·전공 심화를 조금 더 봐 주세요.
-- 지원 직무가 전공과 다르면(필라테스 강사, 의료기기 영업 등) 해부학·운동학 지식을 직무 강점으로 연결하도록 안내해 주세요.`
-  },
-  {
-    name: '사회복지과',
-    prompt: `[사회복지과 첨삭 지침 v1]
-${PRESET_COMMON}
-■ 평가 포인트
-1. 직무·기관 이해도: 지원 기관 유형과 대상자(노인·아동·장애인 등) 이해
-2. 가치·윤리 의식: 인권, 자기결정권, 비밀보장에 대한 판단 사례
-3. 현장실습·봉사 성찰: '보람'이 아닌 구체적인 행동과 판단
-4. 공감과 전문적 관계: 공감하되 적절한 거리를 지킨 경험, 소진 관리
-5. 행정·기획 역량: 사례관리, 기록, 프로그램 기획 경험
-
-■ 주의 표현
-- "불쌍한 분들을 돕고 싶다"처럼 대상자를 낮추는 표현
-- "착한 성격이라서" 같은 막연한 동기
-
-■ 첨삭 방향
-- 감정 서술을 구체적인 행동과 판단 사례로 바꾸도록 유도해 주세요.
-- 전문대는 현장 적응력·실무 태도를, 4년제는 기획·정책 이해도를 조금 더 봐 주세요.
-- 지원 직무가 전공과 다르면(공공기관 행정, 상담, HR 등) 사례관리 경험을 고객관리·문서작성 역량으로 연결하도록 안내해 주세요.`
-  },
-  {
-    name: '기계과',
-    prompt: `[기계과 첨삭 지침 v1]
-${PRESET_COMMON}
-■ 평가 포인트
-1. 직무 이해도: 생산·설계·품질·설비보전 중 지원 직무의 구체성
-2. 안전의식: 현장 안전수칙을 지킨 경험, 안전에 대한 태도
-3. 실습·프로젝트 성찰: 오류를 해결한 과정, 가능하면 수치로 표현
-4. 실무 역량 증거: 자격증, CAD·CAM, 장비 운용 경험
-5. 조직 적응·성장: 교대근무 수용, 팀워크, 성실성, 자기계발 계획
-
-■ 주의 표현
-- "손재주가 좋아서"만 근거인 지원동기
-- 자격증 이름만 나열한 문장
-- "대기업이라서"처럼 회사 조건 중심의 동기
-
-■ 첨삭 방향
-- 자격증·실습을 "그래서 무엇을 할 수 있게 되었는지"로 바꾸도록 유도해 주세요.
-- 전문대는 장비 운용·자격증·현장실습을, 4년제는 설계·해석 프로젝트와 이론 응용을 조금 더 봐 주세요.
-- 지원 직무가 전공과 다르면(기술영업, 품질, 구매 등) 도면 이해·공정 지식을 직무 강점으로 연결하도록 안내해 주세요.`
-  },
-  {
-    name: '항공서비스과',
-    prompt: `[항공서비스과 첨삭 지침 v1]
-${PRESET_COMMON}
-■ 평가 포인트
-1. 직무 이해도: 객실승무원·지상직·호텔 등 서비스 직무의 역할과 안전 책임 이해
-2. 고객 응대 경험: 실제 상황과 본인의 대처 행동
-3. 위기·돌발 상황 대처: 침착하게 판단하고 행동한 사례
-4. 팀워크: 위계가 있는 조직 안에서 본인 역할을 인식한 경험
-5. 자기관리: 이미지·표정·태도, 체력, 어학 준비
-
-■ 주의 표현
-- "어릴 적부터 꿈이었다"로만 끝나는 지원동기
-- 근거 없이 "서비스 마인드가 있다"고 주장하는 문장
-- 외모·미소 칭찬만을 강점 근거로 든 표현
-
-■ 첨삭 방향
-- 서비스 마인드를 말이 아닌 실제 행동 사례로 증명하도록 유도해 주세요.
-- 전문대는 서비스 실습·아르바이트 경험을, 4년제는 어학·대외활동·글로벌 경험을 조금 더 봐 주세요.
-- 지원자가 다른 전공 출신이면 전공 지식을 고객 이해·안전·차별화 강점으로 연결하도록 안내해 주세요.`
-  },
-  {
-    name: '사무행정과',
-    prompt: `[사무행정과 첨삭 지침 v1]
-${PRESET_COMMON}
-■ 평가 포인트
-1. 직무 이해도: 지원 부서(총무·인사·회계 등) 업무의 구체성
-2. 정확성·꼼꼼함: 실수를 줄이거나 오류를 바로잡은 실제 사례
-3. 문서·데이터 역량: 엑셀·한글 활용, 관련 자격증을 실제 업무에 쓴 경험
-4. 협업·조율: 여러 사람의 요청과 일정을 조율한 경험
-5. 우선순위 관리: 여러 업무를 동시에 처리한 방식
-
-■ 주의 표현
-- 근거 없이 "꼼꼼한 성격입니다"라고만 쓴 문장
-- 자격증 이름만 나열한 문장
-- "안정적인 직장이라서" 같은 조건 중심의 동기
-
-■ 첨삭 방향
-- 성격 주장을 실제 사례와 가능하면 수치로 바꾸도록 유도해 주세요.
-- 전문대는 실무 프로그램 활용·자격증을, 4년제는 기획·분석·보고서 작성 경험을 조금 더 봐 주세요.
-- 지원자가 다른 전공 출신이면 학과 총무·동아리 회계처럼 행정 성격의 경험을 찾아 연결하도록 안내해 주세요.`
-  },
-  {
-    name: '방위산업',
-    prompt: `[방위산업 첨삭 지침 v1]
-${PRESET_COMMON}
-■ 평가 포인트
-1. 산업·직무 이해도: 방산의 특성(국가 안보, 긴 개발 주기, 엄격한 규격·품질 요구)을 이해하고, 지원 직무(연구개발·생산·품질·사업관리·해외사업 등)가 구체적인가
-2. 보안의식·책임감: 규칙과 절차를 지킨 경험, 정보를 신중하게 다룬 태도
-3. 품질·정확성: 작은 오류도 놓치지 않으려 한 경험, 기준과 절차를 지켜 결과를 낸 사례
-4. 장기 과제 수행력: 오래 걸리는 과제를 끝까지 책임지고 완수한 경험
-5. 협업 역량: 여러 부서·외부 기관과 조율한 경험, 사용자(군) 입장을 고려하는 시각
-
-■ 주의 표현
-- "애국심이 투철해서"만 있고 직무와 연결되지 않는 지원동기
-- "K-방산이 뜨고 있어서"처럼 산업 트렌드나 뉴스만 나열한 동기
-- 무기·장비 자체에 대한 개인적 흥미만 강조한 표현
-- 군 복무 중 부대 위치·장비 운용 세부 등 보안상 민감할 수 있는 내용 (이런 내용이 있으면 일반적인 표현으로 바꾸도록 안내)
-
-■ 첨삭 방향
-- 사명감은 말이 아니라 "규칙을 지키며 끝까지 책임진 행동" 사례로 증명하도록 유도해 주세요.
-- 군 복무 경험은 단순 나열이 아니라, 사용자 입장을 이해하게 된 점이나 조직·절차 속에서 배운 점으로 연결하도록 안내해 주세요.
-- 전문대는 생산·정비·품질검사 현장 역량과 관련 자격증을, 4년제는 연구개발·설계 프로젝트, 사업관리 역량, 해외사업을 위한 어학을 조금 더 봐 주세요.
-- 이공계가 아닌 지원자(사업관리·계약·해외영업 등)는 문서작성·협상·어학 경험을 방산 사업의 신뢰·절차 준수와 연결하도록 안내해 주세요.`
-  },
-  {
-    name: '직업상담사',
-    prompt: `[직업상담사 첨삭 지침 v1]
-${PRESET_COMMON}
-■ 평가 포인트
-1. 직무 이해도: 취업지원 기관 유형(고용센터, 대학 일자리센터, 민간위탁 등)과 상담사 역할 이해
-2. 상담·경청 역량: 상대의 이야기를 끝까지 듣고 질문으로 이끈 경험
-3. 노동시장 이해: 직업정보·채용 동향을 탐색하고 활용한 경험
-4. 사례 개입 경험: 상대가 스스로 변화하도록 도운 사례
-5. 전문성 성장: 자격 취득, 보수교육, 관심 대상(청년·중장년·경력단절 등)
-
-■ 주의 표현
-- "사람을 좋아해서" 같은 막연한 동기
-- 상담을 조언·해결해주는 일로만 표현한 문장
-
-■ 첨삭 방향
-- 상담 경험을 상담자의 활약이 아니라 내담자의 변화 중심으로 서술하도록 유도해 주세요.
-- 이전 직장 경력이 있는 지원자는 그 경력을 직무 이해·상담 역량으로 연결하도록 안내해 주세요.`
-  }
+  { name: '사회복지학과', prompt: '사회복지 직무 특성상 공감·소통 역량, 사례관리·대상자 지원 경험, 윤리의식이 드러나는지 특히 중점적으로 봐 주세요. 대상자와의 관계 형성 경험이 있다면 구체적으로 짚어주세요.' },
+  { name: '물리치료과', prompt: '물리치료사 직무 특성상 환자와의 신뢰 형성, 임상실습 경험, 의료진과의 협업·소통 역량이 드러나는지 확인해주세요.' },
+  { name: '항공서비스', prompt: '항공서비스직 특성상 이미지메이킹(표정·태도), 위기대응 능력, 고객응대 경험이 구체적으로 드러나는지 확인해주세요.' },
+  { name: '사무행정', prompt: '사무행정 직무 특성상 꼼꼼함, 문서작성·데이터 처리 경험, 협업 프로세스 이해도가 드러나는지 확인해주세요.' },
+  { name: '직업상담사', prompt: '직업상담사 직무 특성상 상담·경청 역량, 노동시장에 대한 이해, 사례 개입 경험이 드러나는지 확인해주세요.' }
 ];
 
 // ---------- 강사 화면 ----------
@@ -1484,12 +1223,7 @@ async function renderPresetsTab(content) {
   libraryEl.innerHTML = PRESET_LIBRARY.map((lib, i) => {
     const already = config.presets.some(p => p.name === lib.name);
     return `<div class="preset-item">
-      <div><b>${escapeHtml(lib.name)}</b>
-        <details style="margin-top:4px">
-          <summary style="cursor:pointer;font-size:12px;color:var(--navy)">지침 보기</summary>
-          <div style="font-size:12px;color:var(--muted);margin-top:6px;white-space:pre-wrap">${escapeHtml(lib.prompt)}</div>
-        </details>
-      </div>
+      <div><b>${escapeHtml(lib.name)}</b><div style="font-size:12px;color:var(--muted);margin-top:2px">${escapeHtml(lib.prompt)}</div></div>
       <button class="btn-secondary lib-add-btn" data-i="${i}" ${already ? 'disabled' : ''}>${already ? '추가됨' : '추가하기'}</button>
     </div>`;
   }).join('');
@@ -1524,12 +1258,9 @@ async function renderPresetsTab(content) {
       row.innerHTML = `
         <div style="flex:1 1 100%;min-width:0">
           <b>${escapeHtml(p.name)}</b>${p.id === cfg.activePresetId ? ' <span class="star-tag ok">기본값</span>' : ''}
-          <details class="prompt-display" style="margin-top:4px">
-            <summary style="cursor:pointer;font-size:12px;color:var(--navy)">지침 보기</summary>
-            <div style="font-size:12px;color:var(--muted);margin-top:6px;white-space:pre-wrap">${escapeHtml(p.prompt) || '(추가 지침 없음)'}</div>
-          </details>
+          <div class="prompt-display" style="font-size:12px;color:var(--muted);margin-top:2px">${escapeHtml(p.prompt) || '(추가 지침 없음)'}</div>
           <div class="prompt-edit" style="display:none;margin-top:6px">
-            <textarea class="prompt-edit-input" style="min-height:240px">${escapeHtml(p.prompt)}</textarea>
+            <textarea class="prompt-edit-input" style="min-height:70px">${escapeHtml(p.prompt)}</textarea>
             <div class="btn-row" style="margin-top:6px">
               <button class="btn-primary save-prompt-btn">저장</button>
               <button class="btn-secondary cancel-edit-btn">취소</button>
@@ -1732,6 +1463,11 @@ function resultContentHtml(record) {
       ${items.length > 1 ? `<p style="font-size:13px;color:var(--muted);margin-top:-6px">총 ${items.length}개 문항의 첨삭 결과예요.</p>` : ''}
       ${record.jobPosting ? `<div class="result-block"><h3>지원 채용공고 핵심 내용</h3><p style="white-space:pre-wrap">${escapeHtml(record.jobPosting)}</p></div>` : ''}
       ${items.map((it, idx) => resultItemBlockHtml(it, idx, items.length)).join('')}
+      ${record.trackerProgramId ? `
+      <div class="result-block" style="text-align:center;background:var(--green-light);border-radius:10px;padding:16px">
+        <p style="margin:0 0 10px;font-size:13px;color:#333">첨삭 결과, 어떠셨나요? 더 나은 서비스를 위해 짧은 의견 부탁드려요 🙏</p>
+        <a href="https://moa-tracker-tau.vercel.app/?survey=1&t=${encodeURIComponent(TEACHER_ID)}&p=${encodeURIComponent(record.trackerProgramId)}" target="_blank" class="btn-primary" style="display:inline-block;text-decoration:none;padding:10px 24px">30초 만족도 남기기</a>
+      </div>` : ''}
     </div>
   `;
 }
