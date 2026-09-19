@@ -669,9 +669,11 @@ function applyDocTypeToBlock(id, docTypeVal) {
 
 async function renderStudentSubmitForm() {
   let retryLimit = 'unlimited';
+  let institutions = [];
   try {
     const data = await api('/api/config');
     retryLimit = (data.config && data.config.retryLimit) || 'unlimited';
+    institutions = (data.config && data.config.institutions) || [];
   } catch (e) { /* 설정을 못 불러오면 기본값(자유롭게)으로 진행 */ }
 
   const countKey = 'moa_resume_submit_count_' + TEACHER_ID;
@@ -713,6 +715,11 @@ async function renderStudentSubmitForm() {
       <label>본인 전공(또는 직군)을 선택하세요</label>
       <select id="presetSelect"><option>불러오는 중...</option></select>
       <div style="font-size:12px;color:var(--muted);margin-top:4px">전공마다 평가 기준이 달라요. 목록에 본인 전공이 없으면 "기본"을 선택하세요.</div>
+      ${institutions.length ? `
+      <label>본인 소속 기관을 선택하세요</label>
+      <select id="institutionSelect">
+        ${institutions.map(inst => `<option value="${escapeHtml(inst.name)}">${escapeHtml(inst.name)}</option>`).join('')}
+      </select>` : ''}
 
       <label>지원하는 채용공고의 핵심 내용 (선택, 모든 문항에 공통 적용)</label>
       <textarea id="jobPostingInput" placeholder="예) [○○기관] 사회복지사 채용 — 사례관리 경험자 우대, 공감·소통 역량 중시"></textarea>
@@ -806,9 +813,11 @@ async function renderStudentSubmitForm() {
         return { ...it, aiDraft };
       }));
 
+      const studentInstitution = institutions.length ? document.getElementById('institutionSelect').value : '';
+
       const reviewRes = await api('/api/reviews', {
         method: 'POST',
-        body: JSON.stringify({ studentName, studentEmail, presetId: presetSelect.value, docType: docTypeSelect.value, jobPosting, items: itemsWithDraft })
+        body: JSON.stringify({ studentName, studentEmail, presetId: presetSelect.value, docType: docTypeSelect.value, jobPosting, studentInstitution, items: itemsWithDraft })
       });
 
       localStorage.setItem(countKey, String(usedCount + 1));
@@ -925,10 +934,18 @@ async function renderNotifyTab(content) {
     <div class="card">
       <h2>수강생 사후관리 트래커 연동</h2>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">여기에 기관명을 입력해두면, 첨삭이 승인될 때마다 학생이 선택한 전공(프리셋)과 함께 "수강생 사후관리 트래커"의 진로모아관리 통계에 인원수가 자동으로 누적돼요. 첨삭 내용 자체는 저장되지 않고, 기관·전공·인원수만 집계됩니다. 특강이 끝나고 다른 기관으로 넘어가면 이 값을 바꿔주세요.</p>
-      <label>현재 진행 중인 특강 기관명 (선택)</label>
+      <label>현재 진행 중인 특강 기관명 (선택, 기관을 하나만 다닐 때)</label>
       <input type="text" id="institutionNameInput" placeholder="예) 대구대학교 사회복지학과">
       <div class="btn-row"><button class="btn-primary" id="saveInstitutionBtn">저장하기</button></div>
       <div id="institutionSavedMsg" style="font-size:13px;color:var(--green);margin-top:8px;display:none">저장됐어요.</div>
+    </div>
+    <div class="card">
+      <h2>여러 기관 동시 운영 (집체교육용)</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">한 강사 코드로 여러 학교·기관을 동시에 다니실 때 쓰세요. 여기에 기관을 미리 등록해두면, 위의 단일 기관명 대신 <b>학생이 직접 본인 소속을 선택</b>하는 화면이 제출 폼에 나타나요. 목록이 비어있으면 위의 단일 기관명 방식 그대로 작동해요.</p>
+      <div id="institutionListArea" class="empty">불러오는 중...</div>
+      <label>새 기관 추가</label>
+      <input type="text" id="newInstitutionInput" placeholder="예) 영남이공대 직업상담사반">
+      <div class="btn-row"><button class="btn-primary" id="addInstitutionBtn">추가하기</button></div>
     </div>
   `;
   try {
@@ -936,7 +953,50 @@ async function renderNotifyTab(content) {
     document.getElementById('notifyEmailInput').value = (data.config && data.config.notifyEmail) || '';
     document.getElementById('institutionNameInput').value = (data.config && data.config.institutionName) || '';
     document.getElementById('retryLimitSelect').value = (data.config && data.config.retryLimit) || 'unlimited';
+    renderInstitutionList(data.config && data.config.institutions || []);
   } catch (e) { console.error(e); }
+
+  function renderInstitutionList(list) {
+    const area = document.getElementById('institutionListArea');
+    if (!list.length) { area.innerHTML = `<div class="empty">등록된 기관이 없습니다 (단일 기관명 방식으로 작동 중).</div>`; return; }
+    area.innerHTML = '';
+    list.forEach((inst, idx) => {
+      const row = document.createElement('div');
+      row.className = 'preset-item';
+      row.innerHTML = `<div><b>${escapeHtml(inst.name)}</b></div>
+        <div class="btn-row" style="margin:0"><button class="btn-danger del-inst-btn">삭제</button></div>`;
+      row.querySelector('.del-inst-btn').addEventListener('click', async () => {
+        if (!confirm(`"${inst.name}"을(를) 목록에서 삭제할까요?`)) return;
+        try {
+          const data = await api('/api/config');
+          const config = data.config || {};
+          config.institutions = (config.institutions || []).filter((_, i) => i !== idx);
+          await api('/api/config', { method: 'POST', body: JSON.stringify(config) });
+          renderInstitutionList(config.institutions);
+        } catch (e) { alert('삭제 실패: ' + e.message); }
+      });
+      area.appendChild(row);
+    });
+  }
+
+  document.getElementById('addInstitutionBtn').addEventListener('click', async () => {
+    const name = document.getElementById('newInstitutionInput').value.trim();
+    if (!name) { alert('기관명을 입력해 주세요.'); return; }
+    const btn = document.getElementById('addInstitutionBtn');
+    btn.disabled = true; btn.textContent = '추가 중...';
+    try {
+      const data = await api('/api/config');
+      const config = data.config || {};
+      config.institutions = config.institutions || [];
+      config.institutions.push({ id: 'inst_' + Date.now(), name });
+      await api('/api/config', { method: 'POST', body: JSON.stringify(config) });
+      document.getElementById('newInstitutionInput').value = '';
+      renderInstitutionList(config.institutions);
+    } catch (e) {
+      alert('추가 실패: ' + e.message);
+    }
+    btn.disabled = false; btn.textContent = '추가하기';
+  });
 
   document.getElementById('saveNotifyEmailBtn').addEventListener('click', async () => {
     const btn = document.getElementById('saveNotifyEmailBtn');
@@ -1163,6 +1223,7 @@ function buildReviewCard(record, presetName) {
         presetName: presetName || '기본',
         docType: record.docType || 'resume',
         jobPosting: record.jobPosting || '',
+        studentInstitution: record.studentInstitution || '',
         items: finalItems
       };
       const { id } = await api('/api/results', { method: 'POST', body: JSON.stringify(payload) });
