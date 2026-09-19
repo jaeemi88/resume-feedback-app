@@ -78,6 +78,47 @@ async function notifyStudentByEmail(t, id, item, host) {
   }
 }
 
+// 첨삭이 승인될 때, 그 학생의 이메일이 "수강생 사후관리 트래커"의 개인관리에
+// 이미 등록된 학생 카드와 일치할 때만, 오늘 날짜로 상담 이력에 한 줄 자동 기록함.
+// 등록된 카드가 없으면(집체교육 등 일회성 참여자) 아무 것도 하지 않음 — 새 카드를 자동으로 만들지 않음.
+// 같은 학생이 하루에 여러 번 이용해도 그날짜 한 줄에 건수만 합쳐서 표시됨.
+async function upsertStudentConsultLog(client, t, studentEmail, kind) {
+  try {
+    const email = String(studentEmail || '').trim().toLowerCase();
+    if (!email) return;
+    const indexKey = `tracker_students_index:${t}`;
+    const hash = await client.hgetall(indexKey);
+    let matchId = null;
+    for (const [id, raw] of Object.entries(hash || {})) {
+      try {
+        const summary = JSON.parse(raw);
+        if ((summary.email || '').trim().toLowerCase() === email) { matchId = id; break; }
+      } catch (e) { /* 손상된 항목은 건너뜀 */ }
+    }
+    if (!matchId) return;
+
+    const itemKey = `tracker_student:${t}:${matchId}`;
+    const raw = await client.get(itemKey);
+    if (!raw) return;
+    const record = JSON.parse(raw);
+    record.consultLog = record.consultLog || [];
+    const today = new Date().toISOString().slice(0, 10);
+    let todayEntry = record.consultLog.find(c => c.date === today && c.autoCounts);
+    if (!todayEntry) {
+      todayEntry = { date: today, memo: '', autoCounts: {}, auto: true };
+      record.consultLog.push(todayEntry);
+    }
+    todayEntry.autoCounts[kind] = (todayEntry.autoCounts[kind] || 0) + 1;
+    const labels = { resume: '자소서 첨삭', interview: '모의면접' };
+    todayEntry.memo = Object.entries(todayEntry.autoCounts)
+      .map(([k, n]) => `${labels[k] || k} ${n}건`)
+      .join(' · ') + ' 완료 (자동 기록)';
+    await client.set(itemKey, JSON.stringify(record));
+  } catch (err) {
+    console.error('학생 상담이력 자동기록 실패:', err);
+  }
+}
+
 export default async function handler(req, res) {
   const client = getRedis();
   const t = safeTeacherId(req.query.t);
@@ -89,6 +130,20 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     const id = 'res_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     const item = { id, teacherId: t, ...req.body, approvedAt: Date.now() };
+
+    // 트래커 연동 정보를 먼저 계산해서 item에 포함 — 학생 결과 화면에서 만족도 설문 링크를 바로 만들 수 있게 함
+    let institutionNameForSurvey = null;
+    try {
+      const configRaw = await client.get(`resume_app_config:${t}`);
+      const config = configRaw ? JSON.parse(configRaw) : null;
+      if (config && config.institutionName) {
+        institutionNameForSurvey = config.institutionName;
+        item.trackerProgramId = `auto_resume_${slugPart(config.institutionName)}_${slugPart(item.presetName || '(전공 미지정)')}`;
+      }
+    } catch (err) {
+      console.error('트래커 연동용 설정 조회 실패:', err);
+    }
+
     await client.set(itemKey(id), JSON.stringify(item));
 
     const indexRaw = await client.get(indexKey);
@@ -98,15 +153,11 @@ export default async function handler(req, res) {
 
     await notifyStudentByEmail(t, id, item, req.headers.host); // 서버리스 환경에서는 응답 전에 완료를 기다려야 중간에 끊기지 않음
 
-    try {
-      const configRaw = await client.get(`resume_app_config:${t}`);
-      const config = configRaw ? JSON.parse(configRaw) : null;
-      if (config && config.institutionName) {
-        upsertTrackerStat(client, t, config.institutionName, item.presetName);
-      }
-    } catch (err) {
-      console.error('트래커 연동용 설정 조회 실패:', err);
+    if (institutionNameForSurvey) {
+      upsertTrackerStat(client, t, institutionNameForSurvey, item.presetName);
     }
+
+    upsertStudentConsultLog(client, t, item.studentEmail, 'resume');
 
     return res.status(200).json({ ok: true, id });
   }
