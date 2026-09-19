@@ -145,7 +145,9 @@ export default async function handler(req, res) {
     await client.del(itemKey(id));
     const indexRaw = await client.get(indexKey);
     const index = indexRaw ? JSON.parse(indexRaw) : [];
-    await client.set(indexKey, JSON.stringify(index.filter(x => x !== id)));
+    await client.set(indexKey, JSON.stringify(index.filter(x => x.id !== id)));
+    await client.set(indexKey, JSON.stringify(index.filter(x => x.id !== id)));
+
     return res.status(200).json({ ok: true });
   }
 
