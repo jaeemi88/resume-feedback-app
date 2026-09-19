@@ -668,13 +668,22 @@ function applyDocTypeToBlock(id, docTypeVal) {
 }
 
 async function renderStudentSubmitForm() {
-  const alreadySubmittedKey = 'moa_resume_submitted_' + TEACHER_ID;
-  if (localStorage.getItem(alreadySubmittedKey)) {
+  let retryLimit = 'unlimited';
+  try {
+    const data = await api('/api/config');
+    retryLimit = (data.config && data.config.retryLimit) || 'unlimited';
+  } catch (e) { /* 설정을 못 불러오면 기본값(자유롭게)으로 진행 */ }
+
+  const countKey = 'moa_resume_submit_count_' + TEACHER_ID;
+  const usedCount = parseInt(localStorage.getItem(countKey) || '0', 10);
+  const limitNum = retryLimit === 'unlimited' ? Infinity : (parseInt(retryLimit, 10) + 1);
+
+  if (usedCount >= limitNum) {
     app.innerHTML = `
       ${studentTabsHtml()}
       <div class="card">
-        <h2>이미 첨삭 요청을 제출하셨어요</h2>
-        <p style="font-size:14px;color:var(--muted);line-height:1.7">이 기기·브라우저로는 이미 한 번 제출하셨어요. 받으신 확인 코드로 "내 결과 확인" 탭에서 결과를 확인해 주세요. 다시 제출이 꼭 필요하시면 강사님께 말씀해 주세요.</p>
+        <h2>제출 가능한 횟수를 다 쓰셨어요</h2>
+        <p style="font-size:14px;color:var(--muted);line-height:1.7">이 기기·브라우저로 제출할 수 있는 횟수(${limitNum}번)를 다 사용하셨어요. 받으신 확인 코드로 "내 결과 확인" 탭에서 결과를 확인해 주세요. 다시 제출이 꼭 필요하시면 강사님께 말씀해 주세요.</p>
       </div>
     `;
     wireStudentTabs();
@@ -688,7 +697,7 @@ async function renderStudentSubmitForm() {
     ${studentTabsHtml()}
     <div class="card">
       <h2>첨삭 요청</h2>
-      <p style="font-size:13px;color:var(--muted);margin:-4px 0 14px">자소서 문항이 여러 개면 아래 "+ 문항 추가"로 다 모아서 한 번에 제출해 주세요. 제출 후에는 이 기기에서 다시 제출할 수 없으니, 신중하게 작성한 뒤 한 번에 보내주세요.</p>
+      <p style="font-size:13px;color:var(--muted);margin:-4px 0 14px">자소서 문항이 여러 개면 아래 "+ 문항 추가"로 다 모아서 한 번에 제출해 주세요. ${limitNum === Infinity ? '' : limitNum === 1 ? '이 기기에서는 <b>한 번만</b> 제출할 수 있으니, ' : `이 기기에서는 <b>최대 ${limitNum}번</b>까지만 제출할 수 있으니, `}신중하게 작성한 뒤 제출해 주세요.</p>
       <label>이름</label>
       <input type="text" id="studentNameInput" placeholder="본인 이름을 입력해 주세요">
       <label>이메일 주소 (선택)</label>
@@ -802,7 +811,7 @@ async function renderStudentSubmitForm() {
         body: JSON.stringify({ studentName, studentEmail, presetId: presetSelect.value, docType: docTypeSelect.value, jobPosting, items: itemsWithDraft })
       });
 
-      localStorage.setItem(alreadySubmittedKey, '1');
+      localStorage.setItem(countKey, String(usedCount + 1));
 
       statusMsg.innerHTML = `
         제출이 완료되었습니다. 강사님 검수 후 결과를 확인하실 수 있어요.<br>
@@ -902,6 +911,18 @@ async function renderNotifyTab(content) {
       <div id="notifySavedMsg" style="font-size:13px;color:var(--green);margin-top:8px;display:none">저장됐어요.</div>
     </div>
     <div class="card">
+      <h2>재도전 허용 범위</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">한 학생이 이 기기·브라우저로 첨삭을 몇 번까지 제출할 수 있는지 정해요. 대상·현장 분위기에 맞춰 고르세요.</p>
+      <label>제출 허용 횟수</label>
+      <select id="retryLimitSelect">
+        <option value="unlimited">자유롭게 (제한 없음)</option>
+        <option value="1">최대 2번까지 (1회 재도전 가능)</option>
+        <option value="0">1번만 (재도전 불가)</option>
+      </select>
+      <div class="btn-row"><button class="btn-primary" id="saveRetryLimitBtn">저장하기</button></div>
+      <div id="retryLimitSavedMsg" style="font-size:13px;color:var(--green);margin-top:8px;display:none">저장됐어요.</div>
+    </div>
+    <div class="card">
       <h2>수강생 사후관리 트래커 연동</h2>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">여기에 기관명을 입력해두면, 첨삭이 승인될 때마다 학생이 선택한 전공(프리셋)과 함께 "수강생 사후관리 트래커"의 진로모아관리 통계에 인원수가 자동으로 누적돼요. 첨삭 내용 자체는 저장되지 않고, 기관·전공·인원수만 집계됩니다. 특강이 끝나고 다른 기관으로 넘어가면 이 값을 바꿔주세요.</p>
       <label>현재 진행 중인 특강 기관명 (선택)</label>
@@ -914,6 +935,7 @@ async function renderNotifyTab(content) {
     const data = await api('/api/config');
     document.getElementById('notifyEmailInput').value = (data.config && data.config.notifyEmail) || '';
     document.getElementById('institutionNameInput').value = (data.config && data.config.institutionName) || '';
+    document.getElementById('retryLimitSelect').value = (data.config && data.config.retryLimit) || 'unlimited';
   } catch (e) { console.error(e); }
 
   document.getElementById('saveNotifyEmailBtn').addEventListener('click', async () => {
@@ -925,6 +947,22 @@ async function renderNotifyTab(content) {
       config.notifyEmail = document.getElementById('notifyEmailInput').value.trim();
       await api('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
       document.getElementById('notifySavedMsg').style.display = 'block';
+    } catch (e) {
+      console.error(e);
+      alert('저장 중 문제가 발생했어요: ' + e.message);
+    }
+    btn.disabled = false; btn.textContent = '저장하기';
+  });
+
+  document.getElementById('saveRetryLimitBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('saveRetryLimitBtn');
+    btn.disabled = true; btn.textContent = '저장 중...';
+    try {
+      const data = await api('/api/config');
+      const config = data.config || {};
+      config.retryLimit = document.getElementById('retryLimitSelect').value;
+      await api('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
+      document.getElementById('retryLimitSavedMsg').style.display = 'block';
     } catch (e) {
       console.error(e);
       alert('저장 중 문제가 발생했어요: ' + e.message);
