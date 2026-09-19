@@ -24,12 +24,12 @@ function safeTeacherId(raw) {
 // RESEND_API_KEY가 없거나 강사가 이메일을 설정하지 않았으면 조용히 건너뜀 (알림은 부가기능이라 실패해도 검수 요청 저장 자체는 막지 않음).
 async function notifyByEmail(client, t, item) {
   try {
-    if (!process.env.RESEND_API_KEY) return;
+    if (!process.env.RESEND_API_KEY) { console.error('알림 건너뜀: RESEND_API_KEY 없음'); return; }
     const configRaw = await client.get(`resume_app_config:${t}`);
     const config = configRaw ? JSON.parse(configRaw) : null;
     const to = config && config.notifyEmail;
-    if (!to) return;
-    await fetch('https://api.resend.com/emails', {
+    if (!to) { console.error('알림 건너뜀: notifyEmail 미설정'); return; }
+    const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
@@ -42,6 +42,12 @@ async function notifyByEmail(client, t, item) {
         text: `${item.studentName || '학생'}님이 자소서 첨삭 검수를 요청했어요.\n\n강사용 화면의 "검수 대기함" 탭에서 확인해 주세요.`
       })
     });
+    if (!res.ok) {
+      const body = await res.text();
+      console.error('Resend 발송 실패:', res.status, body);
+    } else {
+      console.log('Resend 발송 성공 (강사 알림):', to);
+    }
   } catch (err) {
     console.error('알림 메일 발송 실패:', err);
   }
