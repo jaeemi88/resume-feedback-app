@@ -220,6 +220,13 @@
   .result-block{margin-bottom:18px;}
   .result-block h3{font-size:14px; color:var(--navy); margin:0 0 6px;}
   .result-block p{margin:0; font-size:14px;}
+  .moa-q{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:17px; height:17px; margin-left:5px; vertical-align:middle;
+    border-radius:50%; background:#EAF2AE; color:#11308C;
+    font-size:11px; font-weight:900; line-height:1; text-decoration:none;
+  }
+  .moa-q:hover{ background:#C0D904; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html-docx-js/0.3.1/html-docx.js"></script>
 </head>
@@ -915,7 +922,7 @@ async function renderTeacherView() {
 async function renderNotifyTab(content) {
   content.innerHTML = `
     <div class="card">
-      <h2>새 검수 요청 이메일 알림</h2>
+      <h2>새 검수 요청 이메일 알림<a class="moa-q" target="_blank" rel="noopener" title="알림 메일이 안 올 때" href="https://claude.ai/artifact/ABvpPmNpMpFM2seeGZikf8#p-email">?</a></h2>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">학생이 검수 요청을 보낼 때마다 이 주소로 알림 메일이 발송돼요. 강사용 화면에 매번 들어가서 확인하지 않아도 됩니다.</p>
       <label>알림 받을 이메일 주소</label>
       <input type="text" id="notifyEmailInput" placeholder="예) teacher@example.com">
@@ -923,7 +930,7 @@ async function renderNotifyTab(content) {
       <div id="notifySavedMsg" style="font-size:13px;color:var(--green);margin-top:8px;display:none">저장됐어요.</div>
     </div>
     <div class="card">
-      <h2>재도전 허용 범위</h2>
+      <h2>재도전 허용 범위<a class="moa-q" target="_blank" rel="noopener" title="재도전 설정 안내" href="https://claude.ai/artifact/ABvpPmNpMpFM2seeGZikf8#p-retry">?</a></h2>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">한 학생이 이 기기·브라우저로 첨삭을 몇 번까지 제출할 수 있는지 정해요. 대상·현장 분위기에 맞춰 고르세요.</p>
       <label>제출 허용 횟수</label>
       <select id="retryLimitSelect">
@@ -937,7 +944,7 @@ async function renderNotifyTab(content) {
     <div class="card">
       <h2>수강생 사후관리 트래커 연동</h2>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">여기에 기관명을 입력해두면, 첨삭이 승인될 때마다 학생이 선택한 전공(프리셋)과 함께 "수강생 사후관리 트래커"의 진로모아관리 통계에 인원수가 자동으로 누적돼요. 첨삭 내용 자체는 저장되지 않고, 기관·전공·인원수만 집계됩니다. 특강이 끝나고 다른 기관으로 넘어가면 이 값을 바꿔주세요.</p>
-      <label>현재 진행 중인 특강 기관명 (선택, 기관을 하나만 다닐 때)</label>
+      <label>현재 진행 중인 특강 기관명 (선택, 기관을 하나만 다닐 때)<a class="moa-q" target="_blank" rel="noopener" title="이 설정이 어디에 영향을 주나요?" href="https://claude.ai/artifact/ABvpPmNpMpFM2seeGZikf8#impact">?</a></label>
       <input type="text" id="institutionNameInput" placeholder="예) 대구대학교 사회복지학과">
       <div class="btn-row"><button class="btn-primary" id="saveInstitutionBtn">저장하기</button></div>
       <div id="institutionSavedMsg" style="font-size:13px;color:var(--green);margin-top:8px;display:none">저장됐어요.</div>
@@ -1620,5 +1627,34 @@ async function renderResultView(id) {
 
 route();
 </script>
+
+<!-- ===== MOA 도움말 버튼 : 여기부터 ===== -->
+<style>
+#moaHelp{
+  position:fixed; right:16px; bottom:16px; z-index:9999;
+  display:inline-flex; align-items:center; gap:6px;
+  padding:10px 16px; border-radius:999px;
+  background:#643DF2; color:#fff; text-decoration:none;
+  font-family:'Malgun Gothic','맑은 고딕',sans-serif;
+  font-size:14px; font-weight:700; line-height:1;
+  box-shadow:0 4px 14px rgba(17,48,140,.28);
+}
+#moaHelp:hover{ background:#11308C; }
+#moaHelp .mark{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:17px; height:17px; border-radius:50%;
+  background:#C0D904; color:#11308C; font-size:12px; font-weight:900;
+}
+body.role-student #moaHelp{ display:none; } /* 학생 화면에서는 숨김 */
+@media print{ #moaHelp{ display:none; } }
+</style>
+
+<a id="moaHelp"
+   href="https://claude.ai/artifact/ABvpPmNpMpFM2seeGZikf8"
+   target="_blank" rel="noopener">
+  <span class="mark">?</span>도움말
+</a>
+<!-- ===== 여기까지 ===== -->
+
 </body>
 </html>
