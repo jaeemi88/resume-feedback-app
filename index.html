@@ -267,7 +267,9 @@ async function api(path, options = {}) {
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     const msg = (err.error || ('요청 실패: ' + res.status)) + (err.detail ? ' — 상세: ' + err.detail : '');
-    throw new Error(msg);
+    const e = new Error(msg);
+    if (err.expired) e.expired = true;
+    throw e;
   }
   return res.json();
 }
@@ -396,6 +398,9 @@ function renderMasterTeacherList() {
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">원장님만 보실 수 있는 화면입니다. 새 강사님 한 분당 코드를 하나씩 발급해서 전달해 주세요. 한 번 쓰면 그 코드는 다시 못 씁니다.</p>
       <label>관리자 비밀번호</label>
       <input type="text" id="masterPasswordInput" placeholder="관리자 비밀번호">
+      <label>초대코드 유효기간 (일)</label>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">이 코드를 며칠 안에 등록해야 하는지 정해요. 일회성 강의를 위한 임시 강사라면 짧게(예: 7일), 정규 강사라면 비워두면 기간 제한 없이 유효해요.</div>
+      <input type="text" id="inviteExpiryInput" placeholder="예) 7 (비워두면 무제한)">
       <div class="btn-row"><button class="btn-primary" id="genInviteBtn">초대코드 발급하기</button></div>
       <div id="genInviteError" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
       <div id="genInviteResult" style="margin-top:12px;font-size:15px;font-weight:700;display:none"></div>
@@ -416,6 +421,7 @@ function renderMasterTeacherList() {
 
   document.getElementById('genInviteBtn').addEventListener('click', async () => {
     const pw = document.getElementById('masterPasswordInput').value;
+    const expiryDays = document.getElementById('inviteExpiryInput').value.trim();
     const errEl = document.getElementById('genInviteError');
     const resultEl = document.getElementById('genInviteResult');
     errEl.style.display = 'none'; resultEl.style.display = 'none';
@@ -423,11 +429,11 @@ function renderMasterTeacherList() {
       const res = await fetch('/api/teacher-registry', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'generateInvite', master: pw })
+        body: JSON.stringify({ action: 'generateInvite', master: pw, expiryDays: expiryDays ? parseInt(expiryDays, 10) : 0 })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '발급에 실패했습니다.');
-      resultEl.textContent = '발급된 초대코드: ' + data.inviteCode;
+      resultEl.innerHTML = '발급된 초대코드: ' + data.inviteCode + (data.expiresAt ? `<br><span style="font-size:12px;font-weight:400;color:var(--muted)">유효기간: ${new Date(data.expiresAt).toLocaleDateString('ko-KR')}까지</span>` : `<br><span style="font-size:12px;font-weight:400;color:var(--muted)">유효기간: 무제한</span>`);
       resultEl.style.display = 'block';
     } catch (err) {
       errEl.textContent = err.message;
@@ -478,8 +484,8 @@ function renderMasterTeacherList() {
       }
       resultEl.innerHTML = data.invites.map(iv => `
         <div style="border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:8px">
-          <b>${iv.code}</b> ${iv.used ? '<span style="color:#b91c1c;font-size:12px">(사용됨 · ' + (iv.usedBy || '') + ')</span>' : '<span style="color:var(--green);font-size:12px">(미사용)</span>'}<br>
-          <span style="font-size:12px;color:var(--muted)">발급일: ${new Date(iv.createdAt).toLocaleDateString('ko-KR')}</span>
+          <b>${iv.code}</b> ${iv.used ? '<span style="color:#b91c1c;font-size:12px">(사용됨 · ' + (iv.usedBy || '') + ')</span>' : iv.isExpired ? '<span style="color:#b91c1c;font-size:12px">(기간만료)</span>' : '<span style="color:var(--green);font-size:12px">(미사용)</span>'}<br>
+          <span style="font-size:12px;color:var(--muted)">발급일: ${new Date(iv.createdAt).toLocaleDateString('ko-KR')}${iv.expiresAt ? ` · 유효기간: ${new Date(iv.expiresAt).toLocaleDateString('ko-KR')}까지` : ' · 유효기간: 무제한'}</span>
         </div>
       `).join('');
     } catch (err) {
@@ -569,6 +575,10 @@ async function renderStudentLookup() {
       const { item } = await api('/api/results?code=' + encodeURIComponent(code));
       area.innerHTML = resultContentHtml(item);
     } catch (e) {
+      if (e.expired) {
+        area.innerHTML = `<div class="empty">⏰ 조회 가능한 기간이 지났어요. 결과가 다시 필요하시면 강사님께 문의해 주세요.</div>`;
+        return;
+      }
       try {
         const pending = await api('/api/reviews?code=' + encodeURIComponent(code));
         area.innerHTML = `<div class="empty">${escapeHtml(pending.studentName) || '학생'}님, 아직 강사님이 검토 중입니다. 잠시 후 다시 확인해 주세요.</div>`;
@@ -949,6 +959,14 @@ async function renderNotifyTab(content) {
       <div id="institutionSavedMsg" style="font-size:13px;color:var(--green);margin-top:8px;display:none">저장됐어요.</div>
     </div>
     <div class="card">
+      <h2>집체교육 학생 결과 조회 유효기간</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">"수강생 사후관리 트래커"의 개인관리에 <b>이미 등록된 학생(1:1 코칭 대상)</b>은 기간 제한 없이 계속 조회할 수 있어요. 등록되지 않은 학생(집체교육·일회성 특강 참가자)만 여기서 정한 기간이 지나면 코드·링크로 결과를 못 열어봐요. 다운로드(워드 저장)는 그 전에 미리 받아두시면 기간이 지나도 계속 볼 수 있어요.</p>
+      <label>집체교육 학생 결과 유효기간 (일, 승인일 포함)</label>
+      <input type="text" id="groupExpiryInput" placeholder="예) 5">
+      <div class="btn-row"><button class="btn-primary" id="saveGroupExpiryBtn">저장하기</button></div>
+      <div id="groupExpirySavedMsg" style="font-size:13px;color:var(--green);margin-top:8px;display:none">저장됐어요.</div>
+    </div>
+    <div class="card">
       <h2>여러 기관 동시 운영 (집체교육용)</h2>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">한 강사 코드로 여러 학교·기관을 동시에 다니실 때 쓰세요. 여기에 기관을 미리 등록해두면, 위의 단일 기관명 대신 <b>학생이 직접 본인 소속을 선택</b>하는 화면이 제출 폼에 나타나요. 목록이 비어있으면 위의 단일 기관명 방식 그대로 작동해요.</p>
       <div id="institutionListArea" class="empty">불러오는 중...</div>
@@ -962,6 +980,7 @@ async function renderNotifyTab(content) {
     document.getElementById('notifyEmailInput').value = (data.config && data.config.notifyEmail) || '';
     document.getElementById('institutionNameInput').value = (data.config && data.config.institutionName) || '';
     document.getElementById('retryLimitSelect').value = (data.config && data.config.retryLimit) || 'unlimited';
+    document.getElementById('groupExpiryInput').value = (data.config && data.config.groupCodeExpiryDays) || 5;
     renderInstitutionList(data.config && data.config.institutions || []);
   } catch (e) { console.error(e); }
 
@@ -1048,6 +1067,24 @@ async function renderNotifyTab(content) {
       config.institutionName = document.getElementById('institutionNameInput').value.trim();
       await api('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
       document.getElementById('institutionSavedMsg').style.display = 'block';
+    } catch (e) {
+      console.error(e);
+      alert('저장 중 문제가 발생했어요: ' + e.message);
+    }
+    btn.disabled = false; btn.textContent = '저장하기';
+  });
+
+  document.getElementById('saveGroupExpiryBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('saveGroupExpiryBtn');
+    const days = parseInt(document.getElementById('groupExpiryInput').value, 10);
+    if (!days || days < 1) { alert('1 이상의 숫자를 입력해 주세요.'); return; }
+    btn.disabled = true; btn.textContent = '저장 중...';
+    try {
+      const data = await api('/api/config');
+      const config = data.config || {};
+      config.groupCodeExpiryDays = days;
+      await api('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
+      document.getElementById('groupExpirySavedMsg').style.display = 'block';
     } catch (e) {
       console.error(e);
       alert('저장 중 문제가 발생했어요: ' + e.message);
@@ -1460,11 +1497,12 @@ async function renderResultsTab(content) {
   }
 
   function buildResultRow(it) {
-    const link = location.origin + location.pathname + '?t=' + encodeURIComponent(TEACHER_ID) + '#result=' + it.id;
+    const link = location.origin + location.pathname + '?t=' + encodeURIComponent(TEACHER_ID) + '&admin=1#result=' + it.id;
+    const expiredBadge = it.expiresAt ? (Date.now() > it.expiresAt ? '<span class="star-tag miss" style="margin-left:6px">학생 조회 만료</span>' : `<span class="star-tag ok" style="margin-left:6px">~${new Date(it.expiresAt).toLocaleDateString('ko-KR')}까지 조회가능</span>`) : '';
     const row = document.createElement('div');
     row.className = 'preset-item';
     row.innerHTML = `
-      <div><b>${escapeHtml(it.studentName) || '(이름 없음)'}</b> — 문항 ${it.itemCount || 1}개<div style="font-size:12px;color:var(--muted)">${new Date(it.approvedAt).toLocaleString('ko-KR')}</div></div>
+      <div><b>${escapeHtml(it.studentName) || '(이름 없음)'}</b> — 문항 ${it.itemCount || 1}개${expiredBadge}<div style="font-size:12px;color:var(--muted)">${new Date(it.approvedAt).toLocaleString('ko-KR')}</div></div>
       <div class="btn-row" style="margin:0">
         <a href="${link}" target="_blank" class="btn-secondary" style="text-decoration:none;padding:8px 14px;border-radius:8px">결과 보기</a>
         <button class="btn-danger delete-result-btn">삭제</button>
@@ -1619,9 +1657,13 @@ function downloadResultAsWord(studentName) {
 async function renderResultView(id) {
   app.innerHTML = `<div class="card"><div class="empty">결과를 불러오는 중...</div></div>`;
   try {
-    const { item } = await api('/api/results?id=' + encodeURIComponent(id));
+    const { item } = await api('/api/results?id=' + encodeURIComponent(id) + (isAdmin ? '&admin=1' : ''));
     app.innerHTML = resultContentHtml(item);
   } catch (e) {
+    if (e.expired) {
+      app.innerHTML = `<div class="card"><div class="empty">⏰ 조회 가능한 기간이 지났어요. 결과가 다시 필요하시면 강사님께 문의해 주세요.</div></div>`;
+      return;
+    }
     app.innerHTML = `<div class="card"><div class="empty">결과를 불러올 수 없습니다: ${escapeHtml(e.message)}</div></div>`;
   }
 }
