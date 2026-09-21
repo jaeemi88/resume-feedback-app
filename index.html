@@ -508,11 +508,26 @@ function renderMasterTeacherList() {
         row.style.cssText = 'border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap';
         row.innerHTML = `
           <div>
-            <b>${escapeHtml(t.name)}</b> <span style="color:var(--muted);font-size:12px">(코드: ${escapeHtml(t.code)})</span><br>
+            <b>${escapeHtml(t.name)}</b> <span style="color:var(--muted);font-size:12px">(코드: ${escapeHtml(t.code)})</span> ${t.permanent ? '<span class="star-tag ok">영구</span>' : '<span class="star-tag miss">임시</span>'}<br>
             <span style="font-size:12px;color:var(--muted)">등록일: ${new Date(t.approvedAt).toLocaleDateString('ko-KR')} · 첫 등록 앱: ${t.firstApp || '-'}</span>
           </div>
-          <button class="btn-danger del-teacher-btn" style="flex-shrink:0">삭제</button>
+          <div class="btn-row" style="margin:0">
+            <button class="btn-secondary toggle-permanent-btn" style="flex-shrink:0">${t.permanent ? '임시로 전환' : '영구로 전환'}</button>
+            <button class="btn-danger del-teacher-btn" style="flex-shrink:0">삭제</button>
+          </div>
         `;
+        row.querySelector('.toggle-permanent-btn').addEventListener('click', async () => {
+          try {
+            const r = await fetch('/api/teacher-registry', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'setPermanent', master: pw, code: t.code, permanent: !t.permanent })
+            });
+            const d = await r.json();
+            if (!r.ok) throw new Error(d.error || '변경에 실패했습니다.');
+            t.permanent = !t.permanent;
+            document.getElementById('masterListBtn').click();
+          } catch (e) { alert('변경 실패: ' + e.message); }
+        });
         row.querySelector('.del-teacher-btn').addEventListener('click', async () => {
           if (!confirm(`"${t.name}"(${t.code}) 강사를 삭제할까요? 접속이 차단되고, 프리셋·첨삭 기록은 그대로 보관됩니다.`)) return;
           try {
@@ -964,6 +979,12 @@ let currentTab = 'reviews';
 async function renderTeacherView() {
   const studentLink = location.origin + location.pathname + '?t=' + encodeURIComponent(TEACHER_ID);
   const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=' + encodeURIComponent(studentLink);
+  let isPermanentTeacher = false;
+  try {
+    const r = await fetch('/api/teacher-registry?check=' + encodeURIComponent(TEACHER_ID));
+    const d = await r.json();
+    isPermanentTeacher = !!d.permanent;
+  } catch (e) { /* 확인 실패 시 안전하게 숨김 처리 */ }
   app.innerHTML = `
     <div class="card" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
       <img id="qrImage" src="${qrUrl}" alt="학생용 QR코드" title="클릭하면 다운로드됩니다" style="width:120px;height:120px;border:1px solid var(--border);border-radius:8px;cursor:pointer">
@@ -981,7 +1002,7 @@ async function renderTeacherView() {
       <div class="tab" data-tab="presets">첨삭 기준 프리셋</div>
       <div class="tab" data-tab="results">완료된 첨삭</div>
       <div class="tab" data-tab="notify">알림 설정</div>
-      <div class="tab" data-tab="guide">기능 안내</div>
+      ${isPermanentTeacher ? '<div class="tab" data-tab="guide">기능 안내</div>' : ''}
     </div>
     <div id="tabContent"></div>
   `;
