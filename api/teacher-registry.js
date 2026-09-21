@@ -53,13 +53,17 @@ export default async function handler(req, res) {
     // 차단 여부 확인 (누구나) — 확인에 실패하면 막지 않고 통과시킴
     if (check !== undefined) {
       const c = safeCode(check);
-      if (!c) return res.status(200).json({ blocked: false });
+      if (!c) return res.status(200).json({ blocked: false, permanent: false });
       try {
         const removed = await client.hexists(REMOVED_KEY, c);
-        return res.status(200).json({ blocked: !!removed });
+        if (removed) return res.status(200).json({ blocked: true, permanent: false });
+        const raw = await client.hget(TEACHERS_KEY, c);
+        // permanent 필드가 없는 기존 강사(이 기능 이전에 등록됨)는 정규 강사로 간주해 기본값 true
+        const permanent = raw ? (JSON.parse(raw).permanent !== false) : false;
+        return res.status(200).json({ blocked: false, permanent });
       } catch (err) {
         console.error(err);
-        return res.status(200).json({ blocked: false });
+        return res.status(200).json({ blocked: false, permanent: false });
       }
     }
 
@@ -92,7 +96,7 @@ export default async function handler(req, res) {
       const hash = await client.hgetall(TEACHERS_KEY);
       const teachers = Object.entries(hash).map(([code, raw]) => {
         const data = JSON.parse(raw);
-        return { code, name: data.name || code, approvedAt: data.approvedAt, firstApp: data.firstApp || '' };
+        return { code, name: data.name || code, approvedAt: data.approvedAt, firstApp: data.firstApp || '', permanent: data.permanent !== false };
       });
       teachers.sort((a, b) => new Date(b.approvedAt) - new Date(a.approvedAt));
       return res.status(200).json({ teachers });
@@ -142,6 +146,25 @@ export default async function handler(req, res) {
       } catch (err) {
         console.error(err);
         return res.status(500).json({ error: '초대코드 취소 중 오류가 발생했습니다.' });
+      }
+    }
+
+    // 원장님이 강사의 영구/임시 상태를 직접 지정 — "기능 안내" 탭 노출 기준으로 쓰임
+    if (body.action === 'setPermanent') {
+      if (!checkAdmin(body.master)) {
+        return res.status(401).json({ error: '관리자 비밀번호가 올바르지 않습니다.' });
+      }
+      try {
+        const c = safeCode(body.code);
+        const raw = await client.hget(TEACHERS_KEY, c);
+        if (!raw) return res.status(404).json({ error: '승인된 강사 목록에서 찾을 수 없어요.' });
+        const data = JSON.parse(raw);
+        data.permanent = !!body.permanent;
+        await client.hset(TEACHERS_KEY, c, JSON.stringify(data));
+        return res.status(200).json({ ok: true });
+      } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: '변경 중 오류가 발생했습니다.' });
       }
     }
 
@@ -222,7 +245,8 @@ export default async function handler(req, res) {
       invite.usedAt = new Date().toISOString();
       await client.hset(INVITES_KEY, inv, JSON.stringify(invite));
 
-      const record = { name: (name || c).trim(), approvedAt: new Date().toISOString(), firstApp: body.app || '' };
+      // 무제한(영구) 초대코드로 들어온 강사만 permanent:true — 기간제 초대코드로 들어온 임시 강사는 false
+      const record = { name: (name || c).trim(), approvedAt: new Date().toISOString(), firstApp: body.app || '', permanent: !invite.expiresAt };
       await client.hset(TEACHERS_KEY, c, JSON.stringify(record));
       await client.hdel(REMOVED_KEY, c); // 삭제됐던 코드를 새 초대코드로 다시 등록한 경우 차단 해제
       return res.status(200).json({ ok: true, alreadyApproved: false });
