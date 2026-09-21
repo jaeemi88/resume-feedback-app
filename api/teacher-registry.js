@@ -3,9 +3,10 @@
 //
 // [원장님 전용 — MASTER_ADMIN_PASSWORD 필요]
 //   GET  ?master=비밀번호               → 승인된 강사 전체 목록 조회
-//   GET  ?master=비밀번호&list=invites  → 발급된 초대코드 전체 목록 조회 (사용여부 포함)
+//   GET  ?master=비밀번호&list=invites  → 발급된 초대코드 전체 목록 조회 (사용여부·유효기간 포함)
 //   GET  ?master=비밀번호&list=removed  → 삭제된 강사 목록 조회 (복구 가능)
-//   POST { action:'generateInvite', master } → 새 일회용 초대코드 발급
+//   POST { action:'generateInvite', master, expiryDays } → 새 일회용 초대코드 발급
+//        expiryDays: 유효기간(일). 생략하거나 0이면 무제한.
 //   POST { action:'cancelInvite', master, inviteCode } → 미사용 초대코드 취소
 //   POST { action:'deleteTeacher', master, code }  → 강사 삭제(접속 차단, 기록은 보관)
 //   POST { action:'restoreTeacher', master, code } → 삭제된 강사 복구
@@ -13,7 +14,7 @@
 // [누구나 호출 가능]
 //   GET  ?check=강사코드 → 삭제(차단)된 강사 코드인지 확인 { blocked: true/false }
 //   POST { code, name, inviteCode } → 강사 등록. 이미 승인된 코드면 초대코드 없이도 통과.
-//                                      새 코드면 초대코드가 유효+미사용이어야 통과, 통과 즉시 그 초대코드는 사용 처리됨.
+//                                      새 코드면 초대코드가 유효+미사용+기간내여야 통과, 통과 즉시 그 초대코드는 사용 처리됨.
 //
 // ※ 차단은 "삭제 목록"에 있는 코드만 막습니다. 예전부터 쓰던 코드가 승인 목록에 없더라도 막히지 않아요.
 import Redis from 'ioredis';
@@ -72,7 +73,10 @@ export default async function handler(req, res) {
     try {
       if (list === 'invites') {
         const hash = await client.hgetall(INVITES_KEY);
-        const invites = Object.entries(hash).map(([code, raw]) => ({ code, ...JSON.parse(raw) }));
+        const invites = Object.entries(hash).map(([code, raw]) => {
+          const data = JSON.parse(raw);
+          return { code, ...data, isExpired: !data.used && !!data.expiresAt && Date.now() > data.expiresAt };
+        });
         invites.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         return res.status(200).json({ invites });
       }
@@ -101,17 +105,19 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     const body = req.body || {};
 
-    // 원장님이 새 초대코드 발급
+    // 원장님이 새 초대코드 발급 — expiryDays를 직접 정할 수 있음 (생략·0이면 무제한)
     if (body.action === 'generateInvite') {
       if (!checkAdmin(body.master)) {
         return res.status(401).json({ error: '관리자 비밀번호가 올바르지 않습니다.' });
       }
       try {
         const code = genInviteCode();
+        const days = parseInt(body.expiryDays, 10);
+        const expiresAt = (days && days > 0) ? (Date.now() + days * 24 * 60 * 60 * 1000) : null;
         await client.hset(INVITES_KEY, code, JSON.stringify({
-          createdAt: new Date().toISOString(), used: false, usedBy: null, usedAt: null
+          createdAt: new Date().toISOString(), used: false, usedBy: null, usedAt: null, expiresAt
         }));
-        return res.status(200).json({ inviteCode: code });
+        return res.status(200).json({ inviteCode: code, expiresAt });
       } catch (err) {
         console.error(err);
         return res.status(500).json({ error: '초대코드 발급 중 오류가 발생했습니다.' });
@@ -205,6 +211,9 @@ export default async function handler(req, res) {
       const invite = JSON.parse(inviteRaw);
       if (invite.used) {
         return res.status(403).json({ error: '이미 사용된 초대코드예요. 원장님께 새 초대코드를 요청해 주세요.' });
+      }
+      if (invite.expiresAt && Date.now() > invite.expiresAt) {
+        return res.status(403).json({ error: '유효기간이 지난 초대코드예요. 원장님께 새 초대코드를 요청해 주세요.' });
       }
 
       invite.used = true;
