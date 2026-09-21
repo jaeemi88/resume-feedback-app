@@ -85,7 +85,7 @@ async function notifyStudentByEmail(t, id, item, host) {
 async function upsertStudentConsultLog(client, t, studentEmail, kind) {
   try {
     const email = String(studentEmail || '').trim().toLowerCase();
-    if (!email) return;
+    if (!email) return false;
     const indexKey = `tracker_students_index:${t}`;
     const hash = await client.hgetall(indexKey);
     let matchId = null;
@@ -95,11 +95,11 @@ async function upsertStudentConsultLog(client, t, studentEmail, kind) {
         if ((summary.email || '').trim().toLowerCase() === email) { matchId = id; break; }
       } catch (e) { /* 손상된 항목은 건너뜀 */ }
     }
-    if (!matchId) return;
+    if (!matchId) return false;
 
     const itemKey = `tracker_student:${t}:${matchId}`;
     const raw = await client.get(itemKey);
-    if (!raw) return;
+    if (!raw) return false;
     const record = JSON.parse(raw);
     record.consultLog = record.consultLog || [];
     const today = new Date().toISOString().slice(0, 10);
@@ -114,8 +114,10 @@ async function upsertStudentConsultLog(client, t, studentEmail, kind) {
       .map(([k, n]) => `${labels[k] || k} ${n}건`)
       .join(' · ') + ' 완료 (자동 기록)';
     await client.set(itemKey, JSON.stringify(record));
+    return true;
   } catch (err) {
     console.error('학생 상담이력 자동기록 실패:', err);
+    return false;
   }
 }
 
@@ -134,6 +136,7 @@ export default async function handler(req, res) {
     // 트래커 연동 정보를 먼저 계산해서 item에 포함 — 학생 결과 화면에서 만족도 설문 링크를 바로 만들 수 있게 함
     // 학생이 직접 소속 기관을 선택했으면(여러 기관 동시 운영) 그 값을 우선 쓰고, 없으면 강사가 설정해둔 단일 기관명을 씀
     let institutionNameForSurvey = null;
+    let groupCodeExpiryDays = 5;
     try {
       const configRaw = await client.get(`resume_app_config:${t}`);
       const config = configRaw ? JSON.parse(configRaw) : null;
@@ -142,15 +145,24 @@ export default async function handler(req, res) {
         institutionNameForSurvey = orgName;
         item.trackerProgramId = `auto_resume_${slugPart(orgName)}_${slugPart(item.presetName || '(전공 미지정)')}`;
       }
+      if (config && config.groupCodeExpiryDays) groupCodeExpiryDays = parseInt(config.groupCodeExpiryDays, 10) || 5;
     } catch (err) {
       console.error('트래커 연동용 설정 조회 실패:', err);
+    }
+
+    // 트래커의 개인관리 카드와 이메일이 일치하는 "1:1 코칭" 학생은 기간 제한 없음.
+    // 일치하지 않는(집체교육·일회성) 학생은 강사가 설정한 일수 후 코드 조회가 막힘 (당일 포함으로 계산).
+    const isIndividualCoaching = await upsertStudentConsultLog(client, t, item.studentEmail, 'resume');
+    if (!isIndividualCoaching) {
+      const approvedDate = new Date(item.approvedAt);
+      item.expiresAt = new Date(approvedDate.getFullYear(), approvedDate.getMonth(), approvedDate.getDate() + groupCodeExpiryDays).getTime();
     }
 
     await client.set(itemKey(id), JSON.stringify(item));
 
     const indexRaw = await client.get(indexKey);
     const index = indexRaw ? JSON.parse(indexRaw) : [];
-    index.push({ id, code: item.code || '', studentName: item.studentName || '', presetName: item.presetName || '기본', itemCount: (item.items || []).length, docType: item.docType || 'resume', approvedAt: item.approvedAt });
+    index.push({ id, code: item.code || '', studentName: item.studentName || '', presetName: item.presetName || '기본', itemCount: (item.items || []).length, docType: item.docType || 'resume', approvedAt: item.approvedAt, expiresAt: item.expiresAt || null });
     await client.set(indexKey, JSON.stringify(index));
 
     await notifyStudentByEmail(t, id, item, req.headers.host); // 서버리스 환경에서는 응답 전에 완료를 기다려야 중간에 끊기지 않음
@@ -158,8 +170,6 @@ export default async function handler(req, res) {
     if (institutionNameForSurvey) {
       upsertTrackerStat(client, t, institutionNameForSurvey, item.presetName);
     }
-
-    upsertStudentConsultLog(client, t, item.studentEmail, 'resume');
 
     return res.status(200).json({ ok: true, id });
   }
@@ -172,6 +182,7 @@ export default async function handler(req, res) {
       const index = indexRaw ? JSON.parse(indexRaw) : [];
       const match = index.find(it => it.code === String(code).toUpperCase());
       if (!match) return res.status(404).json({ error: '해당 코드의 결과를 찾을 수 없습니다.' });
+      if (match.expiresAt && Date.now() > match.expiresAt) return res.status(410).json({ error: '조회 가능한 기간이 지났어요. 결과가 필요하시면 강사님께 문의해 주세요.', expired: true });
       const raw = await client.get(itemKey(match.id));
       if (!raw) return res.status(404).json({ error: '결과를 찾을 수 없습니다.' });
       return res.status(200).json({ item: JSON.parse(raw) });
@@ -186,7 +197,11 @@ export default async function handler(req, res) {
     if (id) {
       const raw = await client.get(itemKey(id));
       if (!raw) return res.status(404).json({ error: '결과를 찾을 수 없습니다.' });
-      return res.status(200).json({ item: JSON.parse(raw) });
+      const parsed = JSON.parse(raw);
+      if (req.query.admin !== '1' && parsed.expiresAt && Date.now() > parsed.expiresAt) {
+        return res.status(410).json({ error: '조회 가능한 기간이 지났어요. 결과가 필요하시면 강사님께 문의해 주세요.', expired: true });
+      }
+      return res.status(200).json({ item: parsed });
     }
 
     return res.status(400).json({ error: 'id 또는 list 파라미터가 필요합니다.' });
