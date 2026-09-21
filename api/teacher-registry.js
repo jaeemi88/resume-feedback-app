@@ -105,7 +105,7 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     const body = req.body || {};
 
-    // 원장님이 새 초대코드 발급 — expiryDays를 직접 정할 수 있음 (생략·0이면 무제한)
+    // 원장님이 새 초대코드 발급 — expiryDays를 직접 정할 수 있음 (생략·0이면 무제한), label(메모)로 누구용인지 표시 가능
     if (body.action === 'generateInvite') {
       if (!checkAdmin(body.master)) {
         return res.status(401).json({ error: '관리자 비밀번호가 올바르지 않습니다.' });
@@ -114,8 +114,9 @@ export default async function handler(req, res) {
         const code = genInviteCode();
         const days = parseInt(body.expiryDays, 10);
         const expiresAt = (days && days > 0) ? (Date.now() + days * 24 * 60 * 60 * 1000) : null;
+        const label = String(body.label || '').trim().slice(0, 60);
         await client.hset(INVITES_KEY, code, JSON.stringify({
-          createdAt: new Date().toISOString(), used: false, usedBy: null, usedAt: null, expiresAt
+          createdAt: new Date().toISOString(), used: false, usedBy: null, usedAt: null, expiresAt, label
         }));
         return res.status(200).json({ inviteCode: code, expiresAt });
       } catch (err) {
