@@ -433,6 +433,8 @@ function renderMasterTeacherList() {
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">원장님만 보실 수 있는 화면입니다. 새 강사님 한 분당 코드를 하나씩 발급해서 전달해 주세요. 한 번 쓰면 그 코드는 다시 못 씁니다.</p>
       <label>관리자 비밀번호</label>
       <input type="text" id="masterPasswordInput" placeholder="관리자 비밀번호">
+      <label>발급 대상 메모 (선택, 예: 김민지 강사)</label>
+      <input type="text" id="inviteLabelInput" placeholder="누구에게 줄 코드인지 적어두면 목록에서 알아보기 쉬워요">
       <label>초대코드 유효기간 (일)</label>
       <div style="font-size:12px;color:var(--muted);margin-bottom:6px">이 코드를 며칠 안에 등록해야 하는지 정해요. 일회성 강의를 위한 임시 강사라면 짧게(예: 7일), 정규 강사라면 비워두면 기간 제한 없이 유효해요.</div>
       <input type="text" id="inviteExpiryInput" placeholder="예) 7 (비워두면 무제한)">
@@ -457,6 +459,7 @@ function renderMasterTeacherList() {
   document.getElementById('genInviteBtn').addEventListener('click', async () => {
     const pw = document.getElementById('masterPasswordInput').value;
     const expiryDays = document.getElementById('inviteExpiryInput').value.trim();
+    const label = document.getElementById('inviteLabelInput').value.trim();
     const errEl = document.getElementById('genInviteError');
     const resultEl = document.getElementById('genInviteResult');
     errEl.style.display = 'none'; resultEl.style.display = 'none';
@@ -464,13 +467,13 @@ function renderMasterTeacherList() {
       const res = await fetch('/api/teacher-registry', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'generateInvite', master: pw, expiryDays: expiryDays ? parseInt(expiryDays, 10) : 0 })
+        body: JSON.stringify({ action: 'generateInvite', master: pw, expiryDays: expiryDays ? parseInt(expiryDays, 10) : 0, label })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '발급에 실패했습니다.');
       const inviteLink = location.origin + location.pathname + '?admin=1&invite=' + encodeURIComponent(data.inviteCode);
       resultEl.innerHTML = `
-        <div>발급된 초대코드: ${data.inviteCode} <span style="font-weight:400;color:var(--muted);font-size:12px">(${daysRemainingText(data.expiresAt)})</span></div>
+        <div>발급된 초대코드: ${data.inviteCode}${label ? ` <span style="font-weight:400;color:var(--navy)">(${escapeHtml(label)})</span>` : ''} <span style="font-weight:400;color:var(--muted);font-size:12px">(${daysRemainingText(data.expiresAt)})</span></div>
         <div class="link-box" style="margin-top:8px">
           <span style="word-break:break-all;font-weight:400;font-size:13px">${inviteLink}</span>
           <button class="btn-secondary" style="margin-left:auto" onclick="navigator.clipboard.writeText('${inviteLink}')">링크 복사</button>
@@ -478,6 +481,7 @@ function renderMasterTeacherList() {
         <p style="font-size:12px;color:var(--muted);font-weight:400;margin:6px 0 0">이 링크 하나만 보내주세요 — 강사님이 열면 초대코드가 자동으로 입력되어 있어요.</p>
       `;
       resultEl.style.display = 'block';
+      document.getElementById('inviteLabelInput').value = '';
     } catch (err) {
       errEl.textContent = err.message;
       errEl.style.display = 'block';
@@ -498,12 +502,31 @@ function renderMasterTeacherList() {
         resultEl.innerHTML = '<div class="empty">아직 등록된 강사가 없습니다.</div>';
         return;
       }
-      resultEl.innerHTML = data.teachers.map(t => `
-        <div style="border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:8px">
-          <b>${t.name}</b> <span style="color:var(--muted);font-size:12px">(코드: ${t.code})</span><br>
-          <span style="font-size:12px;color:var(--muted)">등록일: ${new Date(t.approvedAt).toLocaleDateString('ko-KR')} · 첫 등록 앱: ${t.firstApp || '-'}</span>
-        </div>
-      `).join('');
+      resultEl.innerHTML = '';
+      data.teachers.forEach(t => {
+        const row = document.createElement('div');
+        row.style.cssText = 'border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap';
+        row.innerHTML = `
+          <div>
+            <b>${escapeHtml(t.name)}</b> <span style="color:var(--muted);font-size:12px">(코드: ${escapeHtml(t.code)})</span><br>
+            <span style="font-size:12px;color:var(--muted)">등록일: ${new Date(t.approvedAt).toLocaleDateString('ko-KR')} · 첫 등록 앱: ${t.firstApp || '-'}</span>
+          </div>
+          <button class="btn-danger del-teacher-btn" style="flex-shrink:0">삭제</button>
+        `;
+        row.querySelector('.del-teacher-btn').addEventListener('click', async () => {
+          if (!confirm(`"${t.name}"(${t.code}) 강사를 삭제할까요? 접속이 차단되고, 프리셋·첨삭 기록은 그대로 보관됩니다.`)) return;
+          try {
+            const r = await fetch('/api/teacher-registry', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'deleteTeacher', master: pw, code: t.code })
+            });
+            const d = await r.json();
+            if (!r.ok) throw new Error(d.error || '삭제에 실패했습니다.');
+            row.remove();
+          } catch (e) { alert('삭제 실패: ' + e.message); }
+        });
+        resultEl.appendChild(row);
+      });
     } catch (err) {
       errEl.textContent = err.message;
       errEl.style.display = 'block';
@@ -525,12 +548,34 @@ function renderMasterTeacherList() {
         resultEl.innerHTML = '<div class="empty">아직 발급된 초대코드가 없습니다.</div>';
         return;
       }
-      resultEl.innerHTML = data.invites.map(iv => `
-        <div style="border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:8px">
-          <b>${iv.code}</b> ${iv.used ? '<span style="color:#b91c1c;font-size:12px">(사용됨 · ' + (iv.usedBy || '') + ')</span>' : iv.isExpired ? '<span style="color:#b91c1c;font-size:12px">(기간만료)</span>' : '<span style="color:var(--green);font-size:12px">(미사용)</span>'}<br>
-          <span style="font-size:12px;color:var(--muted)">발급일: ${new Date(iv.createdAt).toLocaleDateString('ko-KR')} · 유효기간: ${daysRemainingText(iv.expiresAt)}</span>
-        </div>
-      `).join('');
+      resultEl.innerHTML = '';
+      data.invites.forEach(iv => {
+        const row = document.createElement('div');
+        row.style.cssText = 'border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap';
+        const statusHtml = iv.used ? '<span style="color:#b91c1c;font-size:12px">(사용됨 · ' + escapeHtml(iv.usedBy || '') + ')</span>' : iv.isExpired ? '<span style="color:#b91c1c;font-size:12px">(기간만료)</span>' : '<span style="color:var(--green);font-size:12px">(미사용)</span>';
+        row.innerHTML = `
+          <div>
+            <b>${iv.code}</b>${iv.label ? ` <span style="color:var(--navy);font-size:12px">(${escapeHtml(iv.label)})</span>` : ''} ${statusHtml}<br>
+            <span style="font-size:12px;color:var(--muted)">발급일: ${new Date(iv.createdAt).toLocaleDateString('ko-KR')} · 유효기간: ${daysRemainingText(iv.expiresAt)}</span>
+          </div>
+          ${!iv.used ? '<button class="btn-danger del-invite-btn" style="flex-shrink:0">취소</button>' : ''}
+        `;
+        if (!iv.used) {
+          row.querySelector('.del-invite-btn').addEventListener('click', async () => {
+            if (!confirm(`초대코드 "${iv.code}"를 취소할까요?`)) return;
+            try {
+              const r = await fetch('/api/teacher-registry', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'cancelInvite', master: pw, inviteCode: iv.code })
+              });
+              const d = await r.json();
+              if (!r.ok) throw new Error(d.error || '취소에 실패했습니다.');
+              row.remove();
+            } catch (e) { alert('취소 실패: ' + e.message); }
+          });
+        }
+        resultEl.appendChild(row);
+      });
     } catch (err) {
       errEl.textContent = err.message;
       errEl.style.display = 'block';
