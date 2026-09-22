@@ -255,6 +255,7 @@
 const params = new URLSearchParams(location.search);
 const isAdmin = params.get('admin') === '1';
 let TEACHER_ID = (params.get('t') || '').trim().toLowerCase().replace(/[^a-z0-9가-힣_-]/g, '').slice(0, 40);
+try{ if(TEACHER_ID){ localStorage.setItem('moa_teacher_id', TEACHER_ID); } else if(!params.get('master')){ const __saved=(localStorage.getItem('moa_teacher_id')||'').trim(); if(__saved){ TEACHER_ID=__saved; const __u=new URL(location.href); __u.searchParams.set('t',__saved); history.replaceState(null,'',__u.toString()); } } }catch(e){}
 document.getElementById('roleBadge').textContent = (isAdmin ? '강사용' : '학생용') + (TEACHER_ID ? ' · ' + TEACHER_ID : '');
 document.body.classList.add(isAdmin ? 'role-teacher' : 'role-student');
 document.getElementById('header-title').addEventListener('click', () => {
