@@ -46,7 +46,13 @@ async function upsertTrackerStat(client, t, orgName, field) {
   }
 }
 
+function koDate(ms) {
+  const d = new Date(ms + 9 * 60 * 60 * 1000); // 한국 시간 기준 날짜 표기
+  return `${d.getUTCFullYear()}년 ${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일`;
+}
+
 // 첨삭이 승인 완료되면, 학생이 이메일을 남겼을 경우에만 결과 링크를 자동으로 보내줌.
+// 링크와 함께 확인코드·조회 가능 기간도 같이 안내함 (링크를 못 열 때 코드로 조회할 수 있게).
 // RESEND_API_KEY가 없거나 학생이 이메일을 안 남겼으면 조용히 건너뜀 (알림은 부가기능이라 실패해도 저장 자체는 막지 않음).
 async function notifyStudentByEmail(t, id, item, host) {
   try {
@@ -54,6 +60,12 @@ async function notifyStudentByEmail(t, id, item, host) {
     const to = item.studentEmail;
     if (!to) { console.log('학생 알림 건너뜀: studentEmail 없음'); return; }
     const link = `https://${host}/?t=${encodeURIComponent(t)}#result=${id}`;
+    const codePart = item.code
+      ? `\n\n확인코드: ${item.code}\n(링크가 열리지 않으면 첨삭 앱의 "내 결과 확인"에서 이 코드로 조회할 수 있어요.)`
+      : '';
+    const expiryPart = item.expiresAt
+      ? `\n\n조회 가능 기간: ${koDate(item.expiresAt - 1)}까지\n필요한 내용은 기간 안에 "워드로 저장"으로 받아두세요.`
+      : '';
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -64,7 +76,7 @@ async function notifyStudentByEmail(t, id, item, host) {
         from: 'MOA FORMULA <moaformula@jinromoa.co.kr>',
         to: [to],
         subject: `[자소서 첨삭] ${item.studentName || '학생'}님의 첨삭 결과가 도착했어요`,
-        text: `${item.studentName || '학생'}님, 요청하신 자소서 첨삭 결과가 준비됐어요.\n\n아래 링크에서 확인해 주세요.\n${link}`
+        text: `${item.studentName || '학생'}님, 요청하신 자소서 첨삭 결과가 준비됐어요.\n\n아래 링크에서 확인해 주세요.\n${link}${codePart}${expiryPart}`
       })
     });
     if (!res.ok) {
@@ -172,6 +184,30 @@ export default async function handler(req, res) {
     }
 
     return res.status(200).json({ ok: true, id });
+  }
+
+  // 강사가 특정 학생 결과의 조회 기간을 연장함 (days일 뒤까지, 0이면 기간 제한 없음)
+  if (req.method === 'PATCH') {
+    const { id } = req.query;
+    if (!id) return res.status(400).json({ error: 'id 파라미터가 필요합니다.' });
+    const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+    const days = Math.max(0, Math.min(365, parseInt(body.days, 10) || 0));
+    const raw = await client.get(itemKey(id));
+    if (!raw) return res.status(404).json({ error: '결과를 찾을 수 없습니다.' });
+    const item = JSON.parse(raw);
+    let expiresAt = null;
+    if (days > 0) {
+      const now = new Date();
+      expiresAt = new Date(now.getFullYear(), now.getMonth(), now.getDate() + days).getTime();
+    }
+    item.expiresAt = expiresAt;
+    item.extendedAt = Date.now();
+    await client.set(itemKey(id), JSON.stringify(item));
+    const indexRaw = await client.get(indexKey);
+    const index = indexRaw ? JSON.parse(indexRaw) : [];
+    const idx = index.findIndex(x => x.id === id);
+    if (idx >= 0) { index[idx].expiresAt = expiresAt; await client.set(indexKey, JSON.stringify(index)); }
+    return res.status(200).json({ ok: true, expiresAt });
   }
 
   if (req.method === 'GET') {
