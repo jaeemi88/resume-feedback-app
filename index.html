@@ -1,285 +1,1816 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>MOA FORMULA 허브</title>
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="MOA FORMULA">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#11308C">
-<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>자소서·이력서 첨삭 — 진로모아커리어센터</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800;900&display=swap">
+<meta name="theme-color" content="#643DF2">
 <style>
-:root{
---navy:#11308C; --violet:#643DF2; --blue:#295BF2; --lime:#C0D904; --cream:#EAF2AE;
---olive:#3D4500; --charcoal:#1F2433; --coral:#D9572B; --coral-soft:#FCE9E1; --coral-ink:#8A3517;
---bg:#F4F6FB; --line:#E2E5EE; --ink:#1A1A2E; --muted:#666;
-}
-*{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
-html,body{margin:0;padding:0}
-body{
-font-family:'Noto Sans KR',-apple-system,sans-serif;
-background:var(--bg);
-color:var(--ink);
-padding-bottom:40px;
-word-break:keep-all;
-overflow-wrap:break-word;
-}
-header{
-background:var(--navy);
-padding:28px 20px 22px;
-display:flex;
-flex-direction:column;
-gap:4px;
-}
-header .brand{
-display:flex;
-align-items:center;
-gap:8px;
-font-size:13px;
-font-weight:700;
-color:var(--lime);
-}
-header .brand img{width:22px;height:22px}
-header h1{
-margin:6px 0 0;
-font-size:22px;
-font-weight:900;
-color:#fff;
-}
-header p{
-margin:2px 0 0;
-font-size:13px;
-color:rgba(255,255,255,0.75);
-}
-main{
-max-width:520px;
-margin:0 auto;
-padding:18px 16px 0;
-}
-.app-card{
-background:#fff;
-border-radius:14px;
-border:1px solid var(--line);
-padding:16px 18px;
-margin-bottom:14px;
-}
-.app-card .app-title{
-display:flex;
-align-items:center;
-gap:8px;
-font-size:16px;
-font-weight:800;
-color:var(--navy);
-margin-bottom:12px;
-}
-.role-row{
-display:flex;
-gap:8px;
-flex-wrap:wrap;
-}
-a.role-btn{
-flex:1;
-min-width:110px;
-text-align:center;
-padding:12px 10px;
-border-radius:10px;
-font-size:14px;
-font-weight:700;
-text-decoration:none;
-color:#fff;
-}
-.app-card{--ac:var(--navy);--at:var(--navy);--ab:var(--navy);border-left:5px solid var(--ac)}
-.c-resume{--ac:var(--violet);--at:var(--violet);--ab:var(--violet)}
-.c-interview{--ac:var(--blue);--at:var(--blue);--ab:var(--blue)}
-.c-tracker{--ac:var(--lime);--at:var(--olive);--ab:var(--lime)}
-.c-board{--ac:var(--charcoal);--at:var(--charcoal);--ab:var(--charcoal)}
-.c-proposal{--ac:var(--coral);--at:var(--coral);--ab:var(--coral)}
-.c-qbank{--ac:var(--coral-soft);--at:var(--coral-ink);--ab:var(--coral-ink)}
-.c-master{--ac:var(--charcoal);--at:var(--charcoal);--ab:var(--charcoal)}
-.app-card .app-title{color:var(--at)}
-.role-btn.student{background:var(--ac);color:#fff;border:2px solid var(--ac)}
-.c-tracker .role-btn.student{color:var(--olive)}
-.c-qbank .role-btn.student{color:var(--coral-ink)}
-.role-btn.teacher{background:#fff;color:var(--at);border:2px solid var(--ab)}
-.role-btn.teacher::before{content:"";display:inline-block;width:13px;height:13px;margin-right:6px;vertical-align:-1px;background:currentColor;
--webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='11' width='14' height='10' rx='2'/%3E%3Cpath d='M8 11V7a4 4 0 0 1 8 0v4'/%3E%3C/svg%3E") center/contain no-repeat;
-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='11' width='14' height='10' rx='2'/%3E%3Cpath d='M8 11V7a4 4 0 0 1 8 0v4'/%3E%3C/svg%3E") center/contain no-repeat}
-.role-legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin:4px 4px 0}
-.role-legend span{display:flex;align-items:center;gap:6px}
-.role-legend i{display:inline-block;width:22px;height:12px;border-radius:4px}
-section.group-label{
-font-size:13px;
-font-weight:800;
-color:var(--muted);
-margin:22px 4px 10px;
-letter-spacing:0.02em;
-}
-footer{
-text-align:center;
-font-size:12px;
-color:var(--muted);
-padding:24px 16px 8px;
-}
+  :root{
+    --bg:#ffffff;
+    --text:#1a2130;
+    --muted:#6b7280;
+    --green:#643DF2;
+    --green-light:#EFEAFE;
+    --navy:#3A1F9E;
+    --navy-light:#F1EDFE;
+    --border:#e2e5ea;
+    --warn:#b45309;
+    --warn-bg:#fef3e2;
+    --ok:#1b4332;
+    --ok-bg:#e8f0ec;
+    --miss:#b91c1c;
+    --miss-bg:#fdecec;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Noto Sans KR','맑은 고딕','Malgun Gothic',-apple-system,sans-serif;
+    line-height:1.6;
+    word-break:keep-all;
+    overflow-wrap:break-word;
+  }
+  header{
+    background:var(--green);
+    color:#fff;
+    padding:18px 24px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  header .header-sub{
+    font-size:12px;
+    color:rgba(255,255,255,.65);
+    margin-bottom:4px;
+    letter-spacing:.2px;
+    display:flex;
+    align-items:center;
+    gap:5px;
+  }
+  header .header-sub .brand-logo{
+    width:14px;
+    height:14px;
+    flex-shrink:0;
+  }
+  header .header-sub .brand-name{
+    color:#C0D904;
+    font-weight:700;
+  }
+  header h1{
+    font-size:20px;
+    margin:0;
+    font-weight:600;
+  }
+  header .badge{
+    font-size:12px;
+    font-weight:700;
+    background:#EAF2AE;
+    color:#3A1F9E;
+    padding:4px 10px;
+    border-radius:999px;
+  }
+  body.role-teacher header .badge{
+    background:#C0D904;
+    color:#3A1F9E;
+  }
+  /* 학생용: 같은 그린 톤이지만 연하게 — 강사용: 원래의 진한 그린 유지 */
+  body.role-student header{
+    background:var(--green-light);
+    color:var(--green);
+  }
+  body.role-student header .header-sub{
+    color:#5b8570;
+  }
+  body.role-student header .brand-name{
+    color:var(--green);
+  }
+  body.role-student header .brand-logo{
+    filter:brightness(0) saturate(100%);
+    opacity:0.75;
+  }
+  main{
+    max-width:880px;
+    margin:0 auto;
+    padding:20px 16px 60px;
+  }
+  .card{
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:20px;
+    margin-bottom:18px;
+  }
+  .card h2{
+    font-size:16px;
+    color:var(--navy);
+    margin:0 0 14px;
+    border-left:4px solid var(--green);
+    padding-left:10px;
+  }
+  label{
+    display:block;
+    font-size:13px;
+    font-weight:700;
+    color:var(--navy);
+    margin:12px 0 6px;
+  }
+  select, textarea, input[type=text]{
+    width:100%;
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:10px 12px;
+    font-family:inherit;
+    font-size:14px;
+    color:#1a2130;
+    background:#ffffff;
+    resize:vertical;
+  }
+  textarea{min-height:90px;}
+  .counter{
+    text-align:right;
+    font-size:12px;
+    color:var(--muted);
+    margin-top:4px;
+  }
+  button{
+    font-family:inherit;
+    font-size:14px;
+    font-weight:700;
+    border:none;
+    border-radius:8px;
+    padding:10px 18px;
+    cursor:pointer;
+  }
+  .btn-primary{background:var(--green); color:#fff;}
+  .btn-primary:disabled{background:#9db8ad; cursor:not-allowed;}
+  .btn-secondary{background:var(--navy-light); color:var(--navy);}
+  .btn-danger{background:var(--miss-bg); color:var(--miss);}
+  .btn-row{display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;}
+  .tabs{display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap;}
+  .tab{
+    padding:8px 14px;
+    border-radius:8px 8px 0 0;
+    background:var(--navy-light);
+    color:var(--navy);
+    cursor:pointer;
+    font-size:13px;
+    font-weight:700;
+  }
+  .tab.active{background:var(--navy); color:#fff;}
+  .status-msg{
+    margin-top:14px;
+    padding:12px 14px;
+    border-radius:8px;
+    font-size:13px;
+    background:var(--green-light);
+    color:var(--green);
+    display:none;
+  }
+  .status-msg.error{background:var(--miss-bg); color:var(--miss);}
+  .star-row{display:flex; gap:8px; flex-wrap:wrap; margin:10px 0;}
+  .star-tag{
+    font-size:12px;
+    font-weight:700;
+    padding:4px 10px;
+    border-radius:999px;
+  }
+  .star-tag.ok{background:var(--ok-bg); color:var(--ok);}
+  .star-tag.miss{background:var(--miss-bg); color:var(--miss);}
+  .review-item{
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:16px;
+    margin-bottom:14px;
+  }
+  .review-item .meta{font-size:12px; color:var(--muted); margin-bottom:8px;}
+  .field-block{margin-bottom:10px;}
+  .field-block .fb-label{font-size:12px; font-weight:700; color:var(--muted); margin-bottom:4px;}
+  .preset-item{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    padding:10px 12px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    margin-bottom:8px;
+    flex-wrap:wrap;
+  }
+  .preset-item > div:first-child{
+    flex:1 1 220px;
+    min-width:0;
+  }
+  .preset-item > .btn-row{
+    flex:0 0 auto;
+  }
+  .link-box{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    background:var(--green-light);
+    border-radius:8px;
+    padding:10px 12px;
+    margin-top:10px;
+    word-break:break-all;
+    font-size:13px;
+  }
+  .empty{color:var(--muted); font-size:13px; padding:10px 0;}
+  .result-block{margin-bottom:18px;}
+  .result-block h3{font-size:14px; color:var(--navy); margin:0 0 6px;}
+  .result-block p{margin:0; font-size:14px;}
+  .moa-q{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:17px; height:17px; margin-left:5px; vertical-align:middle;
+    border-radius:50%; background:#EAF2AE; color:#11308C;
+    font-size:11px; font-weight:900; line-height:1; text-decoration:none;
+  }
+  .moa-q:hover{ background:#C0D904; }
 </style>
 </head>
 <body>
 <header>
-<div class="brand"><img id="brandLogo" alt=""><span>진로모아커리어센터 · MOA FORMULA</span></div>
-<h1>우리 앱 모음</h1>
-<p>화면 아래 "홈 화면에 추가"로 저장해두면 앱처럼 바로 열 수 있어요</p>
+  <div>
+    <div class="header-sub"><img class="brand-logo" src="data:image/png;base64,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" alt=""><span class="brand-name">진로모아커리어센터</span> · MOA FORMULA</div>
+    <h1 id="header-title" style="cursor:pointer" title="홈으로">자소서·이력서 첨삭</h1>
+  </div>
+  <span class="badge" id="roleBadge">학생용</span>
 </header>
-<main>
-<section class="group-label">학생·강사용 도구</section>
-<div class="role-legend" style="margin-bottom:10px"><span><i style="background:var(--navy)"></i>학생용</span><span><i style="border:2px solid var(--navy)"></i>강사용 (잠금)</span></div>
-<div class="app-card c-resume">
-<div class="app-title">📝 자소서·이력서 첨삭</div>
-<div class="role-row">
-<a class="role-btn student" href="https://resume-feedback-app-phi.vercel.app/?t=jinromoa">학생용</a>
-<a class="role-btn teacher" href="https://resume-feedback-app-phi.vercel.app/?admin=1&t=jinromoa">강사용</a>
-</div>
-</div>
-<div class="app-card c-interview">
-<div class="app-title">🎤 모의면접 시뮬레이터</div>
-<div class="role-row">
-<a class="role-btn student" href="https://moa-interview-app.vercel.app/?t=jinromoa">학생용</a>
-<a class="role-btn teacher" href="https://moa-interview-app.vercel.app/?admin=1&t=jinromoa">강사용</a>
-</div>
-</div>
-<div class="app-card c-tracker">
-<div class="app-title">📊 수강생 사후관리 트래커</div>
-<div class="role-row">
-<a class="role-btn teacher" href="https://moa-tracker-tau.vercel.app/?t=jinromoa">강사용 (전체)</a>
-</div>
-</div>
-<section class="group-label">운영 도구</section>
-<div class="app-card c-board">
-<div class="app-title">🗓️ 진로모아 운영보드</div>
-<div class="role-row">
-<a class="role-btn teacher" href="https://jinromoa-board.vercel.app/">바로가기</a>
-</div>
-</div>
-<section class="group-label">제작 도구</section>
-<div class="app-card c-proposal">
-<div class="app-title">📄 제안서 생성기</div>
-<div class="role-row">
-<a class="role-btn teacher" href="https://moa-proposal-generator.vercel.app/?t=jinromoa">바로가기</a>
-</div>
-</div>
-<div class="app-card c-qbank">
-<div class="app-title">🧠 질문은행 자동확장</div>
-<div class="role-row">
-<a class="role-btn teacher" href="https://claude.ai/artifact/AYt1cfU5crrPkxFTJak9mj">바로가기</a>
-</div>
-</div>
-<section class="group-label">참고 자료</section>
-<div class="app-card" style="padding:0;overflow:hidden">
-<details>
-<summary style="cursor:pointer;padding:16px 18px;font-weight:800;font-size:16px;color:var(--navy)">📋 전체 기능 목록 (눌러서 펼치기)</summary>
-<div style="padding:0 18px 18px;font-size:12.5px;line-height:1.8;color:#333">
-<b style="display:block;margin:14px 0 6px;color:var(--violet);font-size:14px">📝 자소서·이력서 첨삭</b>
-<div style="margin-bottom:4px"><b>학생용</b> — 여러 문항 한 번에 제출, 문서유형·전공·소속기관 선택, 채용공고 매칭, 자가진단·Before→After, 확인코드로 결과조회, 제출횟수 제한</div>
-<div><b>강사용</b> — QR코드, 검수대기함(구조진단·감점요인·AI문구감지 등), 프리셋 관리, 완료목록(필터·정렬), 알림설정(이메일·재도전·트래커연동)</div>
-<b style="display:block;margin:14px 0 6px;color:var(--blue);font-size:14px">🎤 모의면접 시뮬레이터</b>
-<div style="margin-bottom:4px"><b>학생용</b> — 6개 유형×6문항, 질문별 즉시 피드백, 재도전 범위, 전공·직무 세트 선택, 직무특화질문 AI생성, 카테고리별/전체모아 보내기 선택</div>
-<div><b>강사용</b> — 검수대기함, 질문 편집, 평가기준 프리셋, 알림설정(이메일 개별저장·검토방식즉시저장·재도전·기관명)</div>
-<b style="display:block;margin:14px 0 6px;color:var(--olive);font-size:14px">📊 수강생 사후관리 트래커</b>
-<div>개인관리(학생카드+상담이력 자동기록), 진로모아관리(기관·전공별 실적, QR 만족도설문 자동집계)</div>
-<b style="display:block;margin:14px 0 6px;color:var(--charcoal);font-size:14px">🗓️ 진로모아 운영보드</b>
-<div>강의·달력·파견강사·완료 탭으로 강의 일정 관리, 새 강의 등록, 강사 등록 링크 보내기, 목록 문서로 보기, 엑셀(CSV) 내보내기, 백업 저장·불러오기</div>
-<b style="display:block;margin:14px 0 6px;color:var(--coral);font-size:14px">📄 제안서 생성기</b>
-<div>학교명만 입력하면 A4 제안서 자동생성(3단계 구성), 기본값 편집 가능, 인쇄/PDF 저장</div>
-<div style="margin-top:14px;padding:12px 14px;background:#FCEBEB;border-radius:8px">
-<b style="color:#A32D2D">자주 헷갈리는 부분</b><br>
-· "제출"은 질문 하나씩, "강사에게 넘기기"만 선택 가능<br>
-· 재도전 설정은 두 앱 각각 따로 설정해야 함<br>
-· 만족도 설문은 기관명을 넣어야만 나타남 (소급 적용 안 됨)<br>
-· 강사 알림 이메일은 "개별 저장" 버튼을 따로 눌러야 함
-</div>
-</div>
-</details>
-</div>
-<div class="app-card" style="padding:0;overflow:hidden">
-<details>
-<summary style="cursor:pointer;padding:16px 18px;font-weight:800;font-size:16px;color:var(--navy)">📊 강사용 기능 안내 (눌러서 펼치기)</summary>
-<div style="padding:0 18px 18px">
-<div style="display:flex;align-items:center;gap:8px;margin:14px 0 10px">
-<span style="width:10px;height:10px;border-radius:50%;background:var(--violet);display:inline-block"></span>
-<b style="font-size:14px">📝 자소서·이력서 첨삭 — 강사용</b>
-</div>
-<table style="width:100%;border-collapse:separate;border-spacing:0;border-radius:10px;overflow:hidden;border:1px solid var(--line);table-layout:fixed;margin-bottom:18px">
-<thead>
-<tr style="background:var(--violet)">
-<th style="text-align:left;font-size:12px;color:#fff;padding:10px 12px;width:34%">기능</th>
-<th style="text-align:left;font-size:12px;color:#fff;padding:10px 12px">설명</th>
-</tr>
-</thead>
-<tbody id="resumeGuideBody"></tbody>
-</table>
-<div style="display:flex;align-items:center;gap:8px;margin:14px 0 10px">
-<span style="width:10px;height:10px;border-radius:50%;background:var(--blue);display:inline-block"></span>
-<b style="font-size:14px">🎤 모의면접 시뮬레이터 — 강사용</b>
-</div>
-<table style="width:100%;border-collapse:separate;border-spacing:0;border-radius:10px;overflow:hidden;border:1px solid var(--line);table-layout:fixed">
-<thead>
-<tr style="background:var(--blue)">
-<th style="text-align:left;font-size:12px;color:#fff;padding:10px 12px;width:34%">기능</th>
-<th style="text-align:left;font-size:12px;color:#fff;padding:10px 12px">설명</th>
-</tr>
-</thead>
-<tbody id="interviewGuideBody"></tbody>
-</table>
-</div>
-</details>
-</div>
-<section class="group-label">원장님 전용 관리 화면</section>
-<div class="app-card c-master">
-<div class="app-title">🎯 강사 승인 · 초대코드 관리</div>
-<div class="role-row">
-<a class="role-btn teacher" href="https://resume-feedback-app-phi.vercel.app/?master=1">자소서 앱에서</a>
-<a class="role-btn teacher" href="https://moa-interview-app.vercel.app/?master=1">모의면접 앱에서</a>
-<a class="role-btn teacher" href="https://moa-tracker-tau.vercel.app/?master=1">트래커 앱에서</a>
-</div>
-</div>
-</main>
-<footer>진로모아커리어센터 · jinromoa 코드로 통일된 링크입니다</footer>
+<main id="app"></main>
+
 <script>
-(function(){
-var icon = document.querySelector('link[rel="apple-touch-icon"]');
-var logo = document.getElementById('brandLogo');
-if(icon && logo){ logo.src = icon.getAttribute('href'); }
-})();
-function fillGuideTable(bodyId, rows, accentVar){
-const tbody = document.getElementById(bodyId);
-tbody.innerHTML = rows.map((r, i) => `
-<tr style="background:${i % 2 === 0 ? '#fff' : '#FAFBFD'}">
-<td style="padding:12px 12px;font-size:12.5px;font-weight:700;color:var(--navy);line-height:1.5;vertical-align:top;border-top:1px solid var(--line);word-break:keep-all">${r[0]}</td>
-<td style="padding:12px 14px;font-size:12.5px;color:#333;line-height:1.7;vertical-align:top;border-top:1px solid var(--line)">${r[1]}</td>
-</tr>
-`).join('');
+const params = new URLSearchParams(location.search);
+const isAdmin = params.get('admin') === '1';
+let TEACHER_ID = (params.get('t') || '').trim().toLowerCase().replace(/[^a-z0-9가-힣_-]/g, '').slice(0, 40);
+document.getElementById('roleBadge').textContent = (isAdmin ? '강사용' : '학생용') + (TEACHER_ID ? ' · ' + TEACHER_ID : '');
+document.body.classList.add(isAdmin ? 'role-teacher' : 'role-student');
+document.getElementById('header-title').addEventListener('click', () => {
+  location.href = location.pathname + '?t=' + encodeURIComponent(TEACHER_ID) + (isAdmin ? '&admin=1' : '');
+});
+
+const app = document.getElementById('app');
+
+// ---------- 공통 유틸 ----------
+async function api(path, options = {}) {
+  // 강사별 데이터 분리를 위해 /api/config, /api/reviews, /api/results 호출에는
+  // 항상 t(강사 코드)를 쿼리 파라미터로 자동 첨부함 (호출부를 일일이 고칠 필요 없게)
+  let finalPath = path;
+  if (/^\/api\/(config|reviews|results)/.test(path)) {
+    const sep = path.includes('?') ? '&' : '?';
+    finalPath = path + sep + 't=' + encodeURIComponent(TEACHER_ID);
+  }
+  const res = await fetch(finalPath, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    const msg = (err.error || ('요청 실패: ' + res.status)) + (err.detail ? ' — 상세: ' + err.detail : '');
+    const e = new Error(msg);
+    if (err.expired) e.expired = true;
+    throw e;
+  }
+  return res.json();
 }
-fillGuideTable('resumeGuideBody', [
-['학생용 QR코드', '클릭 시 다운로드 가능, 교실에 인쇄해서 붙여둘 수 있어요.'],
-['검수 대기함', '문항별 구조진단·구체성 체크·감점 요인·AI스러운 문구 감지·채용공고 매칭·자가진단 비교·Before→After·면접관 시점 추론·강점/개선점/다듬은 문장/꼬리질문 3종까지 전부 수정 가능. "전체 승인 및 링크 생성" 한 번으로 완료돼요.'],
-['첨삭 기준 프리셋 관리', '추천 라이브러리(사회복지학과·물리치료과·항공서비스·사무행정·직업상담사)에서 바로 추가하거나, 직접 추가·수정·기본값 지정·삭제할 수 있어요.'],
-['완료된 첨삭 목록', '전공별 필터·그룹핑, 정렬(최신/오래된/이름순), 결과 보기 링크, 삭제가 가능해요.'],
-['알림 설정 — 이메일', '강사 알림 이메일은 개별 저장 버튼으로 따로 저장해요. 다른 설정을 바꿔도 사라지지 않아요.'],
-['알림 설정 — 재도전 범위', '학생 제출 횟수를 자유롭게 / 1회 재도전 / 1회만 중에서 정할 수 있어요.'],
-['알림 설정 — 트래커 연동', '단일 기관명을 설정하거나, 여러 기관을 등록해서 학생이 직접 소속을 선택하게 할 수 있어요.'],
-['헤더 클릭 → 홈 이동', '어느 화면에서든 상단 앱 이름을 클릭하면 처음 화면으로 이동해요.']
-]);
-fillGuideTable('interviewGuideBody', [
-['검수 대기함', '강사 검토 모드일 때, 학생 제출 내용을 검토한 후 승인해요.'],
-['질문 내용 편집', '6개 카테고리 각각의 질문 6개를 직접 수정할 수 있어요.'],
-['AI 평가기준 프리셋', '전체 교체형 — 프리셋을 선택하면 코칭 프롬프트 전체가 그 기준으로 바뀌어요.'],
-['알림 설정 — 이메일', '개별 저장 버튼으로 따로 저장해요. 다른 설정을 바꿔도 사라지지 않아요.'],
-['강사 검토 후 전달 체크', '체크박스를 누르는 즉시 자동으로 저장돼요.'],
-['재도전 허용 범위', '자유롭게 / 1회 재도전 / 재도전 불가 중에서 선택할 수 있어요.'],
-['기관명 설정', '단일 기관명 또는 세트별 기관명(학생이 전공·직무 세트 선택 시 자동 반영) 중에서 선택할 수 있어요.'],
-['헤더 클릭 → 홈 이동', '어느 화면에서든 상단 앱 이름을 클릭하면 처음 화면으로 이동해요.']
-]);
+
+const FRAMEWORK_LABELS = {
+  STAR: { situation: '상황(S)', task: '과제(T)', action: '행동(A)', result: '결과(R)' },
+  'STAR-L': { situation: '상황(S)', task: '과제(T)', action: '행동(A)', result: '결과+배움(R-L)' },
+  PREP: { point: '주장(P)', reason: '근거(R)', example: '사례(E)', pointAgain: '재강조(P)' },
+  RESUME: { actionVerbStart: '행동동사 시작', quantifiedResult: '정량적 성과', concise: '간결성', jobKeyword: '직무 키워드' }
+};
+
+function structureTagsHtml(framework, structure) {
+  const labels = FRAMEWORK_LABELS[framework] || FRAMEWORK_LABELS.STAR;
+  return Object.keys(labels).map(k => {
+    const ok = structure && structure[k];
+    return `<span class="star-tag ${ok ? 'ok' : 'miss'}">${labels[k]} ${ok ? '충족' : '보완필요'}</span>`;
+  }).join('');
+}
+
+function concretenessTagsHtml(c) {
+  if (!c) return '';
+  const labels = { hasNumber: '숫자 포함', hasProperNoun: '고유명사 포함', hasJobKeyword: '직무 키워드 포함' };
+  return Object.keys(labels).map(k => {
+    const ok = c[k];
+    return `<span class="star-tag ${ok ? 'ok' : 'miss'}">${labels[k]} ${ok ? 'O' : 'X'}</span>`;
+  }).join('');
+}
+
+function riskFlagsHtml(flags) {
+  if (!flags || !flags.length) return '';
+  const labelMap = {
+    복사붙여넣기형: '복사·붙여넣기형(회사·직무명 오류 의심)',
+    완벽한AI스타일형: '완벽한 AI 스타일형(개인 경험 부족)',
+    동문서답형: '동문서답형(핵심 키워드·수치 부족)',
+    추상적표현남발형: '추상적 표현 남발형',
+    근거부족나열형: '근거 부족 주장 나열형'
+  };
+  return `<div style="margin:10px 0">${flags.map(f =>
+    `<span class="star-tag miss" style="background:var(--warn-bg);color:var(--warn)">⚠ ${labelMap[f] || f}</span>`
+  ).join(' ')}</div>`;
+}
+
+function aiTracePhrasesHtml(phrases) {
+  if (!phrases || !phrases.length) return '';
+  return `<div class="field-block" style="background:var(--miss-bg);padding:10px 12px;border-radius:8px">
+    <div class="fb-label">🤖 AI스러운 문구 콕 집어보기</div>
+    ${phrases.map(p => `
+      <div style="margin-top:8px">
+        <span style="text-decoration:underline wavy var(--miss);font-weight:700">"${escapeHtml(p.phrase)}"</span>
+        <p style="margin:4px 0 0;font-size:13px">${escapeHtml(p.note)}</p>
+      </div>
+    `).join('')}
+  </div>`;
+}
+
+function followUpHtml(fu) {
+  if (!fu) return '';
+  const labels = { reasonType: '이유형', alternativeType: '대안형', quantifyType: '수치형' };
+  return Object.keys(labels).map(k =>
+    `<div class="field-block"><div class="fb-label">꼬리질문 · ${labels[k]}</div><p>${escapeHtml(fu[k])}</p></div>`
+  ).join('');
+}
+
+function escapeHtml(str) {
+  return (str || '').replace(/[&<>"']/g, s => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[s]));
+}
+
+function extractCharLimit(questionText) {
+  const match = (questionText || '').match(/(\d{2,5})\s*자/);
+  return match ? parseInt(match[1], 10) : null;
+}
+
+// ---------- 라우팅 ----------
+function renderTeacherSetup() {
+  const urlInvite = new URLSearchParams(location.search).get('invite') || '';
+  const draft = JSON.parse(localStorage.getItem('moa_teacher_setup_draft') || '{}');
+  app.innerHTML = `
+    <div class="card">
+      <h2>강사 코드 설정</h2>
+      <p>여러 강사님이 같은 앱을 함께 쓰기 때문에, 자료가 서로 섞이지 않도록 <b>본인만의 고유 코드</b>가 필요합니다. 영문·숫자로 짧게 만들어 주세요 (예: kimteacher, park01). 한 번 정하시면 계속 같은 코드로 접속하시면 됩니다.</p>
+      <label>강사 이름</label>
+      <input type="text" id="teacherNameInput" placeholder="예: 김강사" value="${escapeHtml(draft.name || '')}">
+      <label>강사 코드</label>
+      <input type="text" id="teacherCodeInput" placeholder="예: kimteacher" value="${escapeHtml(draft.code || '')}">
+      <label>초대코드 <span style="font-weight:400;color:var(--muted)">(처음 등록하는 코드일 때만 필요, 이미 등록된 코드면 비워두세요)</span></label>
+      <input type="text" id="teacherInviteInput" placeholder="원장님께 받은 초대코드" value="${escapeHtml(urlInvite || draft.invite || '')}">
+      <div class="btn-row"><button class="btn-primary" id="setTeacherBtn">시작하기</button></div>
+      <div id="teacherSetupError" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
+    </div>
+  `;
+
+  // 입력하는 중간에 앱을 나가도 다시 들어오면 그대로 남아있도록 임시저장
+  const saveDraft = () => {
+    localStorage.setItem('moa_teacher_setup_draft', JSON.stringify({
+      name: document.getElementById('teacherNameInput').value,
+      code: document.getElementById('teacherCodeInput').value,
+      invite: document.getElementById('teacherInviteInput').value
+    }));
+  };
+  ['teacherNameInput', 'teacherCodeInput', 'teacherInviteInput'].forEach(id => {
+    document.getElementById(id).addEventListener('input', saveDraft);
+  });
+
+  document.getElementById('setTeacherBtn').addEventListener('click', async () => {
+    const code = document.getElementById('teacherCodeInput').value.trim().toLowerCase().replace(/[^a-z0-9가-힣_-]/g, '');
+    const name = document.getElementById('teacherNameInput').value.trim();
+    const inviteCode = document.getElementById('teacherInviteInput').value.trim();
+    const errEl = document.getElementById('teacherSetupError');
+    const btn = document.getElementById('setTeacherBtn');
+    errEl.style.display = 'none';
+    if (!code) { errEl.textContent = '코드를 입력해 주세요.'; errEl.style.display = 'block'; return; }
+    btn.disabled = true; btn.textContent = '확인 중...';
+    try {
+      const res = await fetch('/api/teacher-registry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, name, inviteCode, app: '자소서·이력서 첨삭' })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '등록에 실패했습니다.');
+      localStorage.removeItem('moa_teacher_setup_draft');
+      const p = new URLSearchParams(location.search);
+      p.set('admin', '1');
+      p.set('t', code);
+      const permanentLink = location.origin + location.pathname + '?' + p.toString();
+      app.innerHTML = `
+        <div class="card">
+          <h2>✅ 등록 완료!</h2>
+          <p style="font-size:14px;line-height:1.7">지금 보고 계신 카톡 링크는 <b>1회용 초대 링크</b>라 앞으로는 못 써요. 아래가 <b>${escapeHtml(name || code)}님만의 고정 주소</b>예요 — 꼭 복사해서 카톡 "나에게 보내기"로 저장해두시고, 다음부터는 이 주소로 들어와 주세요.</p>
+          <div class="link-box" style="margin-top:10px">
+            <span style="word-break:break-all">${permanentLink}</span>
+            <button class="btn-secondary" style="margin-left:auto" onclick="navigator.clipboard.writeText('${permanentLink}')">링크 복사</button>
+          </div>
+          <div class="btn-row"><button class="btn-primary" id="goToDashboardBtn">이 주소로 계속하기</button></div>
+        </div>
+      `;
+      document.getElementById('goToDashboardBtn').addEventListener('click', () => { location.href = permanentLink; });
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = '시작하기';
+    }
+  });
+}
+
+function renderMissingTeacherNotice() {
+  app.innerHTML = `<div class="card"><div class="empty">이 링크에는 담당 강사 정보가 없어요. 강사님이 안내한 QR코드나 링크로 다시 접속해 주세요.</div></div>`;
+}
+
+function daysRemainingText(expiresAt) {
+  if (!expiresAt) return '무제한';
+  const diff = Math.ceil((expiresAt - Date.now()) / (24 * 60 * 60 * 1000));
+  if (diff <= 0) return '기간만료';
+  return `${diff}일 남음 (${new Date(expiresAt).toLocaleDateString('ko-KR')}까지)`;
+}
+
+function renderMasterTeacherList() {
+  app.innerHTML = `
+    <div class="card">
+      <h2>새 초대코드 발급</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">원장님만 보실 수 있는 화면입니다. 새 강사님 한 분당 코드를 하나씩 발급해서 전달해 주세요. 한 번 쓰면 그 코드는 다시 못 씁니다.</p>
+      <label>관리자 비밀번호</label>
+      <input type="text" id="masterPasswordInput" placeholder="관리자 비밀번호">
+      <label>발급 대상 메모 (선택, 예: 김민지 강사)</label>
+      <input type="text" id="inviteLabelInput" placeholder="누구에게 줄 코드인지 적어두면 목록에서 알아보기 쉬워요">
+      <label>초대코드 유효기간 (일)</label>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">이 코드를 며칠 안에 등록해야 하는지 정해요. 일회성 강의를 위한 임시 강사라면 짧게(예: 7일), 정규 강사라면 비워두면 기간 제한 없이 유효해요.</div>
+      <input type="text" id="inviteExpiryInput" placeholder="예) 7 (비워두면 무제한)">
+      <div class="btn-row"><button class="btn-primary" id="genInviteBtn">초대코드 발급하기</button></div>
+      <div id="genInviteError" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
+      <div id="genInviteResult" style="margin-top:12px;font-size:15px;font-weight:700;display:none"></div>
+    </div>
+    <div class="card">
+      <h2>승인된 강사 목록</h2>
+      <div class="btn-row"><button class="btn-primary" id="masterListBtn">강사 목록 보기</button></div>
+      <div id="masterListError" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
+      <div id="masterListResult" style="margin-top:16px"></div>
+    </div>
+    <div class="card">
+      <h2>발급된 초대코드 목록</h2>
+      <div class="btn-row"><button class="btn-primary" id="inviteListBtn">초대코드 목록 보기</button></div>
+      <div id="inviteListError" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
+      <div id="inviteListResult" style="margin-top:16px"></div>
+    </div>
+  `;
+
+  document.getElementById('genInviteBtn').addEventListener('click', async () => {
+    const pw = document.getElementById('masterPasswordInput').value;
+    const expiryDays = document.getElementById('inviteExpiryInput').value.trim();
+    const label = document.getElementById('inviteLabelInput').value.trim();
+    const errEl = document.getElementById('genInviteError');
+    const resultEl = document.getElementById('genInviteResult');
+    errEl.style.display = 'none'; resultEl.style.display = 'none';
+    try {
+      const res = await fetch('/api/teacher-registry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'generateInvite', master: pw, expiryDays: expiryDays ? parseInt(expiryDays, 10) : 0, label })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '발급에 실패했습니다.');
+      const inviteLink = location.origin + location.pathname + '?admin=1&invite=' + encodeURIComponent(data.inviteCode);
+      resultEl.innerHTML = `
+        <div>발급된 초대코드: ${data.inviteCode}${label ? ` <span style="font-weight:400;color:var(--navy)">(${escapeHtml(label)})</span>` : ''} <span style="font-weight:400;color:var(--muted);font-size:12px">(${daysRemainingText(data.expiresAt)})</span></div>
+        <div class="link-box" style="margin-top:8px">
+          <span style="word-break:break-all;font-weight:400;font-size:13px">${inviteLink}</span>
+          <button class="btn-secondary" style="margin-left:auto" onclick="navigator.clipboard.writeText('${inviteLink}')">링크 복사</button>
+        </div>
+        <p style="font-size:12px;color:var(--muted);font-weight:400;margin:6px 0 0">이 링크 하나만 보내주세요 — 강사님이 열면 초대코드가 자동으로 입력되어 있어요.</p>
+      `;
+      resultEl.style.display = 'block';
+      document.getElementById('inviteLabelInput').value = '';
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.style.display = 'block';
+    }
+  });
+
+  document.getElementById('masterListBtn').addEventListener('click', async () => {
+    const pw = document.getElementById('masterPasswordInput').value;
+    const errEl = document.getElementById('masterListError');
+    const resultEl = document.getElementById('masterListResult');
+    errEl.style.display = 'none';
+    resultEl.innerHTML = '불러오는 중...';
+    try {
+      const res = await fetch('/api/teacher-registry?master=' + encodeURIComponent(pw));
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '조회에 실패했습니다.');
+      if (!data.teachers.length) {
+        resultEl.innerHTML = '<div class="empty">아직 등록된 강사가 없습니다.</div>';
+        return;
+      }
+      resultEl.innerHTML = '';
+      data.teachers.forEach(t => {
+        const row = document.createElement('div');
+        row.style.cssText = 'border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap';
+        row.innerHTML = `
+          <div>
+            <b>${escapeHtml(t.name)}</b> <span style="color:var(--muted);font-size:12px">(코드: ${escapeHtml(t.code)})</span> ${t.permanent ? '<span class="star-tag ok">영구</span>' : '<span class="star-tag miss">임시</span>'}<br>
+            <span style="font-size:12px;color:var(--muted)">등록일: ${new Date(t.approvedAt).toLocaleDateString('ko-KR')} · 첫 등록 앱: ${t.firstApp || '-'}</span>
+          </div>
+          <div class="btn-row" style="margin:0">
+            <button class="btn-secondary toggle-permanent-btn" style="flex-shrink:0">${t.permanent ? '임시로 전환' : '영구로 전환'}</button>
+            <button class="btn-danger del-teacher-btn" style="flex-shrink:0">삭제</button>
+          </div>
+        `;
+        row.querySelector('.toggle-permanent-btn').addEventListener('click', async () => {
+          try {
+            const r = await fetch('/api/teacher-registry', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'setPermanent', master: pw, code: t.code, permanent: !t.permanent })
+            });
+            const d = await r.json();
+            if (!r.ok) throw new Error(d.error || '변경에 실패했습니다.');
+            t.permanent = !t.permanent;
+            document.getElementById('masterListBtn').click();
+          } catch (e) { alert('변경 실패: ' + e.message); }
+        });
+        row.querySelector('.del-teacher-btn').addEventListener('click', async () => {
+          if (!confirm(`"${t.name}"(${t.code}) 강사를 삭제할까요? 접속이 차단되고, 프리셋·첨삭 기록은 그대로 보관됩니다.`)) return;
+          try {
+            const r = await fetch('/api/teacher-registry', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'deleteTeacher', master: pw, code: t.code })
+            });
+            const d = await r.json();
+            if (!r.ok) throw new Error(d.error || '삭제에 실패했습니다.');
+            row.remove();
+          } catch (e) { alert('삭제 실패: ' + e.message); }
+        });
+        resultEl.appendChild(row);
+      });
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.style.display = 'block';
+      resultEl.innerHTML = '';
+    }
+  });
+
+  document.getElementById('inviteListBtn').addEventListener('click', async () => {
+    const pw = document.getElementById('masterPasswordInput').value;
+    const errEl = document.getElementById('inviteListError');
+    const resultEl = document.getElementById('inviteListResult');
+    errEl.style.display = 'none';
+    resultEl.innerHTML = '불러오는 중...';
+    try {
+      const res = await fetch('/api/teacher-registry?list=invites&master=' + encodeURIComponent(pw));
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '조회에 실패했습니다.');
+      if (!data.invites.length) {
+        resultEl.innerHTML = '<div class="empty">아직 발급된 초대코드가 없습니다.</div>';
+        return;
+      }
+      resultEl.innerHTML = '';
+      data.invites.forEach(iv => {
+        const row = document.createElement('div');
+        row.style.cssText = 'border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap';
+        const statusHtml = iv.used ? '<span style="color:#b91c1c;font-size:12px">(사용됨 · ' + escapeHtml(iv.usedBy || '') + ')</span>' : iv.isExpired ? '<span style="color:#b91c1c;font-size:12px">(기간만료)</span>' : '<span style="color:var(--green);font-size:12px">(미사용)</span>';
+        row.innerHTML = `
+          <div>
+            <b>${iv.code}</b>${iv.label ? ` <span style="color:var(--navy);font-size:12px">(${escapeHtml(iv.label)})</span>` : ''} ${statusHtml}<br>
+            <span style="font-size:12px;color:var(--muted)">발급일: ${new Date(iv.createdAt).toLocaleDateString('ko-KR')} · 유효기간: ${daysRemainingText(iv.expiresAt)}</span>
+          </div>
+          ${!iv.used ? '<button class="btn-danger del-invite-btn" style="flex-shrink:0">취소</button>' : ''}
+        `;
+        if (!iv.used) {
+          row.querySelector('.del-invite-btn').addEventListener('click', async () => {
+            if (!confirm(`초대코드 "${iv.code}"를 취소할까요?`)) return;
+            try {
+              const r = await fetch('/api/teacher-registry', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'cancelInvite', master: pw, inviteCode: iv.code })
+              });
+              const d = await r.json();
+              if (!r.ok) throw new Error(d.error || '취소에 실패했습니다.');
+              row.remove();
+            } catch (e) { alert('취소 실패: ' + e.message); }
+          });
+        }
+        resultEl.appendChild(row);
+      });
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.style.display = 'block';
+      resultEl.innerHTML = '';
+    }
+  });
+}
+
+function route() {
+  const params = new URLSearchParams(location.search);
+  if (params.get('master') === '1') {
+    document.body.classList.add('role-teacher');
+    document.getElementById('roleBadge').textContent = '관리자';
+    renderMasterTeacherList();
+    return;
+  }
+  const hash = location.hash;
+  if (hash.indexOf('#result=') === 0) {
+    if (!TEACHER_ID) { renderMissingTeacherNotice(); return; }
+    const id = hash.replace('#result=', '');
+    renderResultView(id);
+  } else if (isAdmin) {
+    if (!TEACHER_ID) { renderTeacherSetup(); return; }
+    renderTeacherView();
+  } else {
+    if (!TEACHER_ID) { renderMissingTeacherNotice(); return; }
+    renderStudentView();
+  }
+}
+window.addEventListener('hashchange', route);
+
+const QUESTION_EXAMPLES = {
+  '지원동기': '예) 지원 동기를 본인의 경험과 연결하여 서술하시오. (500자 이내)',
+  '성격장점': '예) 본인의 성격상 장점을 서술하시오.',
+  '성격단점': '예) 본인의 성격상 단점과 그 개선 노력을 서술하시오.',
+  '협업갈등': '예) 팀 프로젝트에서 갈등을 해결했던 경험을 서술하시오.',
+  '도전경험': '예) 가장 도전적이었던 경험과 그 결과를 서술하시오.',
+  '실패경험': '예) 실패했던 경험과 그로부터 배운 점을 서술하시오.',
+  '경력활동': '예) 관련 경력·활동사항을 구체적인 수치와 함께 서술하시오.',
+  '입사후포부': '예) 입사 후 포부를 서술하시오.'
+};
+
+// ---------- 학생 화면 ----------
+let studentTab = 'submit';
+
+async function renderStudentView() {
+  if (studentTab === 'lookup') { await renderStudentLookup(); return; }
+  await renderStudentSubmitForm();
+}
+
+function studentTabsHtml() {
+  return `
+    <div class="tabs" style="margin-bottom:0">
+      <div class="tab ${studentTab === 'submit' ? 'active' : ''}" id="tabSubmit">첨삭 요청하기</div>
+      <div class="tab ${studentTab === 'lookup' ? 'active' : ''}" id="tabLookup">내 결과 확인</div>
+    </div>
+  `;
+}
+
+function wireStudentTabs() {
+  document.getElementById('tabSubmit').addEventListener('click', () => { studentTab = 'submit'; renderStudentView(); });
+  document.getElementById('tabLookup').addEventListener('click', () => { studentTab = 'lookup'; renderStudentView(); });
+}
+
+async function renderStudentLookup() {
+  app.innerHTML = `
+    ${studentTabsHtml()}
+    <div class="card">
+      <h2>내 결과 확인</h2>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">첨삭 요청 제출 시 받으신 확인 코드를 입력하세요.</div>
+      <label>확인 코드</label>
+      <input type="text" id="lookupCodeInput" placeholder="예) 7F3K9Q" style="text-transform:uppercase;letter-spacing:2px;font-weight:700">
+      <div class="btn-row"><button class="btn-primary" id="lookupBtn">조회하기</button></div>
+      <div id="lookupResultArea" style="margin-top:16px"></div>
+    </div>
+  `;
+  wireStudentTabs();
+
+  document.getElementById('lookupBtn').addEventListener('click', async () => {
+    const code = document.getElementById('lookupCodeInput').value.trim().toUpperCase();
+    const area = document.getElementById('lookupResultArea');
+    if (!code) { area.innerHTML = `<div class="empty">코드를 입력해 주세요.</div>`; return; }
+    area.innerHTML = `<div class="empty">조회 중...</div>`;
+    try {
+      const { item } = await api('/api/results?code=' + encodeURIComponent(code));
+      area.innerHTML = resultContentHtml(item);
+    } catch (e) {
+      if (e.expired) {
+        area.innerHTML = `<div class="empty">⏰ 조회 가능한 기간이 지났어요. 결과가 다시 필요하시면 강사님께 문의해 주세요.</div>`;
+        return;
+      }
+      try {
+        const pending = await api('/api/reviews?code=' + encodeURIComponent(code));
+        area.innerHTML = `<div class="empty">${escapeHtml(pending.studentName) || '학생'}님, 아직 강사님이 검토 중입니다. 잠시 후 다시 확인해 주세요.</div>`;
+      } catch (e2) {
+        area.innerHTML = `<div class="empty">해당 코드를 찾을 수 없습니다. 코드를 다시 확인해 주세요.</div>`;
+      }
+    }
+  });
+}
+
+let itemCounter = 0;
+
+function itemBlockHtml(id) {
+  return `
+    <div class="item-block" data-item-id="${id}" style="border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px;position:relative">
+      <button type="button" class="item-remove-btn" data-item-id="${id}" title="이 문항 삭제" style="position:absolute;top:12px;right:12px;background:none;border:none;color:var(--miss);font-size:18px;cursor:pointer;line-height:1">✕</button>
+      <div class="item-questionType-row" data-item-id="${id}">
+        <label>문항 유형 (진단 기준이 자동으로 적용됩니다)</label>
+        <select class="item-questionType" data-item-id="${id}">
+          <option value="지원동기" data-fw="PREP">지원동기</option>
+          <option value="성격장점" data-fw="PREP">성격 장점</option>
+          <option value="성격단점" data-fw="STAR">성격 단점</option>
+          <option value="협업갈등" data-fw="STAR">협업·갈등 경험</option>
+          <option value="도전경험" data-fw="STAR">도전·성과 경험</option>
+          <option value="실패경험" data-fw="STAR-L">실패 경험</option>
+          <option value="경력활동" data-fw="STAR">경력·활동사항</option>
+          <option value="입사후포부" data-fw="PREP">입사 후 포부</option>
+        </select>
+      </div>
+      <label class="item-question-label">자소서 문항</label>
+      <textarea class="item-question" data-item-id="${id}"></textarea>
+      <label class="item-answer-label">작성한 답변</label>
+      <textarea class="item-answer" data-item-id="${id}" style="min-height:140px" placeholder="여기에 답변을 붙여넣거나 작성해 주세요."></textarea>
+      <div class="counter item-char-counter" data-item-id="${id}"><span class="item-char-count">0</span>자 작성됨</div>
+      <details style="margin-top:10px">
+        <summary style="cursor:pointer;font-weight:700;color:var(--navy);font-size:13px">선택 입력 — 채우면 첨삭이 더 정확해져요</summary>
+        <div style="margin-top:8px">
+          <label>이 답변으로 보여주고 싶었던 점 (자가진단, 선택)</label>
+          <textarea class="item-selfIntent" data-item-id="${id}" placeholder="예) 저는 이 답변으로 위기 상황에서도 침착하게 대처하는 모습을 보여주고 싶었습니다."></textarea>
+          <label>이전 버전 (재작성한 경우, 수정 전 답변을 붙여넣으면 Before/After 비교를 보여드려요)</label>
+          <textarea class="item-prevAnswer" data-item-id="${id}" placeholder="예) 이전에 제출했던 답변을 그대로 붙여넣어 주세요."></textarea>
+        </div>
+      </details>
+    </div>
+  `;
+}
+
+function wireItemBlock(id, docTypeSelect) {
+  const block = document.querySelector(`.item-block[data-item-id="${id}"]`);
+  const questionInput = block.querySelector('.item-question');
+  const answerInput = block.querySelector('.item-answer');
+  const counterBox = block.querySelector('.item-char-counter');
+  const questionTypeSelect = block.querySelector('.item-questionType');
+
+  function updateCounter() {
+    const len = answerInput.value.length;
+    const limit = extractCharLimit(questionInput.value);
+    if (limit) {
+      const over = len > limit;
+      counterBox.innerHTML = `<span class="item-char-count">${len}</span>자 작성됨 / <b>${limit}자 제한</b>${over ? ` <span style="color:var(--miss);font-weight:700">(${len - limit}자 초과!)</span>` : ''}`;
+      counterBox.style.color = over ? 'var(--miss)' : '';
+    } else {
+      counterBox.innerHTML = `<span class="item-char-count">${len}</span>자 작성됨`;
+      counterBox.style.color = '';
+    }
+  }
+  answerInput.addEventListener('input', updateCounter);
+  questionInput.addEventListener('input', updateCounter);
+
+  const updatePlaceholder = () => { questionInput.placeholder = QUESTION_EXAMPLES[questionTypeSelect.value] || ''; };
+  updatePlaceholder();
+  questionTypeSelect.addEventListener('change', () => { updatePlaceholder(); updateCounter(); });
+
+  applyDocTypeToBlock(id, docTypeSelect.value);
+
+  block.querySelector('.item-remove-btn').addEventListener('click', () => {
+    const allBlocks = document.querySelectorAll('.item-block');
+    if (allBlocks.length <= 1) { alert('최소 1개의 문항은 있어야 해요.'); return; }
+    block.remove();
+  });
+}
+
+function applyDocTypeToBlock(id, docTypeVal) {
+  const block = document.querySelector(`.item-block[data-item-id="${id}"]`);
+  const typeRow = block.querySelector('.item-questionType-row');
+  const qLabel = block.querySelector('.item-question-label');
+  const aLabel = block.querySelector('.item-answer-label');
+  const questionInput = block.querySelector('.item-question');
+  const answerInput = block.querySelector('.item-answer');
+  const questionTypeSelect = block.querySelector('.item-questionType');
+  if (docTypeVal === 'cv') {
+    typeRow.style.display = 'none';
+    qLabel.textContent = '경력·활동 항목명';
+    questionInput.placeholder = '예) 마케팅 서포터즈 활동 (2024.03~2024.08)';
+    aLabel.textContent = '작성한 한 줄 소개 (경력기술서 문장)';
+    answerInput.placeholder = '예) SNS 콘텐츠 기획 및 운영을 담당하여 팔로워를 6개월간 40% 증가시킴';
+  } else {
+    typeRow.style.display = '';
+    qLabel.textContent = '자소서 문항';
+    questionInput.placeholder = QUESTION_EXAMPLES[questionTypeSelect.value] || '';
+    aLabel.textContent = '작성한 답변';
+    answerInput.placeholder = '여기에 답변을 붙여넣거나 작성해 주세요.';
+  }
+}
+
+async function renderStudentSubmitForm() {
+  let retryLimit = 'unlimited';
+  let institutions = [];
+  try {
+    const data = await api('/api/config');
+    retryLimit = (data.config && data.config.retryLimit) || 'unlimited';
+    institutions = (data.config && data.config.institutions) || [];
+  } catch (e) { /* 설정을 못 불러오면 기본값(자유롭게)으로 진행 */ }
+
+  const countKey = 'moa_resume_submit_count_' + TEACHER_ID;
+  const usedCount = parseInt(localStorage.getItem(countKey) || '0', 10);
+  const limitNum = retryLimit === 'unlimited' ? Infinity : (parseInt(retryLimit, 10) + 1);
+
+  if (usedCount >= limitNum) {
+    app.innerHTML = `
+      ${studentTabsHtml()}
+      <div class="card">
+        <h2>제출 가능한 횟수를 다 쓰셨어요</h2>
+        <p style="font-size:14px;color:var(--muted);line-height:1.7">이 기기·브라우저로 제출할 수 있는 횟수(${limitNum}번)를 다 사용하셨어요. 받으신 확인 코드로 "내 결과 확인" 탭에서 결과를 확인해 주세요. 다시 제출이 꼭 필요하시면 강사님께 말씀해 주세요.</p>
+      </div>
+    `;
+    wireStudentTabs();
+    return;
+  }
+
+  itemCounter = 0;
+  const firstId = itemCounter++;
+
+  app.innerHTML = `
+    ${studentTabsHtml()}
+    <div class="card">
+      <h2>첨삭 요청</h2>
+      <p style="font-size:13px;color:var(--muted);margin:-4px 0 14px">자소서 문항이 여러 개면 아래 "+ 문항 추가"로 다 모아서 한 번에 제출해 주세요. ${limitNum === Infinity ? '' : limitNum === 1 ? '이 기기에서는 <b>한 번만</b> 제출할 수 있으니, ' : `이 기기에서는 <b>최대 ${limitNum}번</b>까지만 제출할 수 있으니, `}신중하게 작성한 뒤 제출해 주세요.</p>
+      <label>이름</label>
+      <input type="text" id="studentNameInput" placeholder="본인 이름을 입력해 주세요">
+      <label>이메일 주소 (선택)</label>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">입력하시면 첨삭이 완료됐을 때 결과 링크를 자동으로 이메일로 보내드려요. 안 쓰셔도 제출은 됩니다.</div>
+      <input type="text" id="studentEmailInput" placeholder="예) student@example.com (선택)">
+
+      <label>문서 유형</label>
+      <select id="docTypeSelect">
+        <option value="resume">자소서</option>
+        <option value="cv">이력서 (경력·활동 한 줄 소개)</option>
+      </select>
+
+      <label>본인 전공(또는 직군)을 선택하세요</label>
+      <select id="presetSelect"><option>불러오는 중...</option></select>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">전공마다 평가 기준이 달라요. 목록에 본인 전공이 없으면 "기본"을 선택하세요.</div>
+      ${institutions.length ? `
+      <label>본인 소속 기관을 선택하세요</label>
+      <select id="institutionSelect">
+        ${institutions.map(inst => `<option value="${escapeHtml(inst.name)}">${escapeHtml(inst.name)}</option>`).join('')}
+      </select>` : ''}
+
+      <label>지원하는 채용공고의 핵심 내용 (선택, 모든 문항에 공통 적용)</label>
+      <textarea id="jobPostingInput" placeholder="예) [○○기관] 사회복지사 채용 — 사례관리 경험자 우대, 공감·소통 역량 중시"></textarea>
+
+      <div id="itemsContainer" style="margin-top:18px"></div>
+      <button type="button" class="btn-add-preset" id="addItemBtn" style="margin-bottom:14px">+ 문항 추가</button>
+
+      <div class="btn-row">
+        <button class="btn-primary" id="submitBtn">전체 제출하기</button>
+      </div>
+      <div class="status-msg" id="statusMsg"></div>
+    </div>
+  `;
+
+  wireStudentTabs();
+
+  const docTypeSelect = document.getElementById('docTypeSelect');
+  const itemsContainer = document.getElementById('itemsContainer');
+
+  itemsContainer.insertAdjacentHTML('beforeend', itemBlockHtml(firstId));
+  wireItemBlock(firstId, docTypeSelect);
+
+  document.getElementById('addItemBtn').addEventListener('click', () => {
+    const id = itemCounter++;
+    itemsContainer.insertAdjacentHTML('beforeend', itemBlockHtml(id));
+    wireItemBlock(id, docTypeSelect);
+  });
+
+  docTypeSelect.addEventListener('change', () => {
+    document.querySelectorAll('.item-block').forEach(b => {
+      applyDocTypeToBlock(parseInt(b.getAttribute('data-item-id'), 10), docTypeSelect.value);
+    });
+  });
+
+  const presetSelect = document.getElementById('presetSelect');
+  try {
+    const { config } = await api('/api/config');
+    presetSelect.innerHTML = config.presets.map(p =>
+      `<option value="${p.id}" ${p.id === config.activePresetId ? 'selected' : ''}>${escapeHtml(p.name)}</option>`
+    ).join('');
+  } catch (e) {
+    presetSelect.innerHTML = `<option value="default">기본</option>`;
+  }
+
+  document.getElementById('submitBtn').addEventListener('click', async () => {
+    const studentName = document.getElementById('studentNameInput').value.trim();
+    const studentEmail = document.getElementById('studentEmailInput').value.trim();
+    const jobPosting = document.getElementById('jobPostingInput').value.trim();
+    const statusMsg = document.getElementById('statusMsg');
+    const submitBtn = document.getElementById('submitBtn');
+    const isCv = docTypeSelect.value === 'cv';
+
+    if (!studentName) {
+      statusMsg.textContent = '이름을 입력해 주세요.';
+      statusMsg.className = 'status-msg error';
+      statusMsg.style.display = 'block';
+      return;
+    }
+
+    const blocks = Array.from(document.querySelectorAll('.item-block'));
+    const rawItems = blocks.map(b => ({
+      question: b.querySelector('.item-question').value.trim(),
+      answer: b.querySelector('.item-answer').value.trim(),
+      questionType: isCv ? '이력서항목' : b.querySelector('.item-questionType').value,
+      framework: isCv ? 'RESUME' : b.querySelector('.item-questionType').selectedOptions[0].dataset.fw,
+      selfIntent: b.querySelector('.item-selfIntent').value.trim(),
+      previousAnswer: b.querySelector('.item-prevAnswer').value.trim(),
+      charLimit: extractCharLimit(b.querySelector('.item-question').value)
+    }));
+
+    if (rawItems.some(it => !it.question || !it.answer)) {
+      statusMsg.textContent = '모든 문항에 문항 내용과 답변을 입력해 주세요.';
+      statusMsg.className = 'status-msg error';
+      statusMsg.style.display = 'block';
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = `첨삭 초안 생성 중... (문항 ${rawItems.length}개, 최대 ${rawItems.length}분)`;
+    statusMsg.style.display = 'none';
+
+    try {
+      const { config } = await api('/api/config').catch(() => ({ config: { presets: [] } }));
+      const preset = (config.presets || []).find(p => p.id === presetSelect.value);
+
+      const itemsWithDraft = await Promise.all(rawItems.map(async (it) => {
+        const aiDraft = await api('/api/feedback', {
+          method: 'POST',
+          body: JSON.stringify({ ...it, presetPrompt: preset ? preset.prompt : '', jobPosting })
+        });
+        return { ...it, aiDraft };
+      }));
+
+      const studentInstitution = institutions.length ? document.getElementById('institutionSelect').value : '';
+
+      const reviewRes = await api('/api/reviews', {
+        method: 'POST',
+        body: JSON.stringify({ studentName, studentEmail, presetId: presetSelect.value, docType: docTypeSelect.value, jobPosting, studentInstitution, items: itemsWithDraft })
+      });
+
+      localStorage.setItem(countKey, String(usedCount + 1));
+
+      statusMsg.innerHTML = `
+        제출이 완료되었습니다. 강사님 검수 후 결과를 확인하실 수 있어요.<br>
+        <div style="margin-top:10px;padding:12px;background:#fff;border:2px dashed var(--green);border-radius:8px;text-align:center">
+          <div style="font-size:12px;color:var(--muted)">내 확인 코드 (꼭 저장해두세요!)</div>
+          <div style="font-size:24px;font-weight:800;color:var(--green);letter-spacing:2px;margin-top:4px">${reviewRes.code}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">나중에 이 화면 위쪽 "내 결과 확인"에서 이 코드로 조회하세요.</div>
+        </div>
+      `;
+      statusMsg.className = 'status-msg';
+      statusMsg.style.display = 'block';
+      document.getElementById('itemsContainer').innerHTML = '';
+      document.getElementById('addItemBtn').style.display = 'none';
+      submitBtn.style.display = 'none';
+    } catch (e) {
+      statusMsg.textContent = '오류가 발생했습니다: ' + e.message;
+      statusMsg.className = 'status-msg error';
+      statusMsg.style.display = 'block';
+      submitBtn.disabled = false;
+      submitBtn.textContent = '전체 제출하기';
+    }
+  });
+}
+
+const PRESET_LIBRARY = [
+  { name: '사회복지학과', prompt: '사회복지 직무 특성상 공감·소통 역량, 사례관리·대상자 지원 경험, 윤리의식이 드러나는지 특히 중점적으로 봐 주세요. 대상자와의 관계 형성 경험이 있다면 구체적으로 짚어주세요.' },
+  { name: '물리치료과', prompt: '물리치료사 직무 특성상 환자와의 신뢰 형성, 임상실습 경험, 의료진과의 협업·소통 역량이 드러나는지 확인해주세요.' },
+  { name: '항공서비스', prompt: '항공서비스직 특성상 이미지메이킹(표정·태도), 위기대응 능력, 고객응대 경험이 구체적으로 드러나는지 확인해주세요.' },
+  { name: '사무행정', prompt: '사무행정 직무 특성상 꼼꼼함, 문서작성·데이터 처리 경험, 협업 프로세스 이해도가 드러나는지 확인해주세요.' },
+  { name: '직업상담사', prompt: '직업상담사 직무 특성상 상담·경청 역량, 노동시장에 대한 이해, 사례 개입 경험이 드러나는지 확인해주세요.' }
+];
+
+// ---------- 강사 화면 ----------
+let currentTab = 'reviews';
+
+async function renderTeacherView() {
+  const studentLink = location.origin + location.pathname + '?t=' + encodeURIComponent(TEACHER_ID);
+  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=' + encodeURIComponent(studentLink);
+  let isPermanentTeacher = false;
+  try {
+    const r = await fetch('/api/teacher-registry?check=' + encodeURIComponent(TEACHER_ID));
+    const d = await r.json();
+    isPermanentTeacher = !!d.permanent;
+  } catch (e) { /* 확인 실패 시 안전하게 숨김 처리 */ }
+  app.innerHTML = `
+    <div class="card" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+      <img id="qrImage" src="${qrUrl}" alt="학생용 QR코드" title="클릭하면 다운로드됩니다" style="width:120px;height:120px;border:1px solid var(--border);border-radius:8px;cursor:pointer">
+      <div style="flex:1;min-width:200px">
+        <div class="fb-label" style="margin-bottom:6px">학생용 접속 QR코드</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:8px">학생들에게 이 화면을 보여주거나 프린트해서 교실에 붙여두면, 카메라로 스캔해서 바로 접속할 수 있습니다. QR코드 이미지를 클릭하면 다운로드됩니다.</div>
+        <div class="link-box" style="display:flex">
+          <span style="word-break:break-all">${studentLink}</span>
+          <button class="btn-secondary" style="margin-left:auto" onclick="navigator.clipboard.writeText('${studentLink}')">링크 복사</button>
+        </div>
+      </div>
+    </div>
+    <div class="tabs">
+      <div class="tab" data-tab="reviews">검수 대기함</div>
+      <div class="tab" data-tab="presets">첨삭 기준 프리셋</div>
+      <div class="tab" data-tab="results">완료된 첨삭</div>
+      <div class="tab" data-tab="notify">알림 설정</div>
+      ${isPermanentTeacher ? '<div class="tab" data-tab="guide">기능 안내</div>' : ''}
+    </div>
+    <div id="tabContent"></div>
+  `;
+
+  document.getElementById('qrImage').addEventListener('click', async () => {
+    try {
+      const res = await fetch(qrUrl);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = '자소서첨삭-학생용-QR코드.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      window.open(qrUrl, '_blank');
+    }
+  });
+
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === currentTab);
+    t.addEventListener('click', () => { currentTab = t.dataset.tab; renderTeacherView(); });
+  });
+
+  const content = document.getElementById('tabContent');
+  if (currentTab === 'reviews') await renderReviewsTab(content);
+  else if (currentTab === 'presets') await renderPresetsTab(content);
+  else if (currentTab === 'notify') await renderNotifyTab(content);
+  else if (currentTab === 'guide') renderGuideTab(content);
+  else await renderResultsTab(content);
+}
+
+async function renderNotifyTab(content) {
+  content.innerHTML = `
+    <div class="card">
+      <h2>새 검수 요청 이메일 알림<a class="moa-q" target="_blank" rel="noopener" title="알림 메일이 안 올 때" href="https://claude.ai/artifact/ABvpPmNpMpFM2seeGZikf8#p-email">?</a></h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">학생이 검수 요청을 보낼 때마다 이 주소로 알림 메일이 발송돼요. 강사용 화면에 매번 들어가서 확인하지 않아도 됩니다.</p>
+      <label>알림 받을 이메일 주소</label>
+      <input type="text" id="notifyEmailInput" placeholder="예) teacher@example.com">
+      <div class="btn-row"><button class="btn-primary" id="saveNotifyEmailBtn">저장하기</button></div>
+      <div id="notifySavedMsg" style="font-size:13px;color:var(--green);margin-top:8px;display:none">저장됐어요.</div>
+    </div>
+    <div class="card">
+      <h2>재도전 허용 범위<a class="moa-q" target="_blank" rel="noopener" title="재도전 설정 안내" href="https://claude.ai/artifact/ABvpPmNpMpFM2seeGZikf8#p-retry">?</a></h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">한 학생이 이 기기·브라우저로 첨삭을 몇 번까지 제출할 수 있는지 정해요. 대상·현장 분위기에 맞춰 고르세요.</p>
+      <label>제출 허용 횟수</label>
+      <select id="retryLimitSelect">
+        <option value="unlimited">자유롭게 (제한 없음)</option>
+        <option value="1">최대 2번까지 (1회 재도전 가능)</option>
+        <option value="0">1번만 (재도전 불가)</option>
+      </select>
+      <div class="btn-row"><button class="btn-primary" id="saveRetryLimitBtn">저장하기</button></div>
+      <div id="retryLimitSavedMsg" style="font-size:13px;color:var(--green);margin-top:8px;display:none">저장됐어요.</div>
+    </div>
+    <div class="card">
+      <h2>수강생 사후관리 트래커 연동</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">여기에 기관명을 입력해두면, 첨삭이 승인될 때마다 학생이 선택한 전공(프리셋)과 함께 "수강생 사후관리 트래커"의 진로모아관리 통계에 인원수가 자동으로 누적돼요. 첨삭 내용 자체는 저장되지 않고, 기관·전공·인원수만 집계됩니다. 특강이 끝나고 다른 기관으로 넘어가면 이 값을 바꿔주세요.</p>
+      <label>현재 진행 중인 특강 기관명 (선택, 기관을 하나만 다닐 때)<a class="moa-q" target="_blank" rel="noopener" title="이 설정이 어디에 영향을 주나요?" href="https://claude.ai/artifact/ABvpPmNpMpFM2seeGZikf8#impact">?</a></label>
+      <input type="text" id="institutionNameInput" placeholder="예) 대구대학교 사회복지학과">
+      <div class="btn-row"><button class="btn-primary" id="saveInstitutionBtn">저장하기</button></div>
+      <div id="institutionSavedMsg" style="font-size:13px;color:var(--green);margin-top:8px;display:none">저장됐어요.</div>
+    </div>
+    <div class="card">
+      <h2>집체교육 학생 결과 조회 유효기간</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">"수강생 사후관리 트래커"의 개인관리에 <b>이미 등록된 학생(1:1 코칭 대상)</b>은 기간 제한 없이 계속 조회할 수 있어요. 등록되지 않은 학생(집체교육·일회성 특강 참가자)만 여기서 정한 기간이 지나면 코드·링크로 결과를 못 열어봐요. 다운로드(워드 저장)는 그 전에 미리 받아두시면 기간이 지나도 계속 볼 수 있어요.</p>
+      <label>집체교육 학생 결과 유효기간 (일, 승인일 포함)</label>
+      <input type="text" id="groupExpiryInput" placeholder="예) 5">
+      <div class="btn-row"><button class="btn-primary" id="saveGroupExpiryBtn">저장하기</button></div>
+      <div id="groupExpirySavedMsg" style="font-size:13px;color:var(--green);margin-top:8px;display:none">저장됐어요.</div>
+    </div>
+    <div class="card">
+      <h2>여러 기관 동시 운영 (집체교육용)</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">한 강사 코드로 여러 학교·기관을 동시에 다니실 때 쓰세요. 여기에 기관을 미리 등록해두면, 위의 단일 기관명 대신 <b>학생이 직접 본인 소속을 선택</b>하는 화면이 제출 폼에 나타나요. 목록이 비어있으면 위의 단일 기관명 방식 그대로 작동해요.</p>
+      <div id="institutionListArea" class="empty">불러오는 중...</div>
+      <label>새 기관 추가</label>
+      <input type="text" id="newInstitutionInput" placeholder="예) 영남이공대 직업상담사반">
+      <div class="btn-row"><button class="btn-primary" id="addInstitutionBtn">추가하기</button></div>
+    </div>
+  `;
+  try {
+    const data = await api('/api/config');
+    document.getElementById('notifyEmailInput').value = (data.config && data.config.notifyEmail) || '';
+    document.getElementById('institutionNameInput').value = (data.config && data.config.institutionName) || '';
+    document.getElementById('retryLimitSelect').value = (data.config && data.config.retryLimit) || 'unlimited';
+    document.getElementById('groupExpiryInput').value = (data.config && data.config.groupCodeExpiryDays) || 5;
+    renderInstitutionList(data.config && data.config.institutions || []);
+  } catch (e) { console.error(e); }
+
+  function renderInstitutionList(list) {
+    const area = document.getElementById('institutionListArea');
+    if (!list.length) { area.innerHTML = `<div class="empty">등록된 기관이 없습니다 (단일 기관명 방식으로 작동 중).</div>`; return; }
+    area.innerHTML = '';
+    list.forEach((inst, idx) => {
+      const row = document.createElement('div');
+      row.className = 'preset-item';
+      row.innerHTML = `<div><b>${escapeHtml(inst.name)}</b></div>
+        <div class="btn-row" style="margin:0"><button class="btn-danger del-inst-btn">삭제</button></div>`;
+      row.querySelector('.del-inst-btn').addEventListener('click', async () => {
+        if (!confirm(`"${inst.name}"을(를) 목록에서 삭제할까요?`)) return;
+        try {
+          const data = await api('/api/config');
+          const config = data.config || {};
+          config.institutions = (config.institutions || []).filter((_, i) => i !== idx);
+          await api('/api/config', { method: 'POST', body: JSON.stringify(config) });
+          renderInstitutionList(config.institutions);
+        } catch (e) { alert('삭제 실패: ' + e.message); }
+      });
+      area.appendChild(row);
+    });
+  }
+
+  document.getElementById('addInstitutionBtn').addEventListener('click', async () => {
+    const name = document.getElementById('newInstitutionInput').value.trim();
+    if (!name) { alert('기관명을 입력해 주세요.'); return; }
+    const btn = document.getElementById('addInstitutionBtn');
+    btn.disabled = true; btn.textContent = '추가 중...';
+    try {
+      const data = await api('/api/config');
+      const config = data.config || {};
+      config.institutions = config.institutions || [];
+      config.institutions.push({ id: 'inst_' + Date.now(), name });
+      await api('/api/config', { method: 'POST', body: JSON.stringify(config) });
+      document.getElementById('newInstitutionInput').value = '';
+      renderInstitutionList(config.institutions);
+    } catch (e) {
+      alert('추가 실패: ' + e.message);
+    }
+    btn.disabled = false; btn.textContent = '추가하기';
+  });
+
+  document.getElementById('saveNotifyEmailBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('saveNotifyEmailBtn');
+    btn.disabled = true; btn.textContent = '저장 중...';
+    try {
+      const data = await api('/api/config');
+      const config = data.config || {};
+      config.notifyEmail = document.getElementById('notifyEmailInput').value.trim();
+      await api('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
+      document.getElementById('notifySavedMsg').style.display = 'block';
+    } catch (e) {
+      console.error(e);
+      alert('저장 중 문제가 발생했어요: ' + e.message);
+    }
+    btn.disabled = false; btn.textContent = '저장하기';
+  });
+
+  document.getElementById('saveRetryLimitBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('saveRetryLimitBtn');
+    btn.disabled = true; btn.textContent = '저장 중...';
+    try {
+      const data = await api('/api/config');
+      const config = data.config || {};
+      config.retryLimit = document.getElementById('retryLimitSelect').value;
+      await api('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
+      document.getElementById('retryLimitSavedMsg').style.display = 'block';
+    } catch (e) {
+      console.error(e);
+      alert('저장 중 문제가 발생했어요: ' + e.message);
+    }
+    btn.disabled = false; btn.textContent = '저장하기';
+  });
+
+  document.getElementById('saveInstitutionBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('saveInstitutionBtn');
+    btn.disabled = true; btn.textContent = '저장 중...';
+    try {
+      const data = await api('/api/config');
+      const config = data.config || {};
+      config.institutionName = document.getElementById('institutionNameInput').value.trim();
+      await api('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
+      document.getElementById('institutionSavedMsg').style.display = 'block';
+    } catch (e) {
+      console.error(e);
+      alert('저장 중 문제가 발생했어요: ' + e.message);
+    }
+    btn.disabled = false; btn.textContent = '저장하기';
+  });
+
+  document.getElementById('saveGroupExpiryBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('saveGroupExpiryBtn');
+    const days = parseInt(document.getElementById('groupExpiryInput').value, 10);
+    if (!days || days < 1) { alert('1 이상의 숫자를 입력해 주세요.'); return; }
+    btn.disabled = true; btn.textContent = '저장 중...';
+    try {
+      const data = await api('/api/config');
+      const config = data.config || {};
+      config.groupCodeExpiryDays = days;
+      await api('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
+      document.getElementById('groupExpirySavedMsg').style.display = 'block';
+    } catch (e) {
+      console.error(e);
+      alert('저장 중 문제가 발생했어요: ' + e.message);
+    }
+    btn.disabled = false; btn.textContent = '저장하기';
+  });
+}
+
+function renderGuideTab(content) {
+  const rows = [
+    ['학생용 QR코드', '클릭 시 다운로드 가능, 교실에 인쇄해서 붙여둘 수 있어요.'],
+    ['검수 대기함', '문항별 구조진단·구체성 체크·감점 요인·AI스러운 문구 감지·채용공고 매칭·자가진단 비교·Before→After·면접관 시점 추론·강점/개선점/다듬은 문장/꼬리질문 3종까지 전부 수정 가능. "전체 승인 및 링크 생성" 한 번으로 완료돼요.'],
+    ['첨삭 기준 프리셋 관리', '추천 라이브러리(사회복지학과·물리치료과·항공서비스·사무행정·직업상담사)에서 바로 추가하거나, 직접 추가·수정·기본값 지정·삭제할 수 있어요.'],
+    ['완료된 첨삭 목록', '전공별 필터·그룹핑, 정렬(최신/오래된/이름순), 결과 보기 링크, 삭제가 가능해요.'],
+    ['알림 설정 — 이메일', '강사 알림 이메일은 개별 저장 버튼으로 따로 저장해요. 다른 설정을 바꿔도 사라지지 않아요.'],
+    ['알림 설정 — 재도전 범위', '학생 제출 횟수를 자유롭게 / 1회 재도전 / 1회만 중에서 정할 수 있어요.'],
+    ['알림 설정 — 트래커 연동', '단일 기관명을 설정하거나, 여러 기관을 등록해서 학생이 직접 소속을 선택하게 할 수 있어요.'],
+    ['헤더 클릭 → 홈 이동', '어느 화면에서든 상단 앱 이름을 클릭하면 처음 화면으로 이동해요.']
+  ];
+  content.innerHTML = `
+    <div class="card">
+      <h2>강사용 기능 안내</h2>
+      <p style="font-size:13px;color:var(--muted);margin:-6px 0 16px">지금까지 만들어진 기능을 한눈에 정리했어요. 헷갈릴 때 여기서 확인하세요.</p>
+      <table style="width:100%;border-collapse:separate;border-spacing:0;border-radius:10px;overflow:hidden;border:1px solid var(--border);table-layout:fixed">
+        <thead>
+          <tr style="background:var(--green)">
+            <th style="text-align:left;font-size:13px;color:#fff;padding:12px 14px;width:22%">기능</th>
+            <th style="text-align:left;font-size:13px;color:#fff;padding:12px 16px">설명</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((r, i) => `
+            <tr style="background:${i % 2 === 0 ? '#fff' : '#FAFBFD'}">
+              <td style="padding:14px 14px;font-size:13px;font-weight:700;color:var(--navy);line-height:1.5;vertical-align:top;border-top:1px solid var(--border);word-break:keep-all">${escapeHtml(r[0])}</td>
+              <td style="padding:14px 18px;font-size:13px;color:#333;line-height:1.75;vertical-align:top;border-top:1px solid var(--border)">${escapeHtml(r[1])}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+async function renderReviewsTab(content) {
+  content.innerHTML = `<div class="card"><h2>검수 대기함</h2><div id="reviewsList" class="empty">불러오는 중...</div></div>`;
+  const listEl = document.getElementById('reviewsList');
+  try {
+    const [{ items }, configRes] = await Promise.all([
+      api('/api/reviews'),
+      api('/api/config').catch(() => ({ config: { presets: [] } }))
+    ]);
+    const presetNameMap = {};
+    (configRes.config.presets || []).forEach(p => { presetNameMap[p.id] = p.name; });
+
+    if (!items.length) {
+      listEl.innerHTML = `<div class="empty">대기 중인 첨삭이 없습니다.</div>`;
+      return;
+    }
+    listEl.innerHTML = '';
+    items.forEach(item => listEl.appendChild(buildReviewCard(item, presetNameMap[item.presetId] || '기본')));
+  } catch (e) {
+    listEl.innerHTML = `<div class="empty">불러오기 실패: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function jobMatchHtml(jm) {
+  if (!jm) return '';
+  return `<div class="field-block" style="background:var(--green-light);padding:10px 12px;border-radius:8px">
+    <div class="fb-label">채용공고 매칭 — 일치도: ${escapeHtml(jm.matchLevel)}</div>
+    <div class="star-row">
+      ${(jm.matchedKeywords || []).map(k => `<span class="star-tag ok">✓ ${escapeHtml(k)}</span>`).join('')}
+      ${(jm.missingKeywords || []).map(k => `<span class="star-tag miss">✗ ${escapeHtml(k)}</span>`).join('')}
+    </div>
+  </div>`;
+}
+
+function diffWords(oldStr, newStr) {
+  const a = (oldStr || '').split(/\s+/).filter(Boolean);
+  const b = (newStr || '').split(/\s+/).filter(Boolean);
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = m - 1; i >= 0; i--) {
+    for (let j = n - 1; j >= 0; j--) {
+      dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    }
+  }
+  let i = 0, j = 0;
+  const ops = [];
+  while (i < m && j < n) {
+    if (a[i] === b[j]) { ops.push({ type: 'same', text: a[i] }); i++; j++; }
+    else if (dp[i + 1][j] >= dp[i][j + 1]) { ops.push({ type: 'removed', text: a[i] }); i++; }
+    else { ops.push({ type: 'added', text: b[j] }); j++; }
+  }
+  while (i < m) { ops.push({ type: 'removed', text: a[i] }); i++; }
+  while (j < n) { ops.push({ type: 'added', text: b[j] }); j++; }
+  return ops;
+}
+
+function diffHtml(oldStr, newStr) {
+  if (!oldStr) return '';
+  return diffWords(oldStr, newStr).map(o => {
+    if (o.type === 'same') return escapeHtml(o.text);
+    if (o.type === 'removed') return `<span style="text-decoration:line-through;color:var(--miss);background:var(--miss-bg);padding:0 2px;border-radius:3px">${escapeHtml(o.text)}</span>`;
+    return `<span style="color:var(--ok);background:var(--ok-bg);padding:0 2px;border-radius:3px;font-weight:700">${escapeHtml(o.text)}</span>`;
+  }).join(' ');
+}
+
+function reviewItemBlockHtml(item, idx) {
+  const d = item.aiDraft || {};
+  const framework = d.frameworkUsed || item.framework || 'STAR';
+  return `
+    <div class="review-sub-item" data-idx="${idx}" style="border-top:1px solid var(--line);padding-top:14px;margin-top:14px">
+      <div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:8px">문항 ${idx + 1} · ${escapeHtml(item.questionType || '')} · ${framework}</div>
+      <div class="field-block">
+        <div class="fb-label">자소서 문항</div>
+        <p style="white-space:pre-wrap">${escapeHtml(item.question)}</p>
+      </div>
+      <div class="field-block">
+        <div class="fb-label">학생 답변</div>
+        <p style="white-space:pre-wrap">${escapeHtml(item.answer)}</p>
+      </div>
+      <div class="star-row">${structureTagsHtml(framework, d.structure)}</div>
+      <div class="star-row">${concretenessTagsHtml(d.concreteness)}</div>
+      ${riskFlagsHtml(d.riskFlags)}
+      ${aiTracePhrasesHtml(d.aiTracePhrases)}
+      ${jobMatchHtml(d.jobMatch)}
+      ${item.selfIntent ? `<div class="field-block"><div class="fb-label">학생 자가진단 — 보여주고 싶었던 점</div><p>${escapeHtml(item.selfIntent)}</p></div>` : ''}
+      ${d.intentGapComment ? `<div class="field-block" style="background:var(--warn-bg);padding:10px 12px;border-radius:8px"><div class="fb-label">자가진단 vs 실제 답변 코멘트</div><p>${escapeHtml(d.intentGapComment)}</p></div>` : ''}
+      ${item.previousAnswer ? `<div class="field-block"><div class="fb-label">Before → After 비교</div><p style="white-space:pre-wrap;line-height:1.9">${diffHtml(item.previousAnswer, item.answer)}</p>${d.revisionComment ? `<p style="margin-top:8px;font-size:13px;color:var(--navy)"><b>수정 평가:</b> ${escapeHtml(d.revisionComment)}</p>` : ''}</div>` : ''}
+      ${d.charLimitNote ? `<div class="field-block" style="background:var(--warn-bg);padding:10px 12px;border-radius:8px"><div class="fb-label">⚠ 글자수 초과 (제한 ${item.charLimit}자)</div><p>${escapeHtml(d.charLimitNote)}</p></div>` : ''}
+
+      <div class="field-block" style="background:var(--navy-light);padding:10px 12px;border-radius:8px">
+        <div class="fb-label">면접관 시점 — 이 답변으로 추론되는 평소 모습</div>
+        <p>${escapeHtml(d.interviewerInference)}</p>
+      </div>
+
+      <label>강점 (수정 가능)</label>
+      <textarea class="edit-strengths" data-idx="${idx}">${escapeHtml(d.strengths)}</textarea>
+      <label>개선점 (수정 가능)</label>
+      <textarea class="edit-improvements" data-idx="${idx}">${escapeHtml(d.improvements)}</textarea>
+      <label>다듬은 문장 (수정 가능)</label>
+      <textarea class="edit-polished" data-idx="${idx}" style="min-height:120px">${escapeHtml(d.polishedText)}</textarea>
+
+      <label>예상 꼬리질문 · 이유형 (수정 가능)</label>
+      <textarea class="edit-fu-reason" data-idx="${idx}">${escapeHtml((d.followUpQuestions || {}).reasonType)}</textarea>
+      <label>예상 꼬리질문 · 대안형 (수정 가능)</label>
+      <textarea class="edit-fu-alt" data-idx="${idx}">${escapeHtml((d.followUpQuestions || {}).alternativeType)}</textarea>
+      <label>예상 꼬리질문 · 수치형 (수정 가능)</label>
+      <textarea class="edit-fu-quant" data-idx="${idx}">${escapeHtml((d.followUpQuestions || {}).quantifyType)}</textarea>
+    </div>
+  `;
+}
+
+function buildReviewCard(record, presetName) {
+  const wrap = document.createElement('div');
+  wrap.className = 'review-item';
+  const items = record.items || [];
+  wrap.innerHTML = `
+    <details>
+      <summary style="cursor:pointer">
+        <span style="font-weight:700;color:var(--navy);font-size:15px">${escapeHtml(record.studentName) || '(이름 없음)'}</span>
+        <span class="star-tag ok" style="margin-left:6px">${escapeHtml(presetName || '기본')}</span>
+        <span style="font-size:12px;color:var(--muted);margin-left:8px">문항 ${items.length}개 · 코드 ${escapeHtml(record.code) || '-'} · ${new Date(record.createdAt).toLocaleString('ko-KR')} · 클릭해서 펼치기</span>
+      </summary>
+      <div style="margin-top:14px">
+        ${record.jobPosting ? `<div class="field-block"><div class="fb-label">지원 채용공고 핵심 내용 (전체 문항 공통)</div><p style="white-space:pre-wrap">${escapeHtml(record.jobPosting)}</p></div>` : ''}
+        ${items.map((it, idx) => reviewItemBlockHtml(it, idx)).join('')}
+        <div class="btn-row">
+          <button class="btn-primary approve-btn">전체 승인 및 링크 생성</button>
+          <button class="btn-danger reject-btn">삭제</button>
+        </div>
+        <div class="link-box" style="display:none"></div>
+      </div>
+    </details>
+  `;
+
+  wrap.querySelector('.approve-btn').addEventListener('click', async (e) => {
+    const btn = e.target;
+    btn.disabled = true;
+    btn.textContent = '처리 중...';
+    try {
+      const finalItems = items.map((it, idx) => {
+        const d = it.aiDraft || {};
+        const framework = d.frameworkUsed || it.framework || 'STAR';
+        return {
+          questionType: it.questionType,
+          question: it.question,
+          answer: it.answer,
+          frameworkUsed: framework,
+          structure: d.structure,
+          concreteness: d.concreteness,
+          riskFlags: d.riskFlags || [],
+          aiTracePhrases: d.aiTracePhrases || [],
+          interviewerInference: d.interviewerInference,
+          jobMatch: d.jobMatch || null,
+          intentGapComment: d.intentGapComment || null,
+          previousAnswer: it.previousAnswer || null,
+          revisionComment: d.revisionComment || null,
+          charLimit: it.charLimit || null,
+          charLimitNote: d.charLimitNote || null,
+          missingElements: d.missingElements || [],
+          strengths: wrap.querySelector(`.edit-strengths[data-idx="${idx}"]`).value,
+          improvements: wrap.querySelector(`.edit-improvements[data-idx="${idx}"]`).value,
+          polishedText: wrap.querySelector(`.edit-polished[data-idx="${idx}"]`).value,
+          followUpQuestions: {
+            reasonType: wrap.querySelector(`.edit-fu-reason[data-idx="${idx}"]`).value,
+            alternativeType: wrap.querySelector(`.edit-fu-alt[data-idx="${idx}"]`).value,
+            quantifyType: wrap.querySelector(`.edit-fu-quant[data-idx="${idx}"]`).value
+          }
+        };
+      });
+
+      const payload = {
+        studentName: record.studentName || '',
+        studentEmail: record.studentEmail || '',
+        code: record.code || '',
+        presetName: presetName || '기본',
+        docType: record.docType || 'resume',
+        jobPosting: record.jobPosting || '',
+        studentInstitution: record.studentInstitution || '',
+        items: finalItems
+      };
+      const { id } = await api('/api/results', { method: 'POST', body: JSON.stringify(payload) });
+      await api('/api/reviews?id=' + record.id, { method: 'DELETE' });
+
+      const link = location.origin + location.pathname + '?t=' + encodeURIComponent(TEACHER_ID) + '#result=' + id;
+      const linkBox = wrap.querySelector('.link-box');
+      linkBox.style.display = 'flex';
+      linkBox.innerHTML = `<span>학생 결과 링크:</span> <a href="${link}" target="_blank">${link}</a>
+        <button class="btn-secondary" style="margin-left:auto" onclick="navigator.clipboard.writeText('${link}')">복사</button>`;
+      btn.textContent = '승인 완료';
+    } catch (err) {
+      alert('오류: ' + err.message);
+      btn.disabled = false;
+      btn.textContent = '전체 승인 및 링크 생성';
+    }
+  });
+
+  wrap.querySelector('.reject-btn').addEventListener('click', async () => {
+    if (!confirm('이 검수 항목을 삭제할까요?')) return;
+    await api('/api/reviews?id=' + record.id, { method: 'DELETE' });
+    wrap.remove();
+  });
+
+  return wrap;
+}
+
+async function renderPresetsTab(content) {
+  content.innerHTML = `
+    <div class="card">
+      <details>
+        <summary style="cursor:pointer;font-weight:700;color:var(--navy)">추천 프리셋 라이브러리 (클릭해서 펼치기)</summary>
+        <div style="font-size:13px;color:var(--muted);margin:10px 0">자주 쓰이는 직군별 평가기준입니다. 클릭하면 바로 추가됩니다.</div>
+        <div id="libraryList"></div>
+      </details>
+    </div>
+    <div class="card">
+      <h2>첨삭 기준 프리셋 관리</h2>
+      <details open>
+        <summary style="cursor:pointer;font-weight:700;color:var(--navy)">등록된 프리셋 목록 (클릭해서 접기/펼치기)</summary>
+        <div id="presetList" class="empty" style="margin-top:10px">불러오는 중...</div>
+      </details>
+      <label>새 프리셋 이름</label>
+      <input type="text" id="newPresetName" placeholder="예) 사회복지학과, 항공서비스과, 직설적인 톤 등">
+      <label>추가 지침 (톤·평가기준·직군 특성 등을 문장으로 작성)</label>
+      <textarea id="newPresetPrompt" placeholder="예) 사회복지 직무 특성상 공감·소통 역량이 드러나는지 특히 중점적으로 봐 주세요."></textarea>
+      <div class="btn-row"><button class="btn-primary" id="addPresetBtn">프리셋 추가</button></div>
+    </div>
+  `;
+
+  let config = { presets: [], activePresetId: 'default' };
+  try {
+    const r = await api('/api/config');
+    config = r.config;
+  } catch (e) { /* 기본값 사용 */ }
+
+  const libraryEl = document.getElementById('libraryList');
+  libraryEl.innerHTML = PRESET_LIBRARY.map((lib, i) => {
+    const already = config.presets.some(p => p.name === lib.name);
+    return `<div class="preset-item">
+      <div><b>${escapeHtml(lib.name)}</b><div style="font-size:12px;color:var(--muted);margin-top:2px">${escapeHtml(lib.prompt)}</div></div>
+      <button class="btn-secondary lib-add-btn" data-i="${i}" ${already ? 'disabled' : ''}>${already ? '추가됨' : '추가하기'}</button>
+    </div>`;
+  }).join('');
+  libraryEl.querySelectorAll('.lib-add-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const lib = PRESET_LIBRARY[btn.dataset.i];
+      config.presets.push({ id: 'p_' + Date.now(), name: lib.name, prompt: lib.prompt });
+      await api('/api/config', { method: 'POST', body: JSON.stringify(config) });
+      renderPresetsTab(content);
+    });
+  });
+
+  renderPresetList(config);
+
+  document.getElementById('addPresetBtn').addEventListener('click', async () => {
+    const name = document.getElementById('newPresetName').value.trim();
+    const prompt = document.getElementById('newPresetPrompt').value.trim();
+    if (!name) { alert('프리셋 이름을 입력해 주세요.'); return; }
+    const id = 'p_' + Date.now();
+    config.presets.push({ id, name, prompt });
+    await api('/api/config', { method: 'POST', body: JSON.stringify(config) });
+    renderPresetsTab(content);
+  });
+
+  function renderPresetList(cfg) {
+    const listEl = document.getElementById('presetList');
+    if (!cfg.presets.length) { listEl.innerHTML = `<div class="empty">등록된 프리셋이 없습니다.</div>`; return; }
+    listEl.innerHTML = '';
+    cfg.presets.forEach(p => {
+      const row = document.createElement('div');
+      row.className = 'preset-item';
+      row.innerHTML = `
+        <div style="flex:1 1 100%;min-width:0">
+          <b>${escapeHtml(p.name)}</b>${p.id === cfg.activePresetId ? ' <span class="star-tag ok">기본값</span>' : ''}
+          <div class="prompt-display" style="font-size:12px;color:var(--muted);margin-top:2px">${escapeHtml(p.prompt) || '(추가 지침 없음)'}</div>
+          <div class="prompt-edit" style="display:none;margin-top:6px">
+            <textarea class="prompt-edit-input" style="min-height:70px">${escapeHtml(p.prompt)}</textarea>
+            <div class="btn-row" style="margin-top:6px">
+              <button class="btn-primary save-prompt-btn">저장</button>
+              <button class="btn-secondary cancel-edit-btn">취소</button>
+            </div>
+          </div>
+        </div>
+        <div class="btn-row" style="margin:0">
+          <button class="btn-secondary edit-prompt-btn">지침 수정</button>
+          <button class="btn-secondary set-default-btn">기본값으로</button>
+          <button class="btn-danger delete-btn">삭제</button>
+        </div>
+      `;
+      row.querySelector('.edit-prompt-btn').addEventListener('click', () => {
+        row.querySelector('.prompt-display').style.display = 'none';
+        row.querySelector('.prompt-edit').style.display = 'block';
+      });
+      row.querySelector('.cancel-edit-btn').addEventListener('click', () => {
+        row.querySelector('.prompt-display').style.display = '';
+        row.querySelector('.prompt-edit').style.display = 'none';
+      });
+      row.querySelector('.save-prompt-btn').addEventListener('click', async () => {
+        p.prompt = row.querySelector('.prompt-edit-input').value.trim();
+        await api('/api/config', { method: 'POST', body: JSON.stringify(cfg) });
+        renderPresetsTab(content);
+      });
+      row.querySelector('.set-default-btn').addEventListener('click', async () => {
+        cfg.activePresetId = p.id;
+        await api('/api/config', { method: 'POST', body: JSON.stringify(cfg) });
+        renderPresetsTab(content);
+      });
+      row.querySelector('.delete-btn').addEventListener('click', async () => {
+        if (p.id === 'default') { alert('기본 프리셋은 삭제할 수 없습니다.'); return; }
+        cfg.presets = cfg.presets.filter(x => x.id !== p.id);
+        await api('/api/config', { method: 'POST', body: JSON.stringify(cfg) });
+        renderPresetsTab(content);
+      });
+      listEl.appendChild(row);
+    });
+  }
+}
+
+async function renderResultsTab(content) {
+  content.innerHTML = `
+    <div class="card">
+      <h2>완료된 첨삭 목록</h2>
+      <div class="btn-row" style="margin-top:0;align-items:center">
+        <div style="flex:1;min-width:160px">
+          <label style="margin-top:0">전공(첨삭 기준) 필터</label>
+          <select id="filterPreset"><option value="__all__">전체 (전공별로 묶어보기)</option></select>
+        </div>
+        <div style="flex:1;min-width:160px">
+          <label style="margin-top:0">정렬</label>
+          <select id="sortOrder">
+            <option value="recent">최신순</option>
+            <option value="oldest">오래된순</option>
+            <option value="name">이름 가나다순</option>
+          </select>
+        </div>
+      </div>
+      <div id="resultsList" class="empty" style="margin-top:14px">불러오는 중...</div>
+    </div>
+  `;
+  const listEl = document.getElementById('resultsList');
+  const filterSelect = document.getElementById('filterPreset');
+  const sortSelect = document.getElementById('sortOrder');
+
+  let allItems = [];
+  try {
+    const { items } = await api('/api/results?list=1');
+    allItems = items;
+  } catch (e) {
+    listEl.innerHTML = `<div class="empty">불러오기 실패: ${escapeHtml(e.message)}</div>`;
+    return;
+  }
+
+  if (!allItems.length) { listEl.innerHTML = `<div class="empty">완료된 첨삭이 없습니다.</div>`; return; }
+
+  const presetNames = [...new Set(allItems.map(it => it.presetName || '기본'))].sort((a, b) => a.localeCompare(b, 'ko'));
+  filterSelect.innerHTML = `<option value="__all__">전체 (전공별로 묶어보기)</option>` +
+    presetNames.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+
+  function sortItems(items) {
+    const sorted = [...items];
+    if (sortSelect.value === 'name') {
+      sorted.sort((a, b) => (a.studentName || '').localeCompare(b.studentName || '', 'ko'));
+    } else if (sortSelect.value === 'oldest') {
+      sorted.sort((a, b) => a.approvedAt - b.approvedAt);
+    } else {
+      sorted.sort((a, b) => b.approvedAt - a.approvedAt);
+    }
+    return sorted;
+  }
+
+  function buildResultRow(it) {
+    const link = location.origin + location.pathname + '?t=' + encodeURIComponent(TEACHER_ID) + '&admin=1#result=' + it.id;
+    const expiredBadge = it.expiresAt ? (Date.now() > it.expiresAt ? '<span class="star-tag miss" style="margin-left:6px">학생 조회 만료</span>' : `<span class="star-tag ok" style="margin-left:6px">${daysRemainingText(it.expiresAt)}</span>`) : '';
+    const row = document.createElement('div');
+    row.className = 'preset-item';
+    row.innerHTML = `
+      <div><b>${escapeHtml(it.studentName) || '(이름 없음)'}</b> — 문항 ${it.itemCount || 1}개${expiredBadge}<div style="font-size:12px;color:var(--muted)">${new Date(it.approvedAt).toLocaleString('ko-KR')}</div></div>
+      <div class="btn-row" style="margin:0">
+        <a href="${link}" target="_blank" class="btn-secondary" style="text-decoration:none;padding:8px 14px;border-radius:8px">결과 보기</a>
+        <button class="btn-danger delete-result-btn">삭제</button>
+      </div>
+    `;
+    row.querySelector('.delete-result-btn').addEventListener('click', async () => {
+      if (!confirm(`${it.studentName || '이름 없음'}님의 첨삭 결과를 삭제할까요? 학생에게 보낸 링크도 더 이상 열리지 않게 됩니다.`)) return;
+      try {
+        await api('/api/results?id=' + it.id, { method: 'DELETE' });
+        renderList();
+      } catch (e) {
+        alert('삭제 실패: ' + e.message);
+      }
+    });
+    return row;
+  }
+
+  function renderList() {
+    const filterVal = filterSelect.value;
+    listEl.innerHTML = '';
+
+    if (filterVal === '__all__') {
+      presetNames.forEach(name => {
+        const groupItems = sortItems(allItems.filter(it => (it.presetName || '기본') === name));
+        if (!groupItems.length) return;
+        const groupWrap = document.createElement('details');
+        groupWrap.open = true;
+        groupWrap.style.marginBottom = '14px';
+        const summary = document.createElement('summary');
+        summary.style.cursor = 'pointer';
+        summary.innerHTML = `<b style="color:var(--navy)">📁 ${escapeHtml(name)}</b> <span class="star-tag ok">${groupItems.length}명</span>`;
+        groupWrap.appendChild(summary);
+        const inner = document.createElement('div');
+        inner.style.marginTop = '8px';
+        groupItems.forEach(it => inner.appendChild(buildResultRow(it)));
+        groupWrap.appendChild(inner);
+        listEl.appendChild(groupWrap);
+      });
+    } else {
+      const filtered = sortItems(allItems.filter(it => (it.presetName || '기본') === filterVal));
+      filtered.forEach(it => listEl.appendChild(buildResultRow(it)));
+    }
+  }
+
+  filterSelect.addEventListener('change', renderList);
+  sortSelect.addEventListener('change', renderList);
+  renderList();
+}
+
+// ---------- 학생 결과 열람 화면 ----------
+function resultItemBlockHtml(item, idx, total) {
+  return `
+    <div class="result-block" style="${idx > 0 ? 'border-top:2px solid var(--line);padding-top:18px;margin-top:18px' : ''}">
+      ${total > 1 ? `<div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:8px">문항 ${idx + 1} / ${total} · ${escapeHtml(item.questionType || '')}</div>` : ''}
+      <h3>${escapeHtml(item.questionType === '이력서항목' ? '경력·활동 항목' : '자소서 문항')}</h3>
+      <p style="white-space:pre-wrap">${escapeHtml(item.question)}</p>
+    </div>
+    <div class="result-block">
+      <h3>제출한 답변</h3>
+      <p style="white-space:pre-wrap">${escapeHtml(item.answer)}</p>
+    </div>
+    <div class="result-block">
+      <h3>${(item.frameworkUsed || 'STAR')} 구조 진단</h3>
+      <div class="star-row">${structureTagsHtml(item.frameworkUsed || 'STAR', item.structure)}</div>
+      <div class="star-row">${concretenessTagsHtml(item.concreteness)}</div>
+      ${riskFlagsHtml(item.riskFlags)}
+      ${aiTracePhrasesHtml(item.aiTracePhrases)}
+    </div>
+    ${item.jobMatch ? `<div class="result-block"><h3>채용공고 매칭도</h3>${jobMatchHtml(item.jobMatch)}</div>` : ''}
+    ${item.intentGapComment ? `<div class="result-block"><h3>내가 밝힌 의도 vs 실제 답변</h3><p style="white-space:pre-wrap;background:var(--warn-bg);padding:12px;border-radius:8px">${escapeHtml(item.intentGapComment)}</p></div>` : ''}
+    ${item.previousAnswer ? `<div class="result-block"><h3>Before → After 비교</h3><p style="white-space:pre-wrap;line-height:1.9;background:var(--green-light);padding:12px;border-radius:8px">${diffHtml(item.previousAnswer, item.answer)}</p>${item.revisionComment ? `<p style="margin-top:8px">${escapeHtml(item.revisionComment)}</p>` : ''}</div>` : ''}
+    ${item.charLimitNote ? `<div class="result-block"><h3>⚠ 글자수 초과 (제한 ${item.charLimit}자)</h3><p style="white-space:pre-wrap;background:var(--warn-bg);padding:12px;border-radius:8px">${escapeHtml(item.charLimitNote)}</p></div>` : ''}
+    <div class="result-block">
+      <h3>면접관 시점 — 이 답변으로 추론되는 평소 모습</h3>
+      <p style="white-space:pre-wrap;background:var(--navy-light);padding:12px;border-radius:8px">${escapeHtml(item.interviewerInference)}</p>
+    </div>
+    <div class="result-block">
+      <h3>잘된 점</h3>
+      <p style="white-space:pre-wrap">${escapeHtml(item.strengths)}</p>
+    </div>
+    <div class="result-block">
+      <h3>개선 방향</h3>
+      <p style="white-space:pre-wrap">${escapeHtml(item.improvements)}</p>
+    </div>
+    <div class="result-block">
+      <h3>다듬은 문장 제안</h3>
+      <p style="white-space:pre-wrap;background:var(--green-light);padding:12px;border-radius:8px">${escapeHtml(item.polishedText)}</p>
+    </div>
+    <div class="result-block">
+      <h3>예상 꼬리질문 (면접 대비)</h3>
+      ${followUpHtml(item.followUpQuestions)}
+    </div>
+  `;
+}
+
+function resultContentHtml(record) {
+  const items = record.items || [];
+  return `
+    <div class="card">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+        <button class="btn-secondary" onclick="downloadResultAsWord('${escapeHtml(record.studentName || '첨삭결과').replace(/'/g, "")}')">📄 워드로 저장</button>
+      </div>
+      <div id="resultExportArea">
+      <h2>첨삭 결과${record.studentName ? ` — ${escapeHtml(record.studentName)}님` : ''}</h2>
+      ${items.length > 1 ? `<p style="font-size:13px;color:var(--muted);margin-top:-6px">총 ${items.length}개 문항의 첨삭 결과예요.</p>` : ''}
+      ${record.jobPosting ? `<div class="result-block"><h3>지원 채용공고 핵심 내용</h3><p style="white-space:pre-wrap">${escapeHtml(record.jobPosting)}</p></div>` : ''}
+      ${items.map((it, idx) => resultItemBlockHtml(it, idx, items.length)).join('')}
+      </div>
+      ${record.trackerProgramId ? `
+      <div class="result-block" style="text-align:center;background:var(--green-light);border-radius:10px;padding:16px">
+        <p style="margin:0 0 10px;font-size:13px;color:#333">첨삭 결과, 어떠셨나요? 더 나은 서비스를 위해 짧은 의견 부탁드려요 🙏</p>
+        <a href="https://moa-tracker-tau.vercel.app/?survey=1&t=${encodeURIComponent(TEACHER_ID)}&p=${encodeURIComponent(record.trackerProgramId)}" target="_blank" class="btn-primary" style="display:inline-block;text-decoration:none;padding:10px 24px">30초 만족도 남기기</a>
+      </div>` : ''}
+    </div>
+  `;
+}
+
+// CSS 변수(var(--xxx))는 워드 문서에서 인식이 안 되므로, 실제 색상값으로 치환해서 내보냄
+function resolveCssVarsForExport(html) {
+  const rootStyle = getComputedStyle(document.documentElement);
+  return html.replace(/var\((--[a-zA-Z0-9-]+)\)/g, (match, varName) => {
+    const val = rootStyle.getPropertyValue(varName).trim();
+    return val || '#333333';
+  });
+}
+
+function downloadResultAsWord(studentName) {
+  const exportArea = document.getElementById('resultExportArea');
+  if (!exportArea) {
+    alert('저장할 내용을 찾지 못했어요. 잠시 후 다시 시도해 주세요.');
+    return;
+  }
+  const innerHtml = resolveCssVarsForExport(exportArea.innerHTML);
+  // 외부 라이브러리 없이도 워드에서 바로 열리도록, HTML을 .doc 형식으로 감싸서 저장 (모바일에서도 안정적으로 동작)
+  const fullHtml = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head><meta charset="utf-8"><title>첨삭 결과</title><style>
+    body{font-family:'맑은 고딕','Malgun Gothic',sans-serif;font-size:11pt;line-height:1.6;color:#1a2130}
+    h2{font-size:16pt;color:#11308C} h3{font-size:13pt;color:#11308C}
+    .star-tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:9pt;font-weight:bold;margin:2px}
+  </style></head><body>${innerHtml}</body></html>`;
+  const blob = new Blob(['\ufeff', fullHtml], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${studentName}_첨삭결과.doc`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function renderResultView(id) {
+  app.innerHTML = `<div class="card"><div class="empty">결과를 불러오는 중...</div></div>`;
+  try {
+    const { item } = await api('/api/results?id=' + encodeURIComponent(id) + (isAdmin ? '&admin=1' : ''));
+    app.innerHTML = resultContentHtml(item);
+  } catch (e) {
+    if (e.expired) {
+      app.innerHTML = `<div class="card"><div class="empty">⏰ 조회 가능한 기간이 지났어요. 결과가 다시 필요하시면 강사님께 문의해 주세요.</div></div>`;
+      return;
+    }
+    app.innerHTML = `<div class="card"><div class="empty">결과를 불러올 수 없습니다: ${escapeHtml(e.message)}</div></div>`;
+  }
+}
+
+route();
 </script>
+
+<!-- ===== MOA 도움말 버튼 : 여기부터 ===== -->
+<style>
+#moaHelp{
+  position:fixed; right:16px; bottom:16px; z-index:9999;
+  display:inline-flex; align-items:center; gap:6px;
+  padding:10px 16px; border-radius:999px;
+  background:#643DF2; color:#fff; text-decoration:none;
+  font-family:'Malgun Gothic','맑은 고딕',sans-serif;
+  font-size:14px; font-weight:700; line-height:1;
+  box-shadow:0 4px 14px rgba(17,48,140,.28);
+}
+#moaHelp:hover{ background:#11308C; }
+#moaHelp .mark{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:17px; height:17px; border-radius:50%;
+  background:#C0D904; color:#11308C; font-size:12px; font-weight:900;
+}
+body.role-student #moaHelp{ display:none; } /* 학생 화면에서는 숨김 */
+@media print{ #moaHelp{ display:none; } }
+</style>
+
+<a id="moaHelp"
+   href="https://claude.ai/artifact/ABvpPmNpMpFM2seeGZikf8"
+   target="_blank" rel="noopener">
+  <span class="mark">?</span>도움말
+</a>
+<!-- ===== 여기까지 ===== -->
+
 </body>
 </html>
