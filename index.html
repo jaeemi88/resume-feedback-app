@@ -1623,12 +1623,37 @@ async function renderResultsTab(content) {
     const row = document.createElement('div');
     row.className = 'preset-item';
     row.innerHTML = `
-      <div><b>${escapeHtml(it.studentName) || '(이름 없음)'}</b> — 문항 ${it.itemCount || 1}개${expiredBadge}<div style="font-size:12px;color:var(--muted)">${new Date(it.approvedAt).toLocaleString('ko-KR')}</div></div>
-      <div class="btn-row" style="margin:0">
+      <div><b>${escapeHtml(it.studentName) || '(이름 없음)'}</b> — 문항 ${it.itemCount || 1}개${expiredBadge}<div style="font-size:12px;color:var(--muted)">${new Date(it.approvedAt).toLocaleString('ko-KR')}${it.code ? ' · 확인코드 <b style="color:var(--green);letter-spacing:1px">' + escapeHtml(it.code) + '</b>' : ''}</div></div>
+      <div class="btn-row" style="margin:8px 0 0;flex-wrap:wrap;gap:6px;width:100%">
         <a href="${link}" target="_blank" class="btn-secondary" style="text-decoration:none;padding:8px 14px;border-radius:8px">결과 보기</a>
+        <button class="btn-secondary copy-student-btn" style="padding:8px 12px;font-size:13px">학생 링크 복사</button>
+        <button class="btn-secondary send-student-btn" style="padding:8px 12px;font-size:13px">학생에게 다시 보내기</button>
         <button class="btn-danger delete-result-btn">삭제</button>
       </div>
     `;
+    row.style.flexWrap = 'wrap';
+    const studentLink = location.origin + location.pathname + '?t=' + encodeURIComponent(TEACHER_ID) + '#result=' + it.id;
+    const isExpired = it.expiresAt && Date.now() > it.expiresAt;
+    const sendText = '[진로모아커리어센터]\n' + (it.studentName ? it.studentName + '님, ' : '') + '자기소개서 첨삭 결과를 보내드려요.\n아래 링크를 누르면 바로 확인할 수 있어요.\n\n' + studentLink + (it.code ? '\n\n확인코드: ' + it.code + '\n(링크가 안 열리면 "내 결과 확인"에서 코드로 조회하세요)' : '');
+    function expiredOk() {
+      return !isExpired || confirm('학생 조회 기간이 지난 결과예요. 학생이 링크를 열어도 결과가 보이지 않을 수 있어요.\n그래도 계속할까요?');
+    }
+    async function copyText(txt, doneMsg) {
+      try { await navigator.clipboard.writeText(txt); alert(doneMsg); }
+      catch (e) { prompt('아래 내용을 길게 눌러 복사하세요', txt); }
+    }
+    row.querySelector('.copy-student-btn').addEventListener('click', () => {
+      if (!expiredOk()) return;
+      copyText(studentLink, '학생용 결과 링크를 복사했어요. 카톡이나 문자에 붙여넣어 보내주세요.');
+    });
+    row.querySelector('.send-student-btn').addEventListener('click', async () => {
+      if (!expiredOk()) return;
+      if (navigator.share) {
+        try { await navigator.share({ title: '자기소개서 첨삭 결과', text: sendText }); return; }
+        catch (e) { if (e && e.name === 'AbortError') return; }
+      }
+      copyText(sendText, '안내 문구와 링크를 복사했어요. 카톡이나 문자에 붙여넣어 보내주세요.');
+    });
     row.querySelector('.delete-result-btn').addEventListener('click', async () => {
       if (!confirm(`${it.studentName || '이름 없음'}님의 첨삭 결과를 삭제할까요? 학생에게 보낸 링크도 더 이상 열리지 않게 됩니다.`)) return;
       try {
