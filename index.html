@@ -4,18 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>자소서·이력서 첨삭 — 진로모아커리어센터</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800;900&display=swap">
-<meta name="theme-color" content="#643DF2">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard.css">
 <style>
   :root{
     --bg:#ffffff;
     --text:#1a2130;
     --muted:#6b7280;
-    --green:#643DF2;
-    --green-light:#EFEAFE;
-    --navy:#3A1F9E;
-    --navy-light:#F1EDFE;
+    --green:#6338EE;
+    --green-light:#EDE8FE;
+    --navy:#10288C;
+    --navy-light:#E3E9FB;
     --border:#e2e5ea;
     --warn:#b45309;
     --warn-bg:#fef3e2;
@@ -29,10 +27,8 @@
     margin:0;
     background:var(--bg);
     color:var(--text);
-    font-family:'Noto Sans KR','맑은 고딕','Malgun Gothic',-apple-system,sans-serif;
+    font-family:'Pretendard','맑은 고딕','Malgun Gothic',-apple-system,sans-serif;
     line-height:1.6;
-    word-break:keep-all;
-    overflow-wrap:break-word;
   }
   header{
     background:var(--green);
@@ -59,7 +55,7 @@
     flex-shrink:0;
   }
   header .header-sub .brand-name{
-    color:#C0D904;
+    color:#B6DB00;
     font-weight:700;
   }
   header h1{
@@ -70,14 +66,14 @@
   header .badge{
     font-size:12px;
     font-weight:700;
-    background:#EAF2AE;
-    color:#3A1F9E;
+    background:#EAF6AD;
+    color:#10288C;
     padding:4px 10px;
     border-radius:999px;
   }
   body.role-teacher header .badge{
-    background:#C0D904;
-    color:#3A1F9E;
+    background:#B6DB00;
+    color:#10288C;
   }
   /* 학생용: 같은 그린 톤이지만 연하게 — 강사용: 원래의 진한 그린 유지 */
   body.role-student header{
@@ -224,24 +220,9 @@
   .result-block{margin-bottom:18px;}
   .result-block h3{font-size:14px; color:var(--navy); margin:0 0 6px;}
   .result-block p{margin:0; font-size:14px;}
-  .moa-q{
-    display:inline-flex; align-items:center; justify-content:center;
-    width:17px; height:17px; margin-left:5px; vertical-align:middle;
-    border-radius:50%; background:#EAF2AE; color:#11308C;
-    font-size:11px; font-weight:900; line-height:1; text-decoration:none;
-  }
-  .moa-q:hover{ background:#C0D904; }
 </style>
 </head>
 <body>
-<style>
-.moa-hubbar{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#11308C;padding:calc(7px + env(safe-area-inset-top,0px)) 14px 7px;font-family:"Noto Sans KR","맑은 고딕","Malgun Gothic",sans-serif;position:relative;z-index:50}
-.moa-hubbar a{color:#fff;text-decoration:none;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:6px;padding:4px 10px 4px 6px;border-radius:8px;border:1px solid rgba(255,255,255,.35)}
-.moa-hubbar a:hover,.moa-hubbar a:focus-visible{background:rgba(255,255,255,.12)}
-.moa-hubbar span{color:#C0D904;font-size:11px;font-weight:700;letter-spacing:1.4px}
-@media print{.moa-hubbar{display:none!important}}
-</style>
-<nav class="moa-hubbar" aria-label="MOA FORMULA 허브로 이동"><a href="https://moa-hub.vercel.app/">← 허브</a><span>MOA FORMULA</span></nav>
 <header>
   <div>
     <div class="header-sub"><img class="brand-logo" src="data:image/png;base64,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" alt=""><span class="brand-name">진로모아커리어센터</span> · MOA FORMULA</div>
@@ -255,7 +236,6 @@
 const params = new URLSearchParams(location.search);
 const isAdmin = params.get('admin') === '1';
 let TEACHER_ID = (params.get('t') || '').trim().toLowerCase().replace(/[^a-z0-9가-힣_-]/g, '').slice(0, 40);
-try{ if(TEACHER_ID){ localStorage.setItem('moa_teacher_id', TEACHER_ID); } else if(!params.get('master')){ const __saved=(localStorage.getItem('moa_teacher_id')||'').trim(); if(__saved){ TEACHER_ID=__saved; const __u=new URL(location.href); __u.searchParams.set('t',__saved); history.replaceState(null,'',__u.toString()); } } }catch(e){}
 document.getElementById('roleBadge').textContent = (isAdmin ? '강사용' : '학생용') + (TEACHER_ID ? ' · ' + TEACHER_ID : '');
 document.body.classList.add(isAdmin ? 'role-teacher' : 'role-student');
 document.getElementById('header-title').addEventListener('click', () => {
@@ -280,9 +260,7 @@ async function api(path, options = {}) {
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     const msg = (err.error || ('요청 실패: ' + res.status)) + (err.detail ? ' — 상세: ' + err.detail : '');
-    const e = new Error(msg);
-    if (err.expired) e.expired = true;
-    throw e;
+    throw new Error(msg);
   }
   return res.json();
 }
@@ -357,35 +335,20 @@ function extractCharLimit(questionText) {
 
 // ---------- 라우팅 ----------
 function renderTeacherSetup() {
-  const urlInvite = new URLSearchParams(location.search).get('invite') || '';
-  const draft = JSON.parse(localStorage.getItem('moa_teacher_setup_draft') || '{}');
   app.innerHTML = `
     <div class="card">
       <h2>강사 코드 설정</h2>
       <p>여러 강사님이 같은 앱을 함께 쓰기 때문에, 자료가 서로 섞이지 않도록 <b>본인만의 고유 코드</b>가 필요합니다. 영문·숫자로 짧게 만들어 주세요 (예: kimteacher, park01). 한 번 정하시면 계속 같은 코드로 접속하시면 됩니다.</p>
       <label>강사 이름</label>
-      <input type="text" id="teacherNameInput" placeholder="예: 김강사" value="${escapeHtml(draft.name || '')}">
+      <input type="text" id="teacherNameInput" placeholder="예: 김강사">
       <label>강사 코드</label>
-      <input type="text" id="teacherCodeInput" placeholder="예: kimteacher" value="${escapeHtml(draft.code || '')}">
+      <input type="text" id="teacherCodeInput" placeholder="예: kimteacher">
       <label>초대코드 <span style="font-weight:400;color:var(--muted)">(처음 등록하는 코드일 때만 필요, 이미 등록된 코드면 비워두세요)</span></label>
-      <input type="text" id="teacherInviteInput" placeholder="원장님께 받은 초대코드" value="${escapeHtml(urlInvite || draft.invite || '')}">
+      <input type="text" id="teacherInviteInput" placeholder="원장님께 받은 초대코드">
       <div class="btn-row"><button class="btn-primary" id="setTeacherBtn">시작하기</button></div>
       <div id="teacherSetupError" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
     </div>
   `;
-
-  // 입력하는 중간에 앱을 나가도 다시 들어오면 그대로 남아있도록 임시저장
-  const saveDraft = () => {
-    localStorage.setItem('moa_teacher_setup_draft', JSON.stringify({
-      name: document.getElementById('teacherNameInput').value,
-      code: document.getElementById('teacherCodeInput').value,
-      invite: document.getElementById('teacherInviteInput').value
-    }));
-  };
-  ['teacherNameInput', 'teacherCodeInput', 'teacherInviteInput'].forEach(id => {
-    document.getElementById(id).addEventListener('input', saveDraft);
-  });
-
   document.getElementById('setTeacherBtn').addEventListener('click', async () => {
     const code = document.getElementById('teacherCodeInput').value.trim().toLowerCase().replace(/[^a-z0-9가-힣_-]/g, '');
     const name = document.getElementById('teacherNameInput').value.trim();
@@ -403,23 +366,10 @@ function renderTeacherSetup() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '등록에 실패했습니다.');
-      localStorage.removeItem('moa_teacher_setup_draft');
       const p = new URLSearchParams(location.search);
       p.set('admin', '1');
       p.set('t', code);
-      const permanentLink = location.origin + location.pathname + '?' + p.toString();
-      app.innerHTML = `
-        <div class="card">
-          <h2>✅ 등록 완료!</h2>
-          <p style="font-size:14px;line-height:1.7">지금 보고 계신 카톡 링크는 <b>1회용 초대 링크</b>라 앞으로는 못 써요. 아래가 <b>${escapeHtml(name || code)}님만의 고정 주소</b>예요 — 꼭 복사해서 카톡 "나에게 보내기"로 저장해두시고, 다음부터는 이 주소로 들어와 주세요.</p>
-          <div class="link-box" style="margin-top:10px">
-            <span style="word-break:break-all">${permanentLink}</span>
-            <button class="btn-secondary" style="margin-left:auto" onclick="navigator.clipboard.writeText('${permanentLink}')">링크 복사</button>
-          </div>
-          <div class="btn-row"><button class="btn-primary" id="goToDashboardBtn">이 주소로 계속하기</button></div>
-        </div>
-      `;
-      document.getElementById('goToDashboardBtn').addEventListener('click', () => { location.href = permanentLink; });
+      location.href = location.pathname + '?' + p.toString();
     } catch (err) {
       errEl.textContent = err.message;
       errEl.style.display = 'block';
@@ -432,187 +382,216 @@ function renderMissingTeacherNotice() {
   app.innerHTML = `<div class="card"><div class="empty">이 링크에는 담당 강사 정보가 없어요. 강사님이 안내한 QR코드나 링크로 다시 접속해 주세요.</div></div>`;
 }
 
-function daysRemainingText(expiresAt) {
-  if (!expiresAt) return '무제한';
-  const diff = Math.ceil((expiresAt - Date.now()) / (24 * 60 * 60 * 1000));
-  if (diff <= 0) return '기간만료';
-  return `${diff}일 남음 (${new Date(expiresAt).toLocaleDateString('ko-KR')}까지)`;
-}
-
 function renderMasterTeacherList() {
   app.innerHTML = `
     <div class="card">
-      <h2>새 초대코드 발급</h2>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">원장님만 보실 수 있는 화면입니다. 새 강사님 한 분당 코드를 하나씩 발급해서 전달해 주세요. 한 번 쓰면 그 코드는 다시 못 씁니다.</p>
-      <label>관리자 비밀번호</label>
+      <h2>관리자 비밀번호</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">원장님만 보실 수 있는 화면입니다. 비밀번호를 입력한 뒤 아래 기능을 사용하세요.</p>
       <input type="text" id="masterPasswordInput" placeholder="관리자 비밀번호">
-      <label>발급 대상 메모 (선택, 예: 김민지 강사)</label>
-      <input type="text" id="inviteLabelInput" placeholder="누구에게 줄 코드인지 적어두면 목록에서 알아보기 쉬워요">
-      <label>초대코드 유효기간 (일)</label>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">이 코드를 며칠 안에 등록해야 하는지 정해요. 일회성 강의를 위한 임시 강사라면 짧게(예: 7일), 정규 강사라면 비워두면 기간 제한 없이 유효해요.</div>
-      <input type="text" id="inviteExpiryInput" placeholder="예) 7 (비워두면 무제한)">
-      <div class="btn-row"><button class="btn-primary" id="genInviteBtn">초대코드 발급하기</button></div>
+    </div>
+    <div class="card">
+      <h2>새 초대코드 발급</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">새 강사님 한 분당 코드를 하나씩 발급해서 전달해 주세요. 한 번 쓰면 그 코드는 다시 못 씁니다.</p>
+      <div class="btn-row" style="margin-top:0"><button class="btn-primary" id="genInviteBtn">초대코드 발급하기</button></div>
       <div id="genInviteError" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
       <div id="genInviteResult" style="margin-top:12px;font-size:15px;font-weight:700;display:none"></div>
     </div>
     <div class="card">
       <h2>승인된 강사 목록</h2>
-      <div class="btn-row"><button class="btn-primary" id="masterListBtn">강사 목록 보기</button></div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">강사를 삭제하면 세 앱(모의면접·자소서·트래커) 강사 목록에서 빠지고, 이 앱의 강사 화면과 학생 제출 링크가 막혀요. 프리셋·첨삭 기록은 보관되어 언제든 복구할 수 있어요.</p>
+      <div class="btn-row" style="margin-top:0"><button class="btn-primary" id="masterListBtn">강사 목록 보기</button></div>
       <div id="masterListError" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
       <div id="masterListResult" style="margin-top:16px"></div>
     </div>
     <div class="card">
       <h2>발급된 초대코드 목록</h2>
-      <div class="btn-row"><button class="btn-primary" id="inviteListBtn">초대코드 목록 보기</button></div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">아직 사용되지 않은 코드는 "취소"로 무효화할 수 있어요.</p>
+      <div class="btn-row" style="margin-top:0"><button class="btn-primary" id="inviteListBtn">초대코드 목록 보기</button></div>
       <div id="inviteListError" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
       <div id="inviteListResult" style="margin-top:16px"></div>
     </div>
+    <div class="card">
+      <h2>삭제된 강사 (복구 가능)</h2>
+      <div class="btn-row" style="margin-top:0"><button class="btn-primary" id="removedListBtn">삭제된 강사 보기</button></div>
+      <div id="removedListError" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
+      <div id="removedListResult" style="margin-top:16px"></div>
+    </div>
   `;
 
-  document.getElementById('genInviteBtn').addEventListener('click', async () => {
-    const pw = document.getElementById('masterPasswordInput').value;
-    const expiryDays = document.getElementById('inviteExpiryInput').value.trim();
-    const label = document.getElementById('inviteLabelInput').value.trim();
-    const errEl = document.getElementById('genInviteError');
-    const resultEl = document.getElementById('genInviteResult');
-    errEl.style.display = 'none'; resultEl.style.display = 'none';
-    try {
-      const res = await fetch('/api/teacher-registry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'generateInvite', master: pw, expiryDays: expiryDays ? parseInt(expiryDays, 10) : 0, label })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '발급에 실패했습니다.');
-      const inviteLink = location.origin + location.pathname + '?admin=1&invite=' + encodeURIComponent(data.inviteCode);
-      resultEl.innerHTML = `
-        <div>발급된 초대코드: ${data.inviteCode}${label ? ` <span style="font-weight:400;color:var(--navy)">(${escapeHtml(label)})</span>` : ''} <span style="font-weight:400;color:var(--muted);font-size:12px">(${daysRemainingText(data.expiresAt)})</span></div>
-        <div class="link-box" style="margin-top:8px">
-          <span style="word-break:break-all;font-weight:400;font-size:13px">${inviteLink}</span>
-          <button class="btn-secondary" style="margin-left:auto" onclick="navigator.clipboard.writeText('${inviteLink}')">링크 복사</button>
-        </div>
-        <p style="font-size:12px;color:var(--muted);font-weight:400;margin:6px 0 0">이 링크 하나만 보내주세요 — 강사님이 열면 초대코드가 자동으로 입력되어 있어요.</p>
-      `;
-      resultEl.style.display = 'block';
-      document.getElementById('inviteLabelInput').value = '';
-    } catch (err) {
-      errEl.textContent = err.message;
-      errEl.style.display = 'block';
-    }
-  });
+  const pw = () => document.getElementById('masterPasswordInput').value;
+  const rowStyle = 'border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap';
 
-  document.getElementById('masterListBtn').addEventListener('click', async () => {
-    const pw = document.getElementById('masterPasswordInput').value;
-    const errEl = document.getElementById('masterListError');
+  async function registryPost(body) {
+    const res = await fetch('/api/teacher-registry', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...body, master: pw() })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || '요청에 실패했습니다.');
+    return data;
+  }
+
+  async function registryGet(listParam) {
+    const res = await fetch('/api/teacher-registry?' + (listParam ? 'list=' + listParam + '&' : '') + 'master=' + encodeURIComponent(pw()));
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || '조회에 실패했습니다.');
+    return data;
+  }
+
+  function showError(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.style.display = msg ? 'block' : 'none';
+  }
+
+  async function loadTeachers() {
     const resultEl = document.getElementById('masterListResult');
-    errEl.style.display = 'none';
+    showError('masterListError', '');
     resultEl.innerHTML = '불러오는 중...';
     try {
-      const res = await fetch('/api/teacher-registry?master=' + encodeURIComponent(pw));
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '조회에 실패했습니다.');
-      if (!data.teachers.length) {
-        resultEl.innerHTML = '<div class="empty">아직 등록된 강사가 없습니다.</div>';
-        return;
-      }
-      resultEl.innerHTML = '';
-      data.teachers.forEach(t => {
-        const row = document.createElement('div');
-        row.style.cssText = 'border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap';
-        row.innerHTML = `
+      const data = await registryGet('');
+      if (!data.teachers.length) { resultEl.innerHTML = '<div class="empty">아직 등록된 강사가 없습니다.</div>'; return; }
+      resultEl.innerHTML = data.teachers.map(t => `
+        <div style="${rowStyle}">
           <div>
-            <b>${escapeHtml(t.name)}</b> <span style="color:var(--muted);font-size:12px">(코드: ${escapeHtml(t.code)})</span> ${t.permanent ? '<span class="star-tag ok">영구</span>' : '<span class="star-tag miss">임시</span>'}<br>
-            <span style="font-size:12px;color:var(--muted)">등록일: ${new Date(t.approvedAt).toLocaleDateString('ko-KR')} · 첫 등록 앱: ${t.firstApp || '-'}</span>
+            <b>${escapeHtml(t.name)}</b> <span style="color:var(--muted);font-size:12px">(코드: ${escapeHtml(t.code)})</span><br>
+            <span style="font-size:12px;color:var(--muted)">등록일: ${new Date(t.approvedAt).toLocaleDateString('ko-KR')} · 첫 등록 앱: ${escapeHtml(t.firstApp) || '-'}</span>
           </div>
-          <div class="btn-row" style="margin:0">
-            <button class="btn-secondary toggle-permanent-btn" style="flex-shrink:0">${t.permanent ? '임시로 전환' : '영구로 전환'}</button>
-            <button class="btn-danger del-teacher-btn" style="flex-shrink:0">삭제</button>
-          </div>
-        `;
-        row.querySelector('.toggle-permanent-btn').addEventListener('click', async () => {
+          <button class="btn-danger teacher-del-btn" data-code="${escapeHtml(t.code)}" data-name="${escapeHtml(t.name)}">삭제</button>
+        </div>
+      `).join('');
+      resultEl.querySelectorAll('.teacher-del-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const { code, name } = btn.dataset;
+          if (!confirm(`${name}(${code}) 강사를 삭제할까요?\n\n· 세 앱(모의면접·자소서·트래커) 강사 목록에서 모두 빠져요.\n· 이 앱의 강사 화면과 학생 제출 링크가 막혀요.\n· 프리셋·첨삭 기록은 보관되며, "삭제된 강사"에서 복구할 수 있어요.`)) return;
+          btn.disabled = true; btn.textContent = '삭제 중...';
           try {
-            const r = await fetch('/api/teacher-registry', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action: 'setPermanent', master: pw, code: t.code, permanent: !t.permanent })
-            });
-            const d = await r.json();
-            if (!r.ok) throw new Error(d.error || '변경에 실패했습니다.');
-            t.permanent = !t.permanent;
-            document.getElementById('masterListBtn').click();
-          } catch (e) { alert('변경 실패: ' + e.message); }
+            await registryPost({ action: 'deleteTeacher', code });
+            await loadTeachers();
+            if (document.getElementById('removedListResult').innerHTML) await loadRemoved();
+          } catch (err) {
+            alert(err.message);
+            btn.disabled = false; btn.textContent = '삭제';
+          }
         });
-        row.querySelector('.del-teacher-btn').addEventListener('click', async () => {
-          if (!confirm(`"${t.name}"(${t.code}) 강사를 삭제할까요? 접속이 차단되고, 프리셋·첨삭 기록은 그대로 보관됩니다.`)) return;
-          try {
-            const r = await fetch('/api/teacher-registry', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action: 'deleteTeacher', master: pw, code: t.code })
-            });
-            const d = await r.json();
-            if (!r.ok) throw new Error(d.error || '삭제에 실패했습니다.');
-            row.remove();
-          } catch (e) { alert('삭제 실패: ' + e.message); }
-        });
-        resultEl.appendChild(row);
       });
     } catch (err) {
-      errEl.textContent = err.message;
-      errEl.style.display = 'block';
+      showError('masterListError', err.message);
       resultEl.innerHTML = '';
     }
-  });
+  }
 
-  document.getElementById('inviteListBtn').addEventListener('click', async () => {
-    const pw = document.getElementById('masterPasswordInput').value;
-    const errEl = document.getElementById('inviteListError');
+  async function loadInvites() {
     const resultEl = document.getElementById('inviteListResult');
-    errEl.style.display = 'none';
+    showError('inviteListError', '');
     resultEl.innerHTML = '불러오는 중...';
     try {
-      const res = await fetch('/api/teacher-registry?list=invites&master=' + encodeURIComponent(pw));
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '조회에 실패했습니다.');
-      if (!data.invites.length) {
-        resultEl.innerHTML = '<div class="empty">아직 발급된 초대코드가 없습니다.</div>';
-        return;
-      }
-      resultEl.innerHTML = '';
-      data.invites.forEach(iv => {
-        const row = document.createElement('div');
-        row.style.cssText = 'border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap';
-        const statusHtml = iv.used ? '<span style="color:#b91c1c;font-size:12px">(사용됨 · ' + escapeHtml(iv.usedBy || '') + ')</span>' : iv.isExpired ? '<span style="color:#b91c1c;font-size:12px">(기간만료)</span>' : '<span style="color:var(--green);font-size:12px">(미사용)</span>';
-        row.innerHTML = `
+      const data = await registryGet('invites');
+      if (!data.invites.length) { resultEl.innerHTML = '<div class="empty">아직 발급된 초대코드가 없습니다.</div>'; return; }
+      resultEl.innerHTML = data.invites.map(iv => `
+        <div style="${rowStyle}">
           <div>
-            <b>${iv.code}</b>${iv.label ? ` <span style="color:var(--navy);font-size:12px">(${escapeHtml(iv.label)})</span>` : ''} ${statusHtml}<br>
-            <span style="font-size:12px;color:var(--muted)">발급일: ${new Date(iv.createdAt).toLocaleDateString('ko-KR')} · 유효기간: ${daysRemainingText(iv.expiresAt)}</span>
+            <b>${escapeHtml(iv.code)}</b> ${iv.used ? '<span style="color:#b91c1c;font-size:12px">(사용됨 · ' + escapeHtml(iv.usedBy || '') + ')</span>' : '<span style="color:var(--green);font-size:12px">(미사용)</span>'}<br>
+            <span style="font-size:12px;color:var(--muted)">발급일: ${new Date(iv.createdAt).toLocaleDateString('ko-KR')}</span>
           </div>
-          ${!iv.used ? '<button class="btn-danger del-invite-btn" style="flex-shrink:0">취소</button>' : ''}
-        `;
-        if (!iv.used) {
-          row.querySelector('.del-invite-btn').addEventListener('click', async () => {
-            if (!confirm(`초대코드 "${iv.code}"를 취소할까요?`)) return;
-            try {
-              const r = await fetch('/api/teacher-registry', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'cancelInvite', master: pw, inviteCode: iv.code })
-              });
-              const d = await r.json();
-              if (!r.ok) throw new Error(d.error || '취소에 실패했습니다.');
-              row.remove();
-            } catch (e) { alert('취소 실패: ' + e.message); }
-          });
-        }
-        resultEl.appendChild(row);
+          ${iv.used ? '' : `<button class="btn-danger invite-cancel-btn" data-code="${escapeHtml(iv.code)}">취소</button>`}
+        </div>
+      `).join('');
+      resultEl.querySelectorAll('.invite-cancel-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const code = btn.dataset.code;
+          if (!confirm(`초대코드 ${code}를 취소할까요?\n취소하면 이 코드로는 더 이상 등록할 수 없어요.`)) return;
+          btn.disabled = true; btn.textContent = '취소 중...';
+          try {
+            await registryPost({ action: 'cancelInvite', inviteCode: code });
+            await loadInvites();
+          } catch (err) {
+            alert(err.message);
+            btn.disabled = false; btn.textContent = '취소';
+          }
+        });
       });
     } catch (err) {
-      errEl.textContent = err.message;
-      errEl.style.display = 'block';
+      showError('inviteListError', err.message);
       resultEl.innerHTML = '';
     }
+  }
+
+  async function loadRemoved() {
+    const resultEl = document.getElementById('removedListResult');
+    showError('removedListError', '');
+    resultEl.innerHTML = '불러오는 중...';
+    try {
+      const data = await registryGet('removed');
+      if (!data.teachers.length) { resultEl.innerHTML = '<div class="empty">삭제된 강사가 없습니다.</div>'; return; }
+      resultEl.innerHTML = data.teachers.map(t => `
+        <div style="${rowStyle}">
+          <div>
+            <b>${escapeHtml(t.name)}</b> <span style="color:var(--muted);font-size:12px">(코드: ${escapeHtml(t.code)})</span><br>
+            <span style="font-size:12px;color:var(--muted)">삭제일: ${new Date(t.removedAt).toLocaleDateString('ko-KR')}</span>
+          </div>
+          <button class="btn-secondary teacher-restore-btn" data-code="${escapeHtml(t.code)}" data-name="${escapeHtml(t.name)}">복구</button>
+        </div>
+      `).join('');
+      resultEl.querySelectorAll('.teacher-restore-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const { code, name } = btn.dataset;
+          if (!confirm(`${name}(${code}) 강사를 복구할까요?\n기존 프리셋·첨삭 기록과 함께 다시 사용할 수 있게 돼요.`)) return;
+          btn.disabled = true; btn.textContent = '복구 중...';
+          try {
+            await registryPost({ action: 'restoreTeacher', code });
+            await loadRemoved();
+            if (document.getElementById('masterListResult').innerHTML) await loadTeachers();
+          } catch (err) {
+            alert(err.message);
+            btn.disabled = false; btn.textContent = '복구';
+          }
+        });
+      });
+    } catch (err) {
+      showError('removedListError', err.message);
+      resultEl.innerHTML = '';
+    }
+  }
+
+  document.getElementById('genInviteBtn').addEventListener('click', async () => {
+    const resultEl = document.getElementById('genInviteResult');
+    showError('genInviteError', '');
+    resultEl.style.display = 'none';
+    try {
+      const data = await registryPost({ action: 'generateInvite' });
+      resultEl.textContent = '발급된 초대코드: ' + data.inviteCode;
+      resultEl.style.display = 'block';
+      if (document.getElementById('inviteListResult').innerHTML) await loadInvites();
+    } catch (err) {
+      showError('genInviteError', err.message);
+    }
   });
+  document.getElementById('masterListBtn').addEventListener('click', loadTeachers);
+  document.getElementById('inviteListBtn').addEventListener('click', loadInvites);
+  document.getElementById('removedListBtn').addEventListener('click', loadRemoved);
 }
 
-function route() {
+// 삭제(사용 중지)된 강사 코드인지 확인 — 확인에 실패하면 막지 않고 통과시킴
+async function isTeacherBlocked(code) {
+  try {
+    const res = await fetch('/api/teacher-registry?check=' + encodeURIComponent(code));
+    if (!res.ok) return false;
+    const data = await res.json();
+    return !!data.blocked;
+  } catch (e) {
+    return false;
+  }
+}
+
+function renderBlockedNotice(forTeacher) {
+  app.innerHTML = `<div class="card"><div class="empty">${forTeacher
+    ? '사용이 중지된 강사 코드예요. 원장님께 문의해 주세요.'
+    : '이 링크는 더 이상 사용할 수 없어요. 담당 강사님께 문의해 주세요.'}</div></div>`;
+}
+
+async function route() {
   const params = new URLSearchParams(location.search);
   if (params.get('master') === '1') {
     document.body.classList.add('role-teacher');
@@ -622,14 +601,17 @@ function route() {
   }
   const hash = location.hash;
   if (hash.indexOf('#result=') === 0) {
+    // 이미 승인된 첨삭 결과는 강사가 삭제돼도 학생이 계속 볼 수 있게 둠
     if (!TEACHER_ID) { renderMissingTeacherNotice(); return; }
     const id = hash.replace('#result=', '');
     renderResultView(id);
   } else if (isAdmin) {
     if (!TEACHER_ID) { renderTeacherSetup(); return; }
+    if (await isTeacherBlocked(TEACHER_ID)) { renderBlockedNotice(true); return; }
     renderTeacherView();
   } else {
     if (!TEACHER_ID) { renderMissingTeacherNotice(); return; }
+    if (await isTeacherBlocked(TEACHER_ID)) { renderBlockedNotice(false); return; }
     renderStudentView();
   }
 }
@@ -691,10 +673,6 @@ async function renderStudentLookup() {
       const { item } = await api('/api/results?code=' + encodeURIComponent(code));
       area.innerHTML = resultContentHtml(item);
     } catch (e) {
-      if (e.expired) {
-        area.innerHTML = `<div class="empty">⏰ 조회 가능한 기간이 지났어요. 결과가 다시 필요하시면 강사님께 문의해 주세요.</div>`;
-        return;
-      }
       try {
         const pending = await api('/api/reviews?code=' + encodeURIComponent(code));
         area.innerHTML = `<div class="empty">${escapeHtml(pending.studentName) || '학생'}님, 아직 강사님이 검토 중입니다. 잠시 후 다시 확인해 주세요.</div>`;
@@ -802,11 +780,9 @@ function applyDocTypeToBlock(id, docTypeVal) {
 
 async function renderStudentSubmitForm() {
   let retryLimit = 'unlimited';
-  let institutions = [];
   try {
     const data = await api('/api/config');
     retryLimit = (data.config && data.config.retryLimit) || 'unlimited';
-    institutions = (data.config && data.config.institutions) || [];
   } catch (e) { /* 설정을 못 불러오면 기본값(자유롭게)으로 진행 */ }
 
   const countKey = 'moa_resume_submit_count_' + TEACHER_ID;
@@ -848,11 +824,6 @@ async function renderStudentSubmitForm() {
       <label>본인 전공(또는 직군)을 선택하세요</label>
       <select id="presetSelect"><option>불러오는 중...</option></select>
       <div style="font-size:12px;color:var(--muted);margin-top:4px">전공마다 평가 기준이 달라요. 목록에 본인 전공이 없으면 "기본"을 선택하세요.</div>
-      ${institutions.length ? `
-      <label>본인 소속 기관을 선택하세요</label>
-      <select id="institutionSelect">
-        ${institutions.map(inst => `<option value="${escapeHtml(inst.name)}">${escapeHtml(inst.name)}</option>`).join('')}
-      </select>` : ''}
 
       <label>지원하는 채용공고의 핵심 내용 (선택, 모든 문항에 공통 적용)</label>
       <textarea id="jobPostingInput" placeholder="예) [○○기관] 사회복지사 채용 — 사례관리 경험자 우대, 공감·소통 역량 중시"></textarea>
@@ -946,11 +917,9 @@ async function renderStudentSubmitForm() {
         return { ...it, aiDraft };
       }));
 
-      const studentInstitution = institutions.length ? document.getElementById('institutionSelect').value : '';
-
       const reviewRes = await api('/api/reviews', {
         method: 'POST',
-        body: JSON.stringify({ studentName, studentEmail, presetId: presetSelect.value, docType: docTypeSelect.value, jobPosting, studentInstitution, items: itemsWithDraft })
+        body: JSON.stringify({ studentName, studentEmail, presetId: presetSelect.value, docType: docTypeSelect.value, jobPosting, items: itemsWithDraft })
       });
 
       localStorage.setItem(countKey, String(usedCount + 1));
@@ -978,12 +947,83 @@ async function renderStudentSubmitForm() {
   });
 }
 
+// ---------- 추천 프리셋 라이브러리 (v2 · 2026.09) ----------
+// 공통 원칙(면접관 시점)과 피드백 다양화 원칙은 서버(api/feedback.js)가 모든 요청에 자동으로 붙임.
+// 따라서 여기에는 "전공·산업에서만 통하는 기준"만 5~8줄로 적는다. 공통 내용은 중복이므로 쓰지 않는다.
+// 이름 규칙: 끝의 '학과'는 '과'로 통일 / 직무·산업형은 그 이름 그대로 / 한 번 정한 이름은 바꾸지 않는다.
+
 const PRESET_LIBRARY = [
-  { name: '사회복지학과', prompt: '사회복지 직무 특성상 공감·소통 역량, 사례관리·대상자 지원 경험, 윤리의식이 드러나는지 특히 중점적으로 봐 주세요. 대상자와의 관계 형성 경험이 있다면 구체적으로 짚어주세요.' },
-  { name: '물리치료과', prompt: '물리치료사 직무 특성상 환자와의 신뢰 형성, 임상실습 경험, 의료진과의 협업·소통 역량이 드러나는지 확인해주세요.' },
-  { name: '항공서비스', prompt: '항공서비스직 특성상 이미지메이킹(표정·태도), 위기대응 능력, 고객응대 경험이 구체적으로 드러나는지 확인해주세요.' },
-  { name: '사무행정', prompt: '사무행정 직무 특성상 꼼꼼함, 문서작성·데이터 처리 경험, 협업 프로세스 이해도가 드러나는지 확인해주세요.' },
-  { name: '직업상담사', prompt: '직업상담사 직무 특성상 상담·경청 역량, 노동시장에 대한 이해, 사례 개입 경험이 드러나는지 확인해주세요.' }
+  {
+    name: '물리치료과',
+    prompt: `■ 물리치료과 특화 기준
+- 환자·보호자 응대에서 공감과 "쉽게 설명하는 능력"이 드러나면 높게 평가한다.
+- 임상실습은 "실습했습니다"에 그치지 않고 구체적 사례와 배운 점으로 쓰였는지 본다.
+- 체력 관리, 반복 치료를 견디는 꾸준함, 교대·야간 근무 인식을 긍정적으로 본다.
+- 의사·간호사·작업치료사 등 재활팀과의 협업·보고 경험을 중요하게 본다.
+- "환자를 낫게 해주고 싶다", "최선을 다하겠습니다" 같은 일방적·막연한 표현은 감점 요인이므로 환자 입장에서 배운 점으로 바꾸게 한다.
+- 전공과 다른 직무(필라테스 강사, 의료기기 영업 등) 지원이면 해부학·운동학 지식을 그 직무의 강점으로 연결하게 안내한다.`
+  },
+  {
+    name: '사회복지과',
+    prompt: `■ 사회복지과 특화 기준
+- 대상자를 존중하는 태도, 끝까지 듣고 판단한 경청 경험이 드러나면 높게 평가한다.
+- 인권·자기결정권·비밀보장 같은 윤리적 판단 사례를 중요하게 본다.
+- 감정 소진을 다루는 방식, 기관·동료와의 협력, 기록·사례관리 경험을 긍정적으로 본다.
+- "불쌍한 분들을 돕고 싶다"처럼 대상자를 낮추는 표현, "착해서 지원했다" 같은 막연한 동기는 감점 요인으로 짚는다.
+- '보람을 느꼈다'는 감정 서술은 구체적인 행동과 판단으로 바꾸게 한다.
+- 전공과 다른 직무(공공기관 행정, 상담, HR 등) 지원이면 사례관리·기록 경험을 고객관리·문서작성 역량으로 연결하게 안내한다.`
+  },
+  {
+    name: '기계과',
+    prompt: `■ 기계과 특화 기준
+- 생산·설계·품질·설비보전 중 어느 직무인지 구체적으로 밝혔는지 본다.
+- 현장 안전수칙을 지킨 경험, 점검·기록 습관을 높게 평가한다.
+- 실습·프로젝트에서 오류를 찾아 해결한 과정을 가능하면 수치와 함께 쓰게 한다.
+- 자격증·CAD·장비 운용은 이름 나열이 아니라 "그래서 무엇을 할 수 있는지"로 바꾸게 한다.
+- "손재주가 좋아서", "대기업이라서" 같은 동기는 감점 요인이므로 직무·제품 이해로 끌어올린다.
+- 교대근무 수용, 공정·부서 간 협업 경험을 긍정적으로 본다.`
+  },
+  {
+    name: '항공서비스과',
+    prompt: `■ 항공서비스과 특화 기준
+- 서비스직의 본질이 안전이라는 인식이 드러나면 높게 평가한다.
+- 돌발·불만 상황에서 침착하게 판단하고 행동한 실제 사례를 중요하게 본다.
+- 위계가 있는 조직에서 본인 역할을 인식한 팀워크 경험, 체력·어학 등 자기관리를 긍정적으로 본다.
+- "어릴 적부터 꿈이었다"로만 끝나는 동기, 근거 없는 "서비스 마인드가 있다", 외모·미소만 내세운 강점은 감점 요인으로 짚는다.
+- 서비스 마인드는 말이 아니라 실제 응대 행동 사례로 증명하게 한다.
+- 다른 전공 출신이면 그 전공 지식을 고객 이해·안전·차별화 강점으로 연결하게 안내한다.`
+  },
+  {
+    name: '사무행정과',
+    prompt: `■ 사무행정과 특화 기준
+- 총무·인사·회계 등 지원 부서 업무를 구체적으로 이해하고 있는지 본다.
+- 실수를 줄이거나 오류를 바로잡은 사례, 확인·검토 습관을 높게 평가한다.
+- 엑셀·한글 등 실무 도구와 자격증을 실제 업무에 써본 경험을 중요하게 본다.
+- 여러 사람의 요청·일정을 조율하고 우선순위를 정한 경험을 긍정적으로 본다.
+- 근거 없는 "꼼꼼한 성격입니다", 자격증 나열, "안정적이라서" 같은 동기는 감점 요인으로 짚는다.
+- 다른 전공 출신이면 학과 총무·동아리 회계처럼 행정 성격의 경험을 찾아 연결하게 안내한다.`
+  },
+  {
+    name: '방위산업',
+    prompt: `■ 방위산업 특화 기준
+- 보안 의식: 정보 취급의 무게를 아는지 본다. 재직·실습 중 알게 된 정보를 구체적으로 적은 답변은 감점 요인이므로 표현 수위를 낮추게 한다.
+- 신원 안정성: 보안심사·신원조회가 있는 산업이므로 잦은 이직·중도 포기·조직 규칙에 대한 반감 표현을 특히 민감하게 점검한다.
+- 규정 준수: "융통성 있게 처리했다"보다 절차·매뉴얼을 지킨 경험을 더 높게 평가한다.
+- 장기 근속 의지: 지원동기가 "안정적이라서"에 머물면 산업·회사의 역할에 대한 이해로 끌어올리게 안내한다.
+- 개인 성과보다 공정·부서 간 협업과 인수인계 경험, 확인·기록·점검 습관을 중요하게 본다.
+- 구호성 애국심은 부담스럽게 읽히므로 담백한 책임감으로 다듬는다.
+- 지원 직무(연구개발·생산·품질·사업관리·해외사업 등)를 구체적으로 밝혔는지 본다.`
+  },
+  {
+    name: '직업상담사',
+    prompt: `■ 직업상담사 특화 기준
+- 고용센터·대학 일자리센터·민간위탁 등 기관 유형과 상담사 역할을 이해하고 있는지 본다.
+- 상대의 이야기를 끝까지 듣고 질문으로 이끈 경험, 내담자가 스스로 변화한 사례를 높게 평가한다.
+- 직업정보·채용 동향을 탐색해 활용한 경험, 기록·행정 처리 역량을 중요하게 본다.
+- "사람을 좋아해서" 같은 막연한 동기, 상담을 조언·해결해주는 일로만 본 표현은 감점 요인으로 짚는다.
+- 상담 경험은 상담자의 활약이 아니라 내담자의 변화 중심으로 쓰게 한다.
+- 이전 직장 경력이 있으면 그 경력을 노동시장 이해·상담 역량으로 연결하게 안내한다.`
+  }
 ];
 
 // ---------- 강사 화면 ----------
@@ -992,12 +1032,6 @@ let currentTab = 'reviews';
 async function renderTeacherView() {
   const studentLink = location.origin + location.pathname + '?t=' + encodeURIComponent(TEACHER_ID);
   const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=' + encodeURIComponent(studentLink);
-  let isPermanentTeacher = false;
-  try {
-    const r = await fetch('/api/teacher-registry?check=' + encodeURIComponent(TEACHER_ID));
-    const d = await r.json();
-    isPermanentTeacher = !!d.permanent;
-  } catch (e) { /* 확인 실패 시 안전하게 숨김 처리 */ }
   app.innerHTML = `
     <div class="card" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
       <img id="qrImage" src="${qrUrl}" alt="학생용 QR코드" title="클릭하면 다운로드됩니다" style="width:120px;height:120px;border:1px solid var(--border);border-radius:8px;cursor:pointer">
@@ -1015,7 +1049,6 @@ async function renderTeacherView() {
       <div class="tab" data-tab="presets">첨삭 기준 프리셋</div>
       <div class="tab" data-tab="results">완료된 첨삭</div>
       <div class="tab" data-tab="notify">알림 설정</div>
-      ${isPermanentTeacher ? '<div class="tab" data-tab="guide">기능 안내</div>' : ''}
     </div>
     <div id="tabContent"></div>
   `;
@@ -1046,14 +1079,13 @@ async function renderTeacherView() {
   if (currentTab === 'reviews') await renderReviewsTab(content);
   else if (currentTab === 'presets') await renderPresetsTab(content);
   else if (currentTab === 'notify') await renderNotifyTab(content);
-  else if (currentTab === 'guide') renderGuideTab(content);
   else await renderResultsTab(content);
 }
 
 async function renderNotifyTab(content) {
   content.innerHTML = `
     <div class="card">
-      <h2>새 검수 요청 이메일 알림<a class="moa-q" target="_blank" rel="noopener" title="알림 메일이 안 올 때" href="https://claude.ai/artifact/ABvpPmNpMpFM2seeGZikf8#p-email">?</a></h2>
+      <h2>새 검수 요청 이메일 알림</h2>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">학생이 검수 요청을 보낼 때마다 이 주소로 알림 메일이 발송돼요. 강사용 화면에 매번 들어가서 확인하지 않아도 됩니다.</p>
       <label>알림 받을 이메일 주소</label>
       <input type="text" id="notifyEmailInput" placeholder="예) teacher@example.com">
@@ -1061,7 +1093,7 @@ async function renderNotifyTab(content) {
       <div id="notifySavedMsg" style="font-size:13px;color:var(--green);margin-top:8px;display:none">저장됐어요.</div>
     </div>
     <div class="card">
-      <h2>재도전 허용 범위<a class="moa-q" target="_blank" rel="noopener" title="재도전 설정 안내" href="https://claude.ai/artifact/ABvpPmNpMpFM2seeGZikf8#p-retry">?</a></h2>
+      <h2>재도전 허용 범위</h2>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">한 학생이 이 기기·브라우저로 첨삭을 몇 번까지 제출할 수 있는지 정해요. 대상·현장 분위기에 맞춰 고르세요.</p>
       <label>제출 허용 횟수</label>
       <select id="retryLimitSelect">
@@ -1075,26 +1107,10 @@ async function renderNotifyTab(content) {
     <div class="card">
       <h2>수강생 사후관리 트래커 연동</h2>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">여기에 기관명을 입력해두면, 첨삭이 승인될 때마다 학생이 선택한 전공(프리셋)과 함께 "수강생 사후관리 트래커"의 진로모아관리 통계에 인원수가 자동으로 누적돼요. 첨삭 내용 자체는 저장되지 않고, 기관·전공·인원수만 집계됩니다. 특강이 끝나고 다른 기관으로 넘어가면 이 값을 바꿔주세요.</p>
-      <label>현재 진행 중인 특강 기관명 (선택, 기관을 하나만 다닐 때)<a class="moa-q" target="_blank" rel="noopener" title="이 설정이 어디에 영향을 주나요?" href="https://claude.ai/artifact/ABvpPmNpMpFM2seeGZikf8#impact">?</a></label>
+      <label>현재 진행 중인 특강 기관명 (선택)</label>
       <input type="text" id="institutionNameInput" placeholder="예) 대구대학교 사회복지학과">
       <div class="btn-row"><button class="btn-primary" id="saveInstitutionBtn">저장하기</button></div>
       <div id="institutionSavedMsg" style="font-size:13px;color:var(--green);margin-top:8px;display:none">저장됐어요.</div>
-    </div>
-    <div class="card">
-      <h2>집체교육 학생 결과 조회 유효기간</h2>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">"수강생 사후관리 트래커"의 개인관리에 <b>이미 등록된 학생(1:1 코칭 대상)</b>은 기간 제한 없이 계속 조회할 수 있어요. 등록되지 않은 학생(집체교육·일회성 특강 참가자)만 여기서 정한 기간이 지나면 코드·링크로 결과를 못 열어봐요. 다운로드(워드 저장)는 그 전에 미리 받아두시면 기간이 지나도 계속 볼 수 있어요.</p>
-      <label>집체교육 학생 결과 유효기간 (일, 승인일 포함)</label>
-      <input type="text" id="groupExpiryInput" placeholder="예) 5">
-      <div class="btn-row"><button class="btn-primary" id="saveGroupExpiryBtn">저장하기</button></div>
-      <div id="groupExpirySavedMsg" style="font-size:13px;color:var(--green);margin-top:8px;display:none">저장됐어요.</div>
-    </div>
-    <div class="card">
-      <h2>여러 기관 동시 운영 (집체교육용)</h2>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">한 강사 코드로 여러 학교·기관을 동시에 다니실 때 쓰세요. 여기에 기관을 미리 등록해두면, 위의 단일 기관명 대신 <b>학생이 직접 본인 소속을 선택</b>하는 화면이 제출 폼에 나타나요. 목록이 비어있으면 위의 단일 기관명 방식 그대로 작동해요.</p>
-      <div id="institutionListArea" class="empty">불러오는 중...</div>
-      <label>새 기관 추가</label>
-      <input type="text" id="newInstitutionInput" placeholder="예) 영남이공대 직업상담사반">
-      <div class="btn-row"><button class="btn-primary" id="addInstitutionBtn">추가하기</button></div>
     </div>
   `;
   try {
@@ -1102,51 +1118,7 @@ async function renderNotifyTab(content) {
     document.getElementById('notifyEmailInput').value = (data.config && data.config.notifyEmail) || '';
     document.getElementById('institutionNameInput').value = (data.config && data.config.institutionName) || '';
     document.getElementById('retryLimitSelect').value = (data.config && data.config.retryLimit) || 'unlimited';
-    document.getElementById('groupExpiryInput').value = (data.config && data.config.groupCodeExpiryDays) || 5;
-    renderInstitutionList(data.config && data.config.institutions || []);
   } catch (e) { console.error(e); }
-
-  function renderInstitutionList(list) {
-    const area = document.getElementById('institutionListArea');
-    if (!list.length) { area.innerHTML = `<div class="empty">등록된 기관이 없습니다 (단일 기관명 방식으로 작동 중).</div>`; return; }
-    area.innerHTML = '';
-    list.forEach((inst, idx) => {
-      const row = document.createElement('div');
-      row.className = 'preset-item';
-      row.innerHTML = `<div><b>${escapeHtml(inst.name)}</b></div>
-        <div class="btn-row" style="margin:0"><button class="btn-danger del-inst-btn">삭제</button></div>`;
-      row.querySelector('.del-inst-btn').addEventListener('click', async () => {
-        if (!confirm(`"${inst.name}"을(를) 목록에서 삭제할까요?`)) return;
-        try {
-          const data = await api('/api/config');
-          const config = data.config || {};
-          config.institutions = (config.institutions || []).filter((_, i) => i !== idx);
-          await api('/api/config', { method: 'POST', body: JSON.stringify(config) });
-          renderInstitutionList(config.institutions);
-        } catch (e) { alert('삭제 실패: ' + e.message); }
-      });
-      area.appendChild(row);
-    });
-  }
-
-  document.getElementById('addInstitutionBtn').addEventListener('click', async () => {
-    const name = document.getElementById('newInstitutionInput').value.trim();
-    if (!name) { alert('기관명을 입력해 주세요.'); return; }
-    const btn = document.getElementById('addInstitutionBtn');
-    btn.disabled = true; btn.textContent = '추가 중...';
-    try {
-      const data = await api('/api/config');
-      const config = data.config || {};
-      config.institutions = config.institutions || [];
-      config.institutions.push({ id: 'inst_' + Date.now(), name });
-      await api('/api/config', { method: 'POST', body: JSON.stringify(config) });
-      document.getElementById('newInstitutionInput').value = '';
-      renderInstitutionList(config.institutions);
-    } catch (e) {
-      alert('추가 실패: ' + e.message);
-    }
-    btn.disabled = false; btn.textContent = '추가하기';
-  });
 
   document.getElementById('saveNotifyEmailBtn').addEventListener('click', async () => {
     const btn = document.getElementById('saveNotifyEmailBtn');
@@ -1195,59 +1167,6 @@ async function renderNotifyTab(content) {
     }
     btn.disabled = false; btn.textContent = '저장하기';
   });
-
-  document.getElementById('saveGroupExpiryBtn').addEventListener('click', async () => {
-    const btn = document.getElementById('saveGroupExpiryBtn');
-    const days = parseInt(document.getElementById('groupExpiryInput').value, 10);
-    if (!days || days < 1) { alert('1 이상의 숫자를 입력해 주세요.'); return; }
-    btn.disabled = true; btn.textContent = '저장 중...';
-    try {
-      const data = await api('/api/config');
-      const config = data.config || {};
-      config.groupCodeExpiryDays = days;
-      await api('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
-      document.getElementById('groupExpirySavedMsg').style.display = 'block';
-    } catch (e) {
-      console.error(e);
-      alert('저장 중 문제가 발생했어요: ' + e.message);
-    }
-    btn.disabled = false; btn.textContent = '저장하기';
-  });
-}
-
-function renderGuideTab(content) {
-  const rows = [
-    ['학생용 QR코드', '클릭 시 다운로드 가능, 교실에 인쇄해서 붙여둘 수 있어요.'],
-    ['검수 대기함', '문항별 구조진단·구체성 체크·감점 요인·AI스러운 문구 감지·채용공고 매칭·자가진단 비교·Before→After·면접관 시점 추론·강점/개선점/다듬은 문장/꼬리질문 3종까지 전부 수정 가능. "전체 승인 및 링크 생성" 한 번으로 완료돼요.'],
-    ['첨삭 기준 프리셋 관리', '추천 라이브러리(사회복지학과·물리치료과·항공서비스·사무행정·직업상담사)에서 바로 추가하거나, 직접 추가·수정·기본값 지정·삭제할 수 있어요.'],
-    ['완료된 첨삭 목록', '전공별 필터·그룹핑, 정렬(최신/오래된/이름순), 결과 보기 링크, 삭제가 가능해요.'],
-    ['알림 설정 — 이메일', '강사 알림 이메일은 개별 저장 버튼으로 따로 저장해요. 다른 설정을 바꿔도 사라지지 않아요.'],
-    ['알림 설정 — 재도전 범위', '학생 제출 횟수를 자유롭게 / 1회 재도전 / 1회만 중에서 정할 수 있어요.'],
-    ['알림 설정 — 트래커 연동', '단일 기관명을 설정하거나, 여러 기관을 등록해서 학생이 직접 소속을 선택하게 할 수 있어요.'],
-    ['헤더 클릭 → 홈 이동', '어느 화면에서든 상단 앱 이름을 클릭하면 처음 화면으로 이동해요.']
-  ];
-  content.innerHTML = `
-    <div class="card">
-      <h2>강사용 기능 안내</h2>
-      <p style="font-size:13px;color:var(--muted);margin:-6px 0 16px">지금까지 만들어진 기능을 한눈에 정리했어요. 헷갈릴 때 여기서 확인하세요.</p>
-      <table style="width:100%;border-collapse:separate;border-spacing:0;border-radius:10px;overflow:hidden;border:1px solid var(--border);table-layout:fixed">
-        <thead>
-          <tr style="background:var(--green)">
-            <th style="text-align:left;font-size:13px;color:#fff;padding:12px 14px;width:22%">기능</th>
-            <th style="text-align:left;font-size:13px;color:#fff;padding:12px 16px">설명</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows.map((r, i) => `
-            <tr style="background:${i % 2 === 0 ? '#fff' : '#FAFBFD'}">
-              <td style="padding:14px 14px;font-size:13px;font-weight:700;color:var(--navy);line-height:1.5;vertical-align:top;border-top:1px solid var(--border);word-break:keep-all">${escapeHtml(r[0])}</td>
-              <td style="padding:14px 18px;font-size:13px;color:#333;line-height:1.75;vertical-align:top;border-top:1px solid var(--border)">${escapeHtml(r[1])}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
-  `;
 }
 
 async function renderReviewsTab(content) {
@@ -1426,7 +1345,6 @@ function buildReviewCard(record, presetName) {
         presetName: presetName || '기본',
         docType: record.docType || 'resume',
         jobPosting: record.jobPosting || '',
-        studentInstitution: record.studentInstitution || '',
         items: finalItems
       };
       const { id } = await api('/api/results', { method: 'POST', body: JSON.stringify(payload) });
@@ -1487,7 +1405,12 @@ async function renderPresetsTab(content) {
   libraryEl.innerHTML = PRESET_LIBRARY.map((lib, i) => {
     const already = config.presets.some(p => p.name === lib.name);
     return `<div class="preset-item">
-      <div><b>${escapeHtml(lib.name)}</b><div style="font-size:12px;color:var(--muted);margin-top:2px">${escapeHtml(lib.prompt)}</div></div>
+      <div><b>${escapeHtml(lib.name)}</b>
+        <details style="margin-top:4px">
+          <summary style="cursor:pointer;font-size:12px;color:var(--navy)">지침 보기</summary>
+          <div style="font-size:12px;color:var(--muted);margin-top:6px;white-space:pre-wrap">${escapeHtml(lib.prompt)}</div>
+        </details>
+      </div>
       <button class="btn-secondary lib-add-btn" data-i="${i}" ${already ? 'disabled' : ''}>${already ? '추가됨' : '추가하기'}</button>
     </div>`;
   }).join('');
@@ -1522,9 +1445,12 @@ async function renderPresetsTab(content) {
       row.innerHTML = `
         <div style="flex:1 1 100%;min-width:0">
           <b>${escapeHtml(p.name)}</b>${p.id === cfg.activePresetId ? ' <span class="star-tag ok">기본값</span>' : ''}
-          <div class="prompt-display" style="font-size:12px;color:var(--muted);margin-top:2px">${escapeHtml(p.prompt) || '(추가 지침 없음)'}</div>
+          <details class="prompt-display" style="margin-top:4px">
+            <summary style="cursor:pointer;font-size:12px;color:var(--navy)">지침 보기</summary>
+            <div style="font-size:12px;color:var(--muted);margin-top:6px;white-space:pre-wrap">${escapeHtml(p.prompt) || '(추가 지침 없음)'}</div>
+          </details>
           <div class="prompt-edit" style="display:none;margin-top:6px">
-            <textarea class="prompt-edit-input" style="min-height:70px">${escapeHtml(p.prompt)}</textarea>
+            <textarea class="prompt-edit-input" style="min-height:240px">${escapeHtml(p.prompt)}</textarea>
             <div class="btn-row" style="margin-top:6px">
               <button class="btn-primary save-prompt-btn">저장</button>
               <button class="btn-secondary cancel-edit-btn">취소</button>
@@ -1619,60 +1545,16 @@ async function renderResultsTab(content) {
   }
 
   function buildResultRow(it) {
-    const link = location.origin + location.pathname + '?t=' + encodeURIComponent(TEACHER_ID) + '&admin=1#result=' + it.id;
-    const expiredBadge = it.expiresAt ? (Date.now() > it.expiresAt ? '<span class="star-tag miss" style="margin-left:6px">학생 조회 만료</span>' : `<span class="star-tag ok" style="margin-left:6px">${daysRemainingText(it.expiresAt)}</span>`) : '';
+    const link = location.origin + location.pathname + '?t=' + encodeURIComponent(TEACHER_ID) + '#result=' + it.id;
     const row = document.createElement('div');
     row.className = 'preset-item';
     row.innerHTML = `
-      <div><b>${escapeHtml(it.studentName) || '(이름 없음)'}</b> — 문항 ${it.itemCount || 1}개${expiredBadge}<div style="font-size:12px;color:var(--muted)">${new Date(it.approvedAt).toLocaleString('ko-KR')}${it.code ? ' · 확인코드 <b style="color:var(--green);letter-spacing:1px">' + escapeHtml(it.code) + '</b>' : ''}</div></div>
-      <div class="btn-row" style="margin:8px 0 0;flex-wrap:wrap;gap:6px;width:100%">
+      <div><b>${escapeHtml(it.studentName) || '(이름 없음)'}</b> — 문항 ${it.itemCount || 1}개<div style="font-size:12px;color:var(--muted)">${new Date(it.approvedAt).toLocaleString('ko-KR')}</div></div>
+      <div class="btn-row" style="margin:0">
         <a href="${link}" target="_blank" class="btn-secondary" style="text-decoration:none;padding:8px 14px;border-radius:8px">결과 보기</a>
-        <button class="btn-secondary copy-student-btn" style="padding:8px 12px;font-size:13px">학생 링크 복사</button>
-        <button class="btn-secondary send-student-btn" style="padding:8px 12px;font-size:13px">학생에게 다시 보내기</button>
-        ${it.expiresAt ? '<button class="btn-secondary extend-btn" style="padding:8px 12px;font-size:13px">조회 기간 연장</button>' : ''}
         <button class="btn-danger delete-result-btn">삭제</button>
       </div>
     `;
-    row.style.flexWrap = 'wrap';
-    const studentLink = location.origin + location.pathname + '?t=' + encodeURIComponent(TEACHER_ID) + '#result=' + it.id;
-    const isExpired = it.expiresAt && Date.now() > it.expiresAt;
-    const sendText = '[진로모아커리어센터]\n' + (it.studentName ? it.studentName + '님, ' : '') + '자기소개서 첨삭 결과를 보내드려요.\n아래 링크를 누르면 바로 확인할 수 있어요.\n\n' + studentLink + (it.code ? '\n\n확인코드: ' + it.code + '\n(링크가 안 열리면 "내 결과 확인"에서 코드로 조회하세요)' : '');
-    function expiredOk() {
-      return !isExpired || confirm('학생 조회 기간이 지난 결과예요. 학생이 링크를 열어도 결과가 보이지 않을 수 있어요.\n그래도 계속할까요?');
-    }
-    async function copyText(txt, doneMsg) {
-      try { await navigator.clipboard.writeText(txt); alert(doneMsg); }
-      catch (e) { prompt('아래 내용을 길게 눌러 복사하세요', txt); }
-    }
-    const extBtn = row.querySelector('.extend-btn');
-    if (extBtn) extBtn.addEventListener('click', async () => {
-      const v = prompt((it.studentName || '학생') + '님 결과를 오늘부터 며칠 더 열어둘까요?\n숫자로 입력하세요. (0 = 기간 제한 없음)', '7');
-      if (v === null) return;
-      const days = parseInt(v, 10);
-      if (isNaN(days) || days < 0) { alert('0 이상의 숫자로 입력해 주세요.'); return; }
-      extBtn.disabled = true; extBtn.textContent = '연장 중...';
-      try {
-        const r = await api('/api/results?id=' + encodeURIComponent(it.id), { method: 'PATCH', body: JSON.stringify({ days }) });
-        it.expiresAt = r.expiresAt;
-        alert(days === 0 ? '기간 제한 없이 볼 수 있게 했어요.' : '연장했어요. ' + daysRemainingText(r.expiresAt) + '\n이제 "학생에게 다시 보내기"로 링크를 보내주세요.');
-        renderList();
-      } catch (e) {
-        alert('연장 실패: ' + e.message);
-        extBtn.disabled = false; extBtn.textContent = '조회 기간 연장';
-      }
-    });
-    row.querySelector('.copy-student-btn').addEventListener('click', () => {
-      if (!expiredOk()) return;
-      copyText(studentLink, '학생용 결과 링크를 복사했어요. 카톡이나 문자에 붙여넣어 보내주세요.');
-    });
-    row.querySelector('.send-student-btn').addEventListener('click', async () => {
-      if (!expiredOk()) return;
-      if (navigator.share) {
-        try { await navigator.share({ title: '자기소개서 첨삭 결과', text: sendText }); return; }
-        catch (e) { if (e && e.name === 'AbortError') return; }
-      }
-      copyText(sendText, '안내 문구와 링크를 복사했어요. 카톡이나 문자에 붙여넣어 보내주세요.');
-    });
     row.querySelector('.delete-result-btn').addEventListener('click', async () => {
       if (!confirm(`${it.studentName || '이름 없음'}님의 첨삭 결과를 삭제할까요? 학생에게 보낸 링크도 더 이상 열리지 않게 됩니다.`)) return;
       try {
@@ -1767,102 +1649,25 @@ function resultContentHtml(record) {
   const items = record.items || [];
   return `
     <div class="card">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-        <button class="btn-secondary" onclick="downloadResultAsWord('${escapeHtml(record.studentName || '첨삭결과').replace(/'/g, "")}')">📄 워드로 저장</button>
-      </div>
-      <div id="resultExportArea">
       <h2>첨삭 결과${record.studentName ? ` — ${escapeHtml(record.studentName)}님` : ''}</h2>
       ${items.length > 1 ? `<p style="font-size:13px;color:var(--muted);margin-top:-6px">총 ${items.length}개 문항의 첨삭 결과예요.</p>` : ''}
       ${record.jobPosting ? `<div class="result-block"><h3>지원 채용공고 핵심 내용</h3><p style="white-space:pre-wrap">${escapeHtml(record.jobPosting)}</p></div>` : ''}
       ${items.map((it, idx) => resultItemBlockHtml(it, idx, items.length)).join('')}
-      </div>
-      ${record.trackerProgramId ? `
-      <div class="result-block" style="text-align:center;background:var(--green-light);border-radius:10px;padding:16px">
-        <p style="margin:0 0 10px;font-size:13px;color:#333">첨삭 결과, 어떠셨나요? 더 나은 서비스를 위해 짧은 의견 부탁드려요 🙏</p>
-        <a href="https://moa-tracker-tau.vercel.app/?survey=1&t=${encodeURIComponent(TEACHER_ID)}&p=${encodeURIComponent(record.trackerProgramId)}" target="_blank" class="btn-primary" style="display:inline-block;text-decoration:none;padding:10px 24px">30초 만족도 남기기</a>
-      </div>` : ''}
     </div>
   `;
-}
-
-// CSS 변수(var(--xxx))는 워드 문서에서 인식이 안 되므로, 실제 색상값으로 치환해서 내보냄
-function resolveCssVarsForExport(html) {
-  const rootStyle = getComputedStyle(document.documentElement);
-  return html.replace(/var\((--[a-zA-Z0-9-]+)\)/g, (match, varName) => {
-    const val = rootStyle.getPropertyValue(varName).trim();
-    return val || '#333333';
-  });
-}
-
-function downloadResultAsWord(studentName) {
-  const exportArea = document.getElementById('resultExportArea');
-  if (!exportArea) {
-    alert('저장할 내용을 찾지 못했어요. 잠시 후 다시 시도해 주세요.');
-    return;
-  }
-  const innerHtml = resolveCssVarsForExport(exportArea.innerHTML);
-  // 외부 라이브러리 없이도 워드에서 바로 열리도록, HTML을 .doc 형식으로 감싸서 저장 (모바일에서도 안정적으로 동작)
-  const fullHtml = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-<head><meta charset="utf-8"><title>첨삭 결과</title><style>
-    body{font-family:'맑은 고딕','Malgun Gothic',sans-serif;font-size:11pt;line-height:1.6;color:#1a2130}
-    h2{font-size:16pt;color:#11308C} h3{font-size:13pt;color:#11308C}
-    .star-tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:9pt;font-weight:bold;margin:2px}
-  </style></head><body>${innerHtml}</body></html>`;
-  const blob = new Blob(['\ufeff', fullHtml], { type: 'application/msword' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${studentName}_첨삭결과.doc`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
 }
 
 async function renderResultView(id) {
   app.innerHTML = `<div class="card"><div class="empty">결과를 불러오는 중...</div></div>`;
   try {
-    const { item } = await api('/api/results?id=' + encodeURIComponent(id) + (isAdmin ? '&admin=1' : ''));
+    const { item } = await api('/api/results?id=' + encodeURIComponent(id));
     app.innerHTML = resultContentHtml(item);
   } catch (e) {
-    if (e.expired) {
-      app.innerHTML = `<div class="card"><div class="empty">⏰ 조회 가능한 기간이 지났어요. 결과가 다시 필요하시면 강사님께 문의해 주세요.</div></div>`;
-      return;
-    }
     app.innerHTML = `<div class="card"><div class="empty">결과를 불러올 수 없습니다: ${escapeHtml(e.message)}</div></div>`;
   }
 }
 
 route();
 </script>
-
-<!-- ===== MOA 도움말 버튼 : 여기부터 ===== -->
-<style>
-#moaHelp{
-  position:fixed; right:16px; bottom:16px; z-index:9999;
-  display:inline-flex; align-items:center; gap:6px;
-  padding:10px 16px; border-radius:999px;
-  background:#643DF2; color:#fff; text-decoration:none;
-  font-family:'Malgun Gothic','맑은 고딕',sans-serif;
-  font-size:14px; font-weight:700; line-height:1;
-  box-shadow:0 4px 14px rgba(17,48,140,.28);
-}
-#moaHelp:hover{ background:#11308C; }
-#moaHelp .mark{
-  display:inline-flex; align-items:center; justify-content:center;
-  width:17px; height:17px; border-radius:50%;
-  background:#C0D904; color:#11308C; font-size:12px; font-weight:900;
-}
-body.role-student #moaHelp{ display:none; } /* 학생 화면에서는 숨김 */
-@media print{ #moaHelp{ display:none; } }
-</style>
-
-<a id="moaHelp"
-   href="https://claude.ai/artifact/ABvpPmNpMpFM2seeGZikf8"
-   target="_blank" rel="noopener">
-  <span class="mark">?</span>도움말
-</a>
-<!-- ===== 여기까지 ===== -->
-
 </body>
 </html>
