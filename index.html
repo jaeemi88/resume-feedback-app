@@ -1628,6 +1628,7 @@ async function renderResultsTab(content) {
         <a href="${link}" target="_blank" class="btn-secondary" style="text-decoration:none;padding:8px 14px;border-radius:8px">결과 보기</a>
         <button class="btn-secondary copy-student-btn" style="padding:8px 12px;font-size:13px">학생 링크 복사</button>
         <button class="btn-secondary send-student-btn" style="padding:8px 12px;font-size:13px">학생에게 다시 보내기</button>
+        ${it.expiresAt ? '<button class="btn-secondary extend-btn" style="padding:8px 12px;font-size:13px">조회 기간 연장</button>' : ''}
         <button class="btn-danger delete-result-btn">삭제</button>
       </div>
     `;
@@ -1642,6 +1643,23 @@ async function renderResultsTab(content) {
       try { await navigator.clipboard.writeText(txt); alert(doneMsg); }
       catch (e) { prompt('아래 내용을 길게 눌러 복사하세요', txt); }
     }
+    const extBtn = row.querySelector('.extend-btn');
+    if (extBtn) extBtn.addEventListener('click', async () => {
+      const v = prompt((it.studentName || '학생') + '님 결과를 오늘부터 며칠 더 열어둘까요?\n숫자로 입력하세요. (0 = 기간 제한 없음)', '7');
+      if (v === null) return;
+      const days = parseInt(v, 10);
+      if (isNaN(days) || days < 0) { alert('0 이상의 숫자로 입력해 주세요.'); return; }
+      extBtn.disabled = true; extBtn.textContent = '연장 중...';
+      try {
+        const r = await api('/api/results?id=' + encodeURIComponent(it.id), { method: 'PATCH', body: JSON.stringify({ days }) });
+        it.expiresAt = r.expiresAt;
+        alert(days === 0 ? '기간 제한 없이 볼 수 있게 했어요.' : '연장했어요. ' + daysRemainingText(r.expiresAt) + '\n이제 "학생에게 다시 보내기"로 링크를 보내주세요.');
+        renderList();
+      } catch (e) {
+        alert('연장 실패: ' + e.message);
+        extBtn.disabled = false; extBtn.textContent = '조회 기간 연장';
+      }
+    });
     row.querySelector('.copy-student-btn').addEventListener('click', () => {
       if (!expiredOk()) return;
       copyText(studentLink, '학생용 결과 링크를 복사했어요. 카톡이나 문자에 붙여넣어 보내주세요.');
