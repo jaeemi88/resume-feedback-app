@@ -1,6 +1,11 @@
 // 강사가 승인한 최종 첨삭 결과 저장 + 학생 링크로 조회
 // 강사별로 데이터가 섞이지 않도록 모든 키를 t(강사 코드)로 구분해서 저장함
+// 보안 (2026-09-25):
+//  - 학생: 확인코드 조회(GET ?code=)와 결과 링크 조회(GET ?id=)만 공개
+//  - 강사: 승인 저장(POST, 학생 이메일 발송 포함)·목록·기간 연장(PATCH)·삭제는 강사용 암호 필요
+//  - 기간 만료 무시(admin=1)는 강사용 암호가 있을 때만 적용
 import Redis from 'ioredis';
+import { isStaff } from './_staff.js';
 
 let redis;
 function getRedis() {
@@ -16,9 +21,7 @@ function slugPart(s) {
   return String(s || '').trim().toLowerCase().replace(/[^a-z0-9가-힣]+/g, '-').slice(0, 40);
 }
 
-// 첨삭이 승인 완료될 때마다, 강사가 설정해둔 "현재 특강 기관명"과 학생이 선택한 전공(프리셋)을 기준으로
-// "수강생 사후관리 트래커"의 진로모아관리 통계(기관·전공별 인원수)에 자동으로 인원을 1명 누적함.
-// 첨삭 내용은 저장하지 않고 인원수·기관명·전공명만 집계됨. 기관명을 설정 안 해뒀으면 조용히 건너뜀.
+// 첨삭이 승인 완료될 때마다 트래커 진로모아관리 통계(기관·전공별 인원수)에 1명 누적 (내용은 저장 안 함)
 async function upsertTrackerStat(client, t, orgName, field) {
   try {
     if (!orgName) return;
@@ -52,8 +55,6 @@ function koDate(ms) {
 }
 
 // 첨삭이 승인 완료되면, 학생이 이메일을 남겼을 경우에만 결과 링크를 자동으로 보내줌.
-// 링크와 함께 확인코드·조회 가능 기간도 같이 안내함 (링크를 못 열 때 코드로 조회할 수 있게).
-// RESEND_API_KEY가 없거나 학생이 이메일을 안 남겼으면 조용히 건너뜀 (알림은 부가기능이라 실패해도 저장 자체는 막지 않음).
 async function notifyStudentByEmail(t, id, item, host) {
   try {
     if (!process.env.RESEND_API_KEY) { console.error('학생 알림 건너뜀: RESEND_API_KEY 없음'); return; }
@@ -90,10 +91,7 @@ async function notifyStudentByEmail(t, id, item, host) {
   }
 }
 
-// 첨삭이 승인될 때, 그 학생의 이메일이 "수강생 사후관리 트래커"의 개인관리에
-// 이미 등록된 학생 카드와 일치할 때만, 오늘 날짜로 상담 이력에 한 줄 자동 기록함.
-// 등록된 카드가 없으면(집체교육 등 일회성 참여자) 아무 것도 하지 않음 — 새 카드를 자동으로 만들지 않음.
-// 같은 학생이 하루에 여러 번 이용해도 그날짜 한 줄에 건수만 합쳐서 표시됨.
+// 이메일이 트래커 개인관리 카드와 일치하는 학생만 상담 이력에 자동 기록 (카드를 새로 만들지 않음)
 async function upsertStudentConsultLog(client, t, studentEmail, kind) {
   try {
     const email = String(studentEmail || '').trim().toLowerCase();
@@ -141,12 +139,15 @@ export default async function handler(req, res) {
   const indexKey = `resume_results_index:${t}`;
   const itemKey = (id) => `resume_result:${t}:${id}`;
 
+  let staff = false;
+  try { staff = await isStaff(req, client); } catch (err) { console.error(err); }
+  const denied = () => res.status(401).json({ error: '강사용 암호가 필요합니다.' });
+
   if (req.method === 'POST') {
+    if (!staff) return denied();
     const id = 'res_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     const item = { id, teacherId: t, ...req.body, approvedAt: Date.now() };
 
-    // 트래커 연동 정보를 먼저 계산해서 item에 포함 — 학생 결과 화면에서 만족도 설문 링크를 바로 만들 수 있게 함
-    // 학생이 직접 소속 기관을 선택했으면(여러 기관 동시 운영) 그 값을 우선 쓰고, 없으면 강사가 설정해둔 단일 기관명을 씀
     let institutionNameForSurvey = null;
     let groupCodeExpiryDays = 5;
     try {
@@ -162,8 +163,6 @@ export default async function handler(req, res) {
       console.error('트래커 연동용 설정 조회 실패:', err);
     }
 
-    // 트래커의 개인관리 카드와 이메일이 일치하는 "1:1 코칭" 학생은 기간 제한 없음.
-    // 일치하지 않는(집체교육·일회성) 학생은 강사가 설정한 일수 후 코드 조회가 막힘 (당일 포함으로 계산).
     const isIndividualCoaching = await upsertStudentConsultLog(client, t, item.studentEmail, 'resume');
     if (!isIndividualCoaching) {
       const approvedDate = new Date(item.approvedAt);
@@ -188,6 +187,7 @@ export default async function handler(req, res) {
 
   // 강사가 특정 학생 결과의 조회 기간을 연장함 (days일 뒤까지, 0이면 기간 제한 없음)
   if (req.method === 'PATCH') {
+    if (!staff) return denied();
     const { id } = req.query;
     if (!id) return res.status(400).json({ error: 'id 파라미터가 필요합니다.' });
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
@@ -213,6 +213,7 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     const { id, list, code } = req.query;
 
+    // 학생: 확인코드로 결과 조회
     if (code) {
       const indexRaw = await client.get(indexKey);
       const index = indexRaw ? JSON.parse(indexRaw) : [];
@@ -224,17 +225,21 @@ export default async function handler(req, res) {
       return res.status(200).json({ item: JSON.parse(raw) });
     }
 
+    // 강사: 완료 목록
     if (list) {
+      if (!staff) return denied();
       const indexRaw = await client.get(indexKey);
       const index = indexRaw ? JSON.parse(indexRaw) : [];
       return res.status(200).json({ items: index.reverse() });
     }
 
+    // 학생·강사: 결과 링크 조회
     if (id) {
       const raw = await client.get(itemKey(id));
       if (!raw) return res.status(404).json({ error: '결과를 찾을 수 없습니다.' });
       const parsed = JSON.parse(raw);
-      if (req.query.admin !== '1' && parsed.expiresAt && Date.now() > parsed.expiresAt) {
+      const adminView = req.query.admin === '1' && staff;
+      if (!adminView && parsed.expiresAt && Date.now() > parsed.expiresAt) {
         return res.status(410).json({ error: '조회 가능한 기간이 지났어요. 결과가 필요하시면 강사님께 문의해 주세요.', expired: true });
       }
       return res.status(200).json({ item: parsed });
@@ -244,6 +249,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'DELETE') {
+    if (!staff) return denied();
     const { id } = req.query;
     if (!id) return res.status(400).json({ error: 'id 파라미터가 필요합니다.' });
     await client.del(itemKey(id));

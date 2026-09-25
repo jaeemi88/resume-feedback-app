@@ -1,6 +1,10 @@
 // 학생 제출 → AI 초안이 강사 승인 전까지 대기하는 "검수 대기함"
 // 강사별로 데이터가 섞이지 않도록 모든 키를 t(강사 코드)로 구분해서 저장함
+// 보안 (2026-09-25):
+//  - 학생 제출(POST)과 확인코드로 "검토 중인지" 조회(GET ?code=)는 공개
+//  - 대기함 전체 목록(GET)과 삭제(DELETE)는 강사용 암호 필요
 import Redis from 'ioredis';
+import { isStaff } from './_staff.js';
 
 let redis;
 function getRedis() {
@@ -21,7 +25,6 @@ function safeTeacherId(raw) {
 }
 
 // 검수 요청이 새로 들어오면, 강사가 설정해둔 이메일로 알림을 보냄.
-// RESEND_API_KEY가 없거나 강사가 이메일을 설정하지 않았으면 조용히 건너뜀 (알림은 부가기능이라 실패해도 검수 요청 저장 자체는 막지 않음).
 async function notifyByEmail(client, t, item) {
   try {
     if (!process.env.RESEND_API_KEY) { console.error('알림 건너뜀: RESEND_API_KEY 없음'); return; }
@@ -79,6 +82,29 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     const { code } = req.query;
+
+    // 학생: 확인코드로 "아직 검토 중인지"만 확인 (이름만 돌려줌)
+    if (code) {
+      const indexRaw = await client.get(indexKey);
+      const index = indexRaw ? JSON.parse(indexRaw) : [];
+      for (const id of index) {
+        const raw = await client.get(itemKey(id));
+        if (!raw) continue;
+        const it = JSON.parse(raw);
+        if (it.code === String(code).toUpperCase()) {
+          return res.status(200).json({ status: 'pending', studentName: it.studentName });
+        }
+      }
+      return res.status(404).json({ error: '해당 코드를 찾을 수 없습니다.' });
+    }
+
+    // 강사: 대기함 전체 목록
+    try {
+      if (!(await isStaff(req, client))) return res.status(401).json({ error: '강사용 암호가 필요합니다.' });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: '확인 중 오류가 발생했습니다.' });
+    }
     const indexRaw = await client.get(indexKey);
     const index = indexRaw ? JSON.parse(indexRaw) : [];
     const items = [];
@@ -86,18 +112,17 @@ export default async function handler(req, res) {
       const raw = await client.get(itemKey(id));
       if (raw) items.push(JSON.parse(raw));
     }
-
-    if (code) {
-      const match = items.find(it => it.code === String(code).toUpperCase());
-      if (!match) return res.status(404).json({ error: '해당 코드를 찾을 수 없습니다.' });
-      return res.status(200).json({ status: 'pending', studentName: match.studentName });
-    }
-
     items.sort((a, b) => b.createdAt - a.createdAt);
     return res.status(200).json({ items });
   }
 
   if (req.method === 'DELETE') {
+    try {
+      if (!(await isStaff(req, client))) return res.status(401).json({ error: '강사용 암호가 필요합니다.' });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: '확인 중 오류가 발생했습니다.' });
+    }
     const { id } = req.query;
     await client.del(itemKey(id));
     const indexRaw = await client.get(indexKey);

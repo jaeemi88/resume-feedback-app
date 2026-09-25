@@ -1,7 +1,9 @@
 // 강사가 설정한 톤·평가기준 프리셋을 서버(Redis)에 저장 — 같은 강사의 모든 기기가 공유
 // 강사별로 데이터가 섞이지 않도록 t(강사 코드)로 구분해서 저장함
 // 원장님이 삭제(사용 중지)한 강사 코드는 설정 조회·저장을 막음 (데이터 자체는 지우지 않고 보관)
+// 보안 (2026-09-25): 조회는 학생 제출 화면에도 필요해서 공개, 저장(POST)은 강사용 암호가 있어야 가능
 import Redis from 'ioredis';
+import { isStaff } from './_staff.js';
 
 let redis;
 function getRedis() {
@@ -44,6 +46,12 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
+    try {
+      if (!(await isStaff(req, client))) return res.status(401).json({ error: '강사용 암호가 필요합니다.' });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: '확인 중 오류가 발생했습니다.' });
+    }
     await client.set(key, JSON.stringify(req.body));
     return res.status(200).json({ ok: true });
   }
