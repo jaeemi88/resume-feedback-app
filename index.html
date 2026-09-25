@@ -728,6 +728,24 @@ const QUESTION_EXAMPLES = {
   '입사후포부': '예) 입사 후 포부를 서술하시오.'
 };
 
+// ---------- 입사 후 포부 특화 기준 (문항 유형이 '입사후포부'일 때만 AI에 추가) ----------
+const ASPIRATION_GUIDE = `
+
+■ 입사 후 포부 특화 기준 (이 문항에 반드시 반영)
+1) 회사 맞춤 근거: "열심히 하겠다", "최고의 인재가 되겠다"처럼 어느 회사에 내도 통하는 포부는 약한 답으로 보고 개선점에서 분명히 짚는다. 지원사만의 요소가 1개 이상 들어갔는지 본다: ① 사내 자격·인증 제도, 직무 관련 자격증 ② 그 회사만의 직급·직위 체계와 경력 경로(전문직 트랙, 사내 강사 등) ③ 특허·핵심 기술·주력 제품이나 서비스 ④ 해외 지사·신규 사업장·진출 예정 시장 ⑤ 최근 사업 방향(신사업, 비전 발표, ESG 등).
+2) 성장 방향 일치: "회사가 ○○ 방향으로 가고 있기에, 저는 ○○ 역량으로 발맞춰 함께 성장하겠다"는 구조인지 본다. 회사 이야기만 있고 본인 역할이 없거나, 본인 목표만 있고 회사가 없는 답은 짚는다.
+3) 단계 구조(권장): 단기(입사~1년: 적응·자격 취득) → 중기(3~5년: 전문성) → 장기(10년: 회사 성장 속 내 역할)로 나뉘면 좋게 평가한다.
+4) 사실 확인 원칙(가장 중요): 학생 답변에 나오지 않은 지원사의 자격제도명·직급명·특허명·해외지사명·수치를 절대 지어내지 않는다. 다듬은 문장에는 [지원사의 사내 자격제도명], [○○ 해외법인]처럼 대괄호 빈칸으로 남기고, 개선점에서 "채용공고·회사 홈페이지·DART 사업보고서·최근 보도자료에서 확인해 채우세요"라고 조사할 곳을 안내한다. 학생이 이미 쓴 회사 정보는 살려서 다듬는다.
+5) 과한 포부 경계: 근거 없이 "임원이 되겠다"는 식의 표현이나 이직·창업을 떠올리게 하는 표현("경력을 쌓아 독립")은 결격 신호가 될 수 있으므로 부드럽게 짚는다.`;
+
+function aspirationExtra(questionType, company) {
+  if (questionType !== '입사후포부') return '';
+  const companyLine = company
+    ? `\n6) 지원 기업: '${company}'. 코멘트와 다듬은 문장에 이 기업명을 넣되, 이 기업의 구체적인 제도명·특허·지사명·수치는 지어내지 말고 대괄호 빈칸으로 남긴다.`
+    : '';
+  return ASPIRATION_GUIDE + companyLine;
+}
+
 // ---------- 학생 화면 ----------
 let studentTab = 'submit';
 
@@ -939,6 +957,10 @@ async function renderStudentSubmitForm() {
       <label>지원하는 채용공고의 핵심 내용 (선택, 모든 문항에 공통 적용)</label>
       <textarea id="jobPostingInput" placeholder="예) [○○기관] 사회복지사 채용 — 사례관리 경험자 우대, 공감·소통 역량 중시"></textarea>
 
+      <label>지원 기업명 (선택)</label>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">적어주면 '입사 후 포부' 문항 첨삭을 이 회사에 맞춰 드려요.</div>
+      <input type="text" id="targetCompanyInput" maxlength="40" placeholder="예) ○○병원, ○○항공 (선택)">
+
       <div id="itemsContainer" style="margin-top:18px"></div>
       <button type="button" class="btn-add-preset" id="addItemBtn" style="margin-bottom:14px">+ 문항 추가</button>
 
@@ -983,6 +1005,7 @@ async function renderStudentSubmitForm() {
     const studentName = document.getElementById('studentNameInput').value.trim();
     const studentEmail = document.getElementById('studentEmailInput').value.trim();
     const jobPosting = document.getElementById('jobPostingInput').value.trim();
+    const targetCompany = document.getElementById('targetCompanyInput').value.trim();
     const statusMsg = document.getElementById('statusMsg');
     const submitBtn = document.getElementById('submitBtn');
     const isCv = docTypeSelect.value === 'cv';
@@ -1023,7 +1046,7 @@ async function renderStudentSubmitForm() {
       const itemsWithDraft = await Promise.all(rawItems.map(async (it) => {
         const aiDraft = await api('/api/feedback', {
           method: 'POST',
-          body: JSON.stringify({ ...it, presetPrompt: preset ? preset.prompt : '', jobPosting })
+          body: JSON.stringify({ ...it, presetPrompt: (preset ? preset.prompt : '') + aspirationExtra(it.questionType, targetCompany), jobPosting })
         });
         return { ...it, aiDraft };
       }));
@@ -1346,6 +1369,7 @@ function renderGuideTab(content) {
     ['알림 설정 — 트래커 연동', '단일 기관명을 설정하거나, 여러 기관을 등록해서 학생이 직접 소속을 선택하게 할 수 있어요.'],
     ['알림 설정 — 조회 유효기간', '집체교육 학생은 정한 일수가 지나면 결과 조회가 막혀요. 트래커에 등록된 1:1 코칭 학생은 기간 제한이 없어요.'],
     ['학생 결과 화면', '"워드로 저장"으로 결과를 파일로 받을 수 있고, 기관이 설정돼 있으면 만족도 설문 버튼이 함께 보여요.'],
+    ['입사 후 포부 맞춤 첨삭', '학생이 "지원 기업명"을 적고 문항 유형을 "입사 후 포부"로 고르면, 사내 자격·직급 체계·특허·해외지사 등 회사 성장 방향과 연결하도록 첨삭해요. AI는 회사 정보를 지어내지 않고 [빈칸]으로 남겨요.'],
     ['헤더 클릭 → 홈 이동', '어느 화면에서든 상단 앱 이름을 클릭하면 처음 화면으로 이동해요.']
   ];
   content.innerHTML = `
