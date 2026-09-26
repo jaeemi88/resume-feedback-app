@@ -340,6 +340,41 @@ function aiTracePhrasesHtml(phrases) {
   </div>`;
 }
 
+// 2026-09-26 추가: 결격 신호 체크 (redFlags) — 학생 결과 화면용
+function redFlagsHtml(flags) {
+  if (!Array.isArray(flags)) return ''; // 예전 결과(이 기능 이전)는 아무것도 표시하지 않음
+  const list = flags.filter(f => f && (f.quote || f.why));
+  if (!list.length) {
+    return `<p style="background:var(--ok-bg);color:var(--ok);padding:12px;border-radius:8px;margin:0">✅ <b>결격 신호 없음</b> — "일 잘할 것 같은 인상 + 큰 흠 없음" 기준을 통과했어요</p>`;
+  }
+  return `<div style="background:var(--warn-bg);border:1px solid #F5C26B;padding:12px;border-radius:8px">
+    <div style="font-weight:700;color:var(--warn);margin-bottom:4px">⚠️ 면접관이 멈칫할 수 있는 표현 (${list.length}개)</div>
+    ${list.map(f => `
+      <div style="border-top:1px dashed #F5C26B;padding-top:8px;margin-top:8px;font-size:14px;line-height:1.6">
+        ${f.type ? `<span class="star-tag miss" style="background:#fff;color:var(--warn);border:1px solid #F5C26B">${escapeHtml(f.type)}</span>` : ''}
+        ${f.quote ? `<div style="font-weight:700">"${escapeHtml(f.quote)}"</div>` : ''}
+        ${f.why ? `<div>→ ${escapeHtml(f.why)}</div>` : ''}
+        ${f.fix ? `<div>✏️ 이렇게: ${escapeHtml(f.fix)}</div>` : ''}
+      </div>`).join('')}
+  </div>`;
+}
+
+// 강사 검수 화면용 — 체크를 풀면 그 항목은 학생 결과에서 빠짐
+function reviewRedFlagsHtml(flags, idx) {
+  if (!Array.isArray(flags)) return '';
+  if (!flags.length) {
+    return `<div class="field-block" style="background:var(--ok-bg);padding:10px 12px;border-radius:8px"><div class="fb-label">⚠️ 결격 신호</div><p style="color:var(--ok)">✅ 없음</p></div>`;
+  }
+  return `<div class="field-block" style="background:var(--warn-bg);padding:10px 12px;border-radius:8px">
+    <div class="fb-label">⚠️ 결격 신호 (체크를 풀면 학생에게 안 보여요)</div>
+    ${flags.map((f, k) => `
+      <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;font-size:13px;line-height:1.5;margin:6px 0;cursor:pointer">
+        <input type="checkbox" class="rf-keep" data-idx="${idx}" data-k="${k}" checked style="margin-top:3px;width:auto">
+        <span><b>[${escapeHtml(f.type || '')}]</b> "${escapeHtml(f.quote || '')}"<br>→ ${escapeHtml(f.why || '')}${f.fix ? `<br>✏️ ${escapeHtml(f.fix)}` : ''}</span>
+      </label>`).join('')}
+  </div>`;
+}
+
 function followUpHtml(fu) {
   if (!fu) return '';
   const labels = { reasonType: '이유형', alternativeType: '대안형', quantifyType: '수치형' };
@@ -1480,6 +1515,7 @@ function reviewItemBlockHtml(item, idx) {
       <div class="star-row">${concretenessTagsHtml(d.concreteness)}</div>
       ${riskFlagsHtml(d.riskFlags)}
       ${aiTracePhrasesHtml(d.aiTracePhrases)}
+      ${reviewRedFlagsHtml(d.redFlags, idx)}
       ${jobMatchHtml(d.jobMatch)}
       ${item.selfIntent ? `<div class="field-block"><div class="fb-label">학생 자가진단 — 보여주고 싶었던 점</div><p>${escapeHtml(item.selfIntent)}</p></div>` : ''}
       ${d.intentGapComment ? `<div class="field-block" style="background:var(--warn-bg);padding:10px 12px;border-radius:8px"><div class="fb-label">자가진단 vs 실제 답변 코멘트</div><p>${escapeHtml(d.intentGapComment)}</p></div>` : ''}
@@ -1549,6 +1585,12 @@ function buildReviewCard(record, presetName) {
           concreteness: d.concreteness,
           riskFlags: d.riskFlags || [],
           aiTracePhrases: d.aiTracePhrases || [],
+          redFlags: Array.isArray(d.redFlags)
+            ? d.redFlags.filter((_, k) => {
+                const cb = wrap.querySelector(`.rf-keep[data-idx="${idx}"][data-k="${k}"]`);
+                return !cb || cb.checked;
+              })
+            : undefined,
           interviewerInference: d.interviewerInference,
           jobMatch: d.jobMatch || null,
           intentGapComment: d.intentGapComment || null,
@@ -1899,6 +1941,7 @@ function resultItemBlockHtml(item, idx, total) {
     ${item.intentGapComment ? `<div class="result-block"><h3>내가 밝힌 의도 vs 실제 답변</h3><p style="white-space:pre-wrap;background:var(--warn-bg);padding:12px;border-radius:8px">${escapeHtml(item.intentGapComment)}</p></div>` : ''}
     ${item.previousAnswer ? `<div class="result-block"><h3>Before → After 비교</h3><p style="white-space:pre-wrap;line-height:1.9;background:var(--green-light);padding:12px;border-radius:8px">${diffHtml(item.previousAnswer, item.answer)}</p>${item.revisionComment ? `<p style="margin-top:8px">${escapeHtml(item.revisionComment)}</p>` : ''}</div>` : ''}
     ${item.charLimitNote ? `<div class="result-block"><h3>⚠ 글자수 초과 (제한 ${item.charLimit}자)</h3><p style="white-space:pre-wrap;background:var(--warn-bg);padding:12px;border-radius:8px">${escapeHtml(item.charLimitNote)}</p></div>` : ''}
+    ${Array.isArray(item.redFlags) ? `<div class="result-block"><h3>결격 신호 체크</h3>${redFlagsHtml(item.redFlags)}</div>` : ''}
     <div class="result-block">
       <h3>면접관 시점 — 이 답변으로 추론되는 평소 모습</h3>
       <p style="white-space:pre-wrap;background:var(--navy-light);padding:12px;border-radius:8px">${escapeHtml(item.interviewerInference)}</p>
