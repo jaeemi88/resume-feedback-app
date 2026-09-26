@@ -840,6 +840,177 @@ async function renderStudentLookup() {
   });
 }
 
+// ---------- 재료 꺼내기 가이드 (2026-09-26 추가) ----------
+// 문항 유형별 4칸 뼈대: 학생이 칸마다 짧은 메모만 적으면 AI가 학생 메모로만 초안을 만들어 줌
+// 문구는 자유롭게 고쳐 써도 됩니다. (label=칸 이름, q=질문, hint=일반 채용 힌트, warn=주의 안내)
+const PROPER_NOUN_TIP = '고유명사는 실제로 있는 것만 적어요. 면접에서 반드시 물어봐요.';
+const SCAFFOLDS = {
+  협업갈등: { rows: [
+    { label: '1. 상황', q: '언제, 누구와, 어떤 일에서 의견이 부딪혔나요?', hint: '과목명·프로젝트명·활동명을 그대로 적어요 (예: 「지역사회 건강조사」 조별과제)', warn: '상대를 탓하는 말은 빼고, 상황만 적어요' },
+    { label: '2. 내가 한 일', q: '그때 내가 한 말이나 행동 하나는?', hint: '"우리가" 말고 "내가"' },
+    { label: '3. 결과', q: '관계나 일이 어떻게 풀렸나요?', hint: '완벽히 안 풀렸어도 괜찮아요' },
+    { label: '4. 변화', q: '그 뒤로 사람을 대할 때 달라진 점은?', hint: '지금도 하는 습관이면 최고' } ] },
+  도전경험: { rows: [
+    { label: '1. 상황', q: '어떤 목표였고, 왜 쉽지 않았나요?', hint: '과목명·대회명·활동명을 그대로 적어요 (예: 「○○ 공모전」)' },
+    { label: '2. 내가 한 일', q: '목표를 위해 꾸준히 한 행동은?', hint: '횟수·기간을 적으면 좋아요' },
+    { label: '3. 결과', q: '전과 비교해 무엇이 달라졌나요?', hint: '숫자로 적을 수 있으면 적기' },
+    { label: '4. 변화', q: '이 경험으로 알게 된 나의 모습은?', hint: '' } ] },
+  실패경험: { rows: [
+    { label: '1. 상황', q: '무엇을 하려다 잘 안 됐나요?', hint: '과목명·프로젝트명·활동명을 그대로 적어요' },
+    { label: '2. 내 부족한 점', q: '돌아보면 내가 놓친 것은?', hint: '', warn: '남·환경 탓은 빼고, 내 몫만 적어요' },
+    { label: '3. 바로잡은 행동', q: '그 뒤 어떻게 다시 해봤나요?', hint: '' },
+    { label: '4. 지금의 습관', q: '그때부터 지키는 나만의 규칙은?', hint: '면접관이 가장 보고 싶은 칸이에요' } ] },
+  경력활동: { rows: [
+    { label: '1. 어디서', q: '기관·기간·맡은 역할은?', hint: '기관명·매장명·부서명을 그대로 (예: ○○병원 재활센터, ○○카페)' },
+    { label: '2. 한 일', q: '가장 자주, 가장 많이 한 업무는?', hint: '동사로 적기: 응대했다, 정리했다' },
+    { label: '3. 성과', q: '칭찬받거나 숫자로 남은 결과는?', hint: '' },
+    { label: '4. 연결', q: '지원 직무에 그대로 쓸 수 있는 점은?', hint: '' } ] },
+  성격장점: { rows: [
+    { label: '1. 한 단어', q: '주변에서 나를 자주 뭐라고 말하나요?', hint: '내가 생각하는 말 말고 남이 한 말' },
+    { label: '2. 증거 장면', q: '그 말을 들었던 구체적인 순간은?', hint: '그 말을 들은 장소나 활동 이름을 함께 (예: 교내 봉사동아리 「○○」)' },
+    { label: '3. 결과', q: '그 성격 덕분에 좋아진 일은?', hint: '' },
+    { label: '4. 직무 연결', q: '그 장점이 이 일에서 어떻게 쓰일까요?', hint: '' } ] },
+  성격단점: { rows: [
+    { label: '1. 단점', q: '실제로 불편을 겪었던 나의 습관은?', hint: '"완벽주의" 같은 포장은 빼기', warn: '직무에 치명적인 단점(예: 간호직에 부주의함)은 피해요' },
+    { label: '2. 겪은 일', q: '그 단점 때문에 생긴 일 하나는?', hint: '그 일이 있었던 장소나 활동 이름을 함께' },
+    { label: '3. 고치는 방법', q: '지금 실제로 하고 있는 노력은?', hint: '구체적 방법일수록 좋아요' },
+    { label: '4. 달라진 점', q: '노력 뒤로 나아진 부분은?', hint: '' } ] },
+  지원동기: { rows: [
+    { label: '1. 계기', q: '이 직무에 관심 갖게 된 순간은?', hint: '실습·아르바이트·가족 경험 등, 장소 이름도 함께' },
+    { label: '2. 이 회사인 이유', q: '다른 곳 말고 이 회사만의 점은?', hint: '회사의 실제 사업명·제도명·센터명 하나 (홈페이지·기사에서 찾기)', warn: '"집이 가까워서", "안정적이라서"는 빼요' },
+    { label: '3. 준비한 것', q: '그 일을 위해 해온 것은?', hint: '자격증·실습·경험 이름을 그대로' },
+    { label: '4. 해보고 싶은 일', q: '입사하면 가장 먼저 맡고 싶은 일은?', hint: '' } ] },
+  입사후포부: { rows: [
+    { label: '1. 첫 1년', q: '1년 안에 꼭 익히고 싶은 업무는?', hint: '맡고 싶은 실제 부서명·업무명 (예: 도수치료실, 객실서비스팀)' },
+    { label: '2. 방법', q: '그걸 위해 할 구체적인 행동은?', hint: '"열심히" 대신 행동으로' },
+    { label: '3. 3~5년', q: '그 뒤 어떤 역할을 맡고 싶나요?', hint: '' },
+    { label: '4. 회사 기여', q: '그게 회사에 어떤 도움이 될까요?', hint: '' } ] }
+};
+const BLIND_TIP = '블라인드 채용이에요 — 학교·지역·가족이 드러나는 이름(○○대학교, ○○점, 부모님 직업 등)은 빼고 적어요. 과목명·활동명은 괜찮아요.';
+
+function currentHiringType() {
+  const el = document.querySelector('input[name="hiringType"]:checked');
+  return el ? el.value : 'general';
+}
+
+function scaffoldHtml(id, type) {
+  const sc = SCAFFOLDS[type];
+  if (!sc) return '';
+  const blind = currentHiringType() === 'blind';
+  return `
+    <div style="background:var(--navy-light);border-radius:10px;padding:12px 14px;margin:6px 0 10px">
+      <div style="font-size:13px;color:var(--navy);line-height:1.6;margin-bottom:6px">
+        칸마다 <b>단어·짧은 메모</b>만 적어요. 2칸 이상 채우면 내 메모로 초안을 만들어 드려요.<br>
+        <span class="sc-tip" style="font-size:12px;color:var(--muted)">${blind ? escapeHtml(BLIND_TIP) : '✅ ' + escapeHtml(PROPER_NOUN_TIP)}</span>
+      </div>
+      ${sc.rows.map((r, k) => `
+        <div style="margin-top:10px">
+          <div style="font-size:13px;font-weight:700;color:var(--navy)">${escapeHtml(r.label)} <span style="font-weight:400;color:#333">— ${escapeHtml(r.q)}</span></div>
+          ${r.hint && !blind ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">${escapeHtml(r.hint)}</div>` : ''}
+          ${r.warn ? `<div style="font-size:12px;color:var(--warn);margin-top:2px">⚠ ${escapeHtml(r.warn)}</div>` : ''}
+          <input type="text" class="sc-memo" data-item-id="${id}" data-k="${k}" maxlength="150" placeholder="짧게 메모" style="margin-top:4px">
+        </div>`).join('')}
+      <div class="btn-row">
+        <button type="button" class="btn-primary sc-draft-btn" data-item-id="${id}" disabled>✏️ 내 메모로 초안 만들기</button>
+      </div>
+      <div class="sc-status" data-item-id="${id}" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
+      <div class="sc-drafts" data-item-id="${id}"></div>
+    </div>`;
+}
+
+// 학생이 채운 메모 [{label, value}] (빈 칸 제외)
+function collectScaffoldMemo(block, type) {
+  const sc = SCAFFOLDS[type];
+  if (!sc) return [];
+  return Array.from(block.querySelectorAll('.sc-memo')).map(inp => {
+    const k = parseInt(inp.dataset.k, 10);
+    return { label: sc.rows[k] ? sc.rows[k].label : '', value: inp.value.trim() };
+  }).filter(m => m.value);
+}
+
+function wireScaffold(block, id) {
+  const typeSel = block.querySelector('.item-questionType');
+  const panel = block.querySelector('.sc-panel');
+  const toggle = block.querySelector('.sc-toggle-btn');
+
+  function render() {
+    panel.innerHTML = scaffoldHtml(id, typeSel.value);
+    const btn = panel.querySelector('.sc-draft-btn');
+    if (!btn) return;
+    const refresh = () => { btn.disabled = collectScaffoldMemo(block, typeSel.value).length < 2; };
+    panel.querySelectorAll('.sc-memo').forEach(inp => inp.addEventListener('input', refresh));
+    btn.addEventListener('click', () => makeDraftFromMemo(block, id));
+  }
+  block._renderScaffold = () => {
+    // 채용 방식이 바뀌면 적어둔 메모는 살리고 안내 문구만 다시 그림
+    const kept = Array.from(panel.querySelectorAll('.sc-memo')).map(i => i.value);
+    render();
+    panel.querySelectorAll('.sc-memo').forEach((i, k) => { if (kept[k]) i.value = kept[k]; });
+    const btn = panel.querySelector('.sc-draft-btn');
+    if (btn) btn.disabled = collectScaffoldMemo(block, typeSel.value).length < 2;
+  };
+
+  toggle.addEventListener('click', () => {
+    const open = panel.style.display !== 'none';
+    if (open) { panel.style.display = 'none'; toggle.textContent = '💡 막막하면 눌러보세요 — 재료 꺼내기'; return; }
+    if (!panel.innerHTML.trim()) render();
+    panel.style.display = 'block';
+    toggle.textContent = '▲ 재료 꺼내기 접기';
+  });
+  typeSel.addEventListener('change', () => {
+    const hasMemo = Array.from(panel.querySelectorAll('.sc-memo')).some(i => i.value.trim());
+    if (hasMemo && !confirm('문항 유형이 바뀌면 적어둔 메모 칸이 새로 바뀌어요. 계속할까요?')) {
+      return; // 유형은 바뀌지만 메모 칸은 그대로 둠
+    }
+    render();
+  });
+}
+
+async function makeDraftFromMemo(block, id) {
+  const type = block.querySelector('.item-questionType').value;
+  const memo = collectScaffoldMemo(block, type);
+  const statusEl = block.querySelector(`.sc-status[data-item-id="${id}"]`);
+  const box = block.querySelector(`.sc-drafts[data-item-id="${id}"]`);
+  const btn = block.querySelector('.sc-draft-btn');
+  if (memo.length < 2) { statusEl.textContent = '2칸 이상 채워주세요.'; return; }
+  btn.disabled = true; btn.textContent = '초안 만드는 중...';
+  statusEl.textContent = '내 메모로 초안 3가지를 만들고 있어요. 10~20초 정도 걸려요.';
+  box.innerHTML = '';
+  try {
+    const question = block.querySelector('.item-question').value.trim();
+    const data = await api('/api/coach', {
+      method: 'POST',
+      body: JSON.stringify({
+        mode: 'draft',
+        questionType: type,
+        question,
+        memo,
+        hiringType: currentHiringType(),
+        charLimit: extractCharLimit(question)
+      })
+    });
+    const drafts = Array.isArray(data.drafts) ? data.drafts : [];
+    if (!drafts.length) throw new Error('초안을 받지 못했어요. 다시 눌러주세요.');
+    statusEl.innerHTML = '마음에 드는 초안을 넣고, <b>꼭 내 말투로 고쳐서</b> 제출하세요. [대괄호] 자리는 직접 채워요.';
+    box.innerHTML = drafts.map((d, k) => `
+      <div style="background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:8px">
+        <span class="star-tag ok">${escapeHtml(d.opener || '초안 ' + (k + 1))}</span>
+        <p style="white-space:pre-wrap;font-size:14px;line-height:1.7;margin:6px 0">${escapeHtml(d.text || '')}</p>
+        <button type="button" class="btn-secondary sc-use-btn" data-k="${k}" style="font-size:13px;padding:6px 12px">이 초안 답변 칸에 넣기</button>
+      </div>`).join('');
+    box.querySelectorAll('.sc-use-btn').forEach(b => b.addEventListener('click', () => {
+      const answer = block.querySelector('.item-answer');
+      if (answer.value.trim() && !confirm('답변 칸에 이미 적힌 내용이 있어요. 초안으로 바꿀까요?')) return;
+      answer.value = drafts[parseInt(b.dataset.k, 10)].text || '';
+      answer.dispatchEvent(new Event('input'));
+      answer.focus();
+    }));
+  } catch (e) {
+    statusEl.textContent = '초안을 만들지 못했어요: ' + e.message;
+  }
+  btn.disabled = false; btn.textContent = '✏️ 내 메모로 초안 만들기';
+}
+
 let itemCounter = 0;
 
 function itemBlockHtml(id) {
@@ -862,6 +1033,8 @@ function itemBlockHtml(id) {
       <label class="item-question-label">자소서 문항</label>
       <textarea class="item-question" data-item-id="${id}"></textarea>
       <label class="item-answer-label">작성한 답변</label>
+      <button type="button" class="btn-secondary sc-toggle-btn" data-item-id="${id}" style="font-size:13px;padding:7px 12px;margin-bottom:6px">💡 막막하면 눌러보세요 — 재료 꺼내기</button>
+      <div class="sc-panel" data-item-id="${id}" style="display:none"></div>
       <textarea class="item-answer" data-item-id="${id}" style="min-height:140px" placeholder="여기에 답변을 붙여넣거나 작성해 주세요."></textarea>
       <div class="counter item-char-counter" data-item-id="${id}"><span class="item-char-count">0</span>자 작성됨</div>
       <details style="margin-top:10px">
@@ -903,6 +1076,7 @@ function wireItemBlock(id, docTypeSelect) {
   updatePlaceholder();
   questionTypeSelect.addEventListener('change', () => { updatePlaceholder(); updateCounter(); });
 
+  wireScaffold(block, id);
   applyDocTypeToBlock(id, docTypeSelect.value);
 
   block.querySelector('.item-remove-btn').addEventListener('click', () => {
@@ -920,6 +1094,10 @@ function applyDocTypeToBlock(id, docTypeVal) {
   const questionInput = block.querySelector('.item-question');
   const answerInput = block.querySelector('.item-answer');
   const questionTypeSelect = block.querySelector('.item-questionType');
+  const scToggle = block.querySelector('.sc-toggle-btn');
+  const scPanel = block.querySelector('.sc-panel');
+  if (scToggle) scToggle.style.display = docTypeVal === 'cv' ? 'none' : '';
+  if (scPanel && docTypeVal === 'cv') scPanel.style.display = 'none';
   if (docTypeVal === 'cv') {
     typeRow.style.display = 'none';
     qLabel.textContent = '경력·활동 항목명';
@@ -980,6 +1158,13 @@ async function renderStudentSubmitForm() {
         <option value="cv">이력서 (경력·활동 한 줄 소개)</option>
       </select>
 
+      <label>채용 방식</label>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:14px;margin:4px 0">
+        <label style="display:flex;align-items:center;gap:6px;font-weight:400;margin:0;cursor:pointer"><input type="radio" name="hiringType" value="general" checked style="width:auto;margin:0"> 일반 채용</label>
+        <label style="display:flex;align-items:center;gap:6px;font-weight:400;margin:0;cursor:pointer"><input type="radio" name="hiringType" value="blind" style="width:auto;margin:0"> 블라인드 채용</label>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px">모르면 채용공고에 '블라인드' 문구가 있는지 확인하세요. 일반 채용은 과목명·기관명 같은 고유명사를 넣으면 신뢰도가 올라가고, 블라인드 채용은 학교·지역·가족이 드러나는 이름을 빼야 해요.</div>
+
       <label>본인 전공(또는 직군)을 선택하세요</label>
       <select id="presetSelect"><option>불러오는 중...</option></select>
       <div style="font-size:12px;color:var(--muted);margin-top:4px">전공마다 평가 기준이 달라요. 목록에 본인 전공이 없으면 "기본"을 선택하세요.</div>
@@ -1019,6 +1204,13 @@ async function renderStudentSubmitForm() {
     itemsContainer.insertAdjacentHTML('beforeend', itemBlockHtml(id));
     wireItemBlock(id, docTypeSelect);
   });
+
+  document.querySelectorAll('input[name="hiringType"]').forEach(r => r.addEventListener('change', () => {
+    document.querySelectorAll('.item-block').forEach(b => {
+      const panel = b.querySelector('.sc-panel');
+      if (b._renderScaffold && panel && panel.innerHTML.trim()) b._renderScaffold();
+    });
+  }));
 
   docTypeSelect.addEventListener('change', () => {
     document.querySelectorAll('.item-block').forEach(b => {
@@ -1060,7 +1252,9 @@ async function renderStudentSubmitForm() {
       framework: isCv ? 'RESUME' : b.querySelector('.item-questionType').selectedOptions[0].dataset.fw,
       selfIntent: b.querySelector('.item-selfIntent').value.trim(),
       previousAnswer: b.querySelector('.item-prevAnswer').value.trim(),
-      charLimit: extractCharLimit(b.querySelector('.item-question').value)
+      charLimit: extractCharLimit(b.querySelector('.item-question').value),
+      hiringType: currentHiringType(),
+      memo: isCv ? [] : collectScaffoldMemo(b, b.querySelector('.item-questionType').value)
     }));
 
     if (rawItems.some(it => !it.question || !it.answer)) {
@@ -1502,7 +1696,8 @@ function reviewItemBlockHtml(item, idx) {
   const framework = d.frameworkUsed || item.framework || 'STAR';
   return `
     <div class="review-sub-item" data-idx="${idx}" style="border-top:1px solid var(--line);padding-top:14px;margin-top:14px">
-      <div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:8px">문항 ${idx + 1} · ${escapeHtml(item.questionType || '')} · ${framework}</div>
+      <div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:8px">문항 ${idx + 1} · ${escapeHtml(item.questionType || '')} · ${framework}${item.hiringType ? ` · <span class="star-tag ${item.hiringType === 'blind' ? 'miss' : 'ok'}">${item.hiringType === 'blind' ? '블라인드 채용' : '일반 채용'}</span>` : ''}</div>
+      ${Array.isArray(item.memo) && item.memo.length ? `<div class="field-block" style="background:var(--navy-light);padding:10px 12px;border-radius:8px"><div class="fb-label">💡 학생이 적은 재료 메모 (코칭 참고용)</div>${item.memo.map(m => `<p style="margin:2px 0;font-size:13px"><b>${escapeHtml(m.label)}</b> ${escapeHtml(m.value)}</p>`).join('')}</div>` : ''}
       <div class="field-block">
         <div class="fb-label">자소서 문항</div>
         <p style="white-space:pre-wrap">${escapeHtml(item.question)}</p>
