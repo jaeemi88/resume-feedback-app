@@ -156,7 +156,7 @@ export default async function handler(req, res) {
   const {
     question, answer, questionType, framework,
     selfIntent, previousAnswer, charLimit,
-    presetPrompt, systemPrompt, jobPosting
+    presetPrompt, systemPrompt, jobPosting, hiringType
   } = req.body || {};
 
   if (!question) {
@@ -204,12 +204,28 @@ export default async function handler(req, res) {
 [문항 유형] ${questionType || '미지정'}
 [구조 진단 기준] ${fw}${charLimit ? `\n[글자수 제한] ${charLimit}자` : ''}${jobPosting ? `\n[지원 채용공고]\n${jobPosting}` : ''}${selfIntent ? `\n[학생이 밝힌 의도]\n${selfIntent}` : ''}${previousAnswer ? `\n[이전 버전 답변]\n${previousAnswer}` : ''}`;
 
+  // 채용 방식별 고유명사 규칙 (2026-09-26 추가)
+  const hiringRules = hiringType === 'blind'
+    ? `
+
+[채용 방식: 블라인드 채용 — 반드시 반영]
+- 학교명, 출신 지역이 드러나는 지명·지점명, 가족 관계·부모 직업처럼 블라인드 채용에서 금지된 정보가 답변에 있으면 결격 신호 목록에 type을 「블라인드 위반」으로 넣고, fix에 그 이름을 뺀 일반 표현(예: 재학 중인 학과, 상급종합병원 임상실습)을 제시한다.
+- 과목명·프로젝트명·활동명·자격증명처럼 학교가 드러나지 않는 고유명사는 그대로 살린다.
+- polishedText에서도 금지된 이름은 일반 표현으로 바꾼다.`
+    : `
+
+[채용 방식: 일반 채용 — 고유명사로 신뢰도 높이기]
+- 과목명·프로젝트명·기관명·매장명·부서명·회사의 실제 사업명처럼 학생 답변에 있는 고유명사는 polishedText에서 반드시 살린다.
+- 경험 문항인데 고유명사가 하나도 없으면 improvements에 "어느 문장에 어떤 이름(예: 과목명, 기관명)을 넣으면 신뢰도가 올라가는지"를 한 줄로 안내하고, polishedText에는 [여기에 프로젝트 이름]처럼 빈칸으로 표시한다.
+- 학생 답변에 없는 고유명사를 지어내지 않는다.`;
+
   const fullSystem =
     COMMON_RULES +
     (majorRules ? `\n\n[전공별 기준]\n${majorRules}` : '') +
     context +
     formatRules +
     RED_FLAG_RULES +
+    hiringRules +
     DIVERSITY_RULES +
     variety +
     JSON_SAFETY_RULE;
