@@ -7,6 +7,9 @@
 // ───────────────────────────────────────────
 // 0. 공통 원칙 (모든 전공·모든 요청에 자동 적용)
 // ───────────────────────────────────────────
+// Vercel 함수 최대 실행 시간 60초 (AI 답변이 길어져도 중간에 끊기지 않도록)
+export const config = { maxDuration: 60 };
+
 const COMMON_RULES = `당신은 15년 경력의 취업 코치입니다. "MOA FORMULA" 기준으로 학생의 자기소개서·이력서 문장을 첨삭합니다.
 
 ■ 공통 원칙 (면접관 시점)
@@ -65,37 +68,80 @@ const DIVERSITY_RULES = `
 
 
 // ───────────────────────────────────────────
+// ★ AI 응답 JSON 안전하게 읽기 (2026-09-26 추가)
+//   - 앞뒤 설명 문장·코드블록 제거, 문자열 속 줄바꿈 정리
+//   - 그래도 실패하면 한 번 더 요청 (재시도)
+// ───────────────────────────────────────────
+function sanitizeJsonString(raw) {
+  let result = '';
+  let inString = false;
+  let escaped = false;
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+    if (inString) {
+      if (escaped) { result += ch; escaped = false; }
+      else if (ch === '\\') { result += ch; escaped = true; }
+      else if (ch === '"') { result += ch; inString = false; }
+      else if (ch === '\n') result += '\\n';
+      else if (ch === '\r') result += '\\r';
+      else if (ch === '\t') result += '\\t';
+      else result += ch;
+    } else {
+      if (ch === '"') inString = true;
+      result += ch;
+    }
+  }
+  return result;
+}
+
+function parseAIJson(raw) {
+  let text = String(raw || '').replace(/```json|```/g, '').trim();
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start >= 0 && end > start) text = text.slice(start, end + 1);
+  try { return JSON.parse(text); } catch (e) {}
+  try { return JSON.parse(sanitizeJsonString(text)); } catch (e) {}
+  return null;
+}
+
+const JSON_SAFETY_RULE = `
+
+[JSON 작성 주의 — 매우 중요]
+- 문자열 값 안에서는 큰따옴표를 절대 쓰지 않는다. 학생 답변을 인용하거나 강조할 때는 작은따옴표(' ')나 「 」를 쓴다.
+- 응답은 { 로 시작해 } 로 끝나는 JSON 객체 하나뿐이다. 앞뒤에 설명 문장을 붙이지 않는다.`;
+
+// ───────────────────────────────────────────
 // ★ 결격 신호 체크 (2026-09-26 추가 · 모든 요청에 자동 적용)
 //   업종 치명타 목록은 원장님 현장 경험에 맞게 자유롭게 고쳐 쓰셔도 됩니다.
 // ───────────────────────────────────────────
 const RED_FLAG_RULES = `
 
 [결격 신호 체크 — 반드시 수행, 결과는 redFlags 필드에]
-면접관이 "이 사람은 걸러야겠다"고 판단할 수 있는 표현을 답변에서 찾는다. 스펙과 내용이 좋아도 이런 신호 하나로 탈락할 수 있다.
+면접관이 「이 사람은 걸러야겠다」고 판단할 수 있는 표현을 답변에서 찾는다. 스펙과 내용이 좋아도 이런 신호 하나로 탈락할 수 있다.
 
 ■ 공통 결격 신호 6가지 (type에는 아래 이름을 그대로 쓴다)
 1. 남 탓·환경 탓: 실패·어려움의 원인을 동료, 조직, 환경, 운으로 돌린다
 2. 동료 깎아내리기: 다른 사람을 소극적·무능하게 묘사하며 자신을 부각한다
 3. 회사·직무 무관심: 어느 회사에나 쓸 수 있는 지원동기, 회사·직무에 대한 이해가 드러나지 않는다
-4. 과장·검증 불가: "최고의", "완벽하게", "누구보다"처럼 확인할 수 없는 자기 과시, 역할에 비해 부풀린 성과
-5. 추상적 다짐: 구체적 행동 없이 "최선을 다하겠습니다", "열심히 하겠습니다"로 끝난다
-6. 조기 이탈 신호: "경험을 쌓고 싶어서", "집이 가까워서", "안정적이라서"처럼 오래 다니지 않을 것 같은 동기
+4. 과장·검증 불가: 「최고의」, 「완벽하게」, 「누구보다」처럼 확인할 수 없는 자기 과시, 역할에 비해 부풀린 성과
+5. 추상적 다짐: 구체적 행동 없이 「최선을 다하겠습니다」, 「열심히 하겠습니다」로 끝난다
+6. 조기 이탈 신호: 「경험을 쌓고 싶어서」, 「집이 가까워서」, 「안정적이라서」처럼 오래 다니지 않을 것 같은 동기
 
-■ 업종 치명타 (전공·직무·채용공고 정보를 보고 해당하는 그룹 하나만 추가로 점검, type은 "업종: 이름" 형식)
-- 보건의료(물리치료·간호·임상병리·보건 등): "업종: 경유지 태도"(다른 병원으로 가기 전 거쳐 가는 곳처럼 읽힘), "업종: 환자보다 내 편의"
-- 항공·서비스(객실승무원·호텔·서비스 등): "업종: 원칙 없는 친절"(안전·규정보다 고객 기분을 우선), "업종: 공감만 있고 해결 없음"
-- 사무행정·공공기관: "업종: 독불장군"(혼자 결정·팀 무시), "업종: 규정 경시"
-- 사회복지·상담(사회복지사·직업상담사 등): "업종: 시혜적 태도"(도와준다·베푼다는 시선), "업종: 비밀보장 경계 모호"
-- 제조·기술·방위산업: "업종: 안전절차 경시"(빨리 끝내려고 절차를 생략), "업종: 보안 의식 부족"
+■ 업종 치명타 (전공·직무·채용공고 정보를 보고 해당하는 그룹 하나만 추가로 점검, type은 「업종: 이름」 형식)
+- 보건의료(물리치료·간호·임상병리·보건 등): 「업종: 경유지 태도」(다른 병원으로 가기 전 거쳐 가는 곳처럼 읽힘), 「업종: 환자보다 내 편의」
+- 항공·서비스(객실승무원·호텔·서비스 등): 「업종: 원칙 없는 친절」(안전·규정보다 고객 기분을 우선), 「업종: 공감만 있고 해결 없음」
+- 사무행정·공공기관: 「업종: 독불장군」(혼자 결정·팀 무시), 「업종: 규정 경시」
+- 사회복지·상담(사회복지사·직업상담사 등): 「업종: 시혜적 태도」(도와준다·베푼다는 시선), 「업종: 비밀보장 경계 모호」
+- 제조·기술·방위산업: 「업종: 안전절차 경시」(빨리 끝내려고 절차를 생략), 「업종: 보안 의식 부족」
 - 그 외이거나 전공 정보가 없으면: 공통 6가지만 점검
 
 ■ 판정 원칙
 - 답변 원문에 실제로 있는 표현만 짚는다. 없는 신호를 억지로 만들지 않는다. 걸리는 것이 없으면 빈 배열 []로 둔다.
 - 가장 치명적인 것부터 최대 3개.
 - quote: 학생 답변에서 그대로 인용 (40자 이내).
-- why: "면접관은 ~로 읽을 수 있어요"처럼 면접관 시점 한 문장. 학생이 위축되지 않게 부드러운 존댓말로.
+- why: 「면접관은 ~로 읽을 수 있어요」처럼 면접관 시점 한 문장. 학생이 위축되지 않게 부드러운 존댓말로.
 - fix: 학생 원문의 사실을 살린 대체 문장 한 줄. 없는 경험·수치는 만들지 않는다.
-- 이 항목은 기존 JSON 응답에 "추가"되는 필드다. 다른 필드는 원래 지시대로 모두 채운다.
+- 이 항목은 기존 JSON 응답에 「추가」되는 필드다. 다른 필드는 원래 지시대로 모두 채운다.
 
 redFlags 형식: [{"type": "유형 이름", "quote": "학생 답변 인용", "why": "면접관 시점 한 문장", "fix": "대체 문장 한 줄"}]`;
 
@@ -165,9 +211,12 @@ export default async function handler(req, res) {
     formatRules +
     RED_FLAG_RULES +
     DIVERSITY_RULES +
-    variety;
+    variety +
+    JSON_SAFETY_RULE;
 
   try {
+    let feedback = null;
+    for (let attempt = 1; attempt <= 2 && !feedback; attempt++) {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -177,7 +226,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 2500 // 결격 신호 항목이 추가되어 2000 → 2500,
+        max_tokens: 3000, // 결격 신호 추가로 여유 있게 (실제 쓴 만큼만 비용 발생)
         system: fullSystem,
         messages: [
           { role: 'user', content: `[문항]\n${question}\n\n[학생 답변]\n${answer || ''}` }
@@ -193,13 +242,13 @@ export default async function handler(req, res) {
     }
 
     const raw = (data.content || []).map((c) => c.text || '').join('').trim();
-    const clean = raw.replace(/```json|```/g, '').trim();
+    feedback = parseAIJson(raw);
+    if (!feedback) {
+      console.error(`JSON 변환 실패 (${attempt}번째 시도, 중단 이유: ${data.stop_reason}):`, raw.slice(0, 800));
+    }
+    } // 재시도 끝
 
-    let feedback;
-    try {
-      feedback = JSON.parse(clean);
-    } catch (e) {
-      console.error('JSON 변환 실패:', clean);
+    if (!feedback) {
       return res.status(500).json({ error: 'AI 응답 형식이 올바르지 않습니다. 다시 시도해 주세요.' });
     }
 
