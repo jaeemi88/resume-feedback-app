@@ -3,6 +3,7 @@
 // - 학생 메모에 없는 경험·수치·고유명사는 절대 만들지 않고 [대괄호 빈칸]으로 남김
 // - 일반 채용: 메모 속 고유명사를 살림 / 블라인드 채용: 학교·지역·가족이 드러나는 이름은 일반 표현으로 바꿈
 // - 학생 화면에서 버튼을 누를 때만 호출됨 (AI 비용 보호를 위해 입력 길이 제한)
+// - mode 'defend' (2026-09-26 2단계): "내 문장 방어 테스트" — 학생이 말로 답한 내용이 자소서와 맞는지 한 줄 판정
 
 export const config = { maxDuration: 60 };
 
@@ -52,6 +53,7 @@ export default async function handler(req, res) {
   }
 
   const body = req.body || {};
+  if (body.mode === 'defend') return defend(body, res);
   if (body.mode !== 'draft') {
     return res.status(400).json({ error: '지원하지 않는 요청입니다.' });
   }
@@ -142,6 +144,71 @@ ${OPENER_GUIDE}
       .slice(0, 3);
 
     return res.status(200).json({ drafts });
+  } catch (err) {
+    console.error('서버 오류:', err);
+    return res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+}
+
+// ---------- 내 문장 방어 테스트 (mode: 'defend') ----------
+async function defend(body, res) {
+  const sentence = clip(body.sentence, 300);
+  const question = clip(body.question, 300);
+  const essay = clip(body.essay, 2500);
+  const reply = clip(body.reply, 800);
+  if (!sentence || !question || reply.length < 10) {
+    return res.status(400).json({ error: '답변을 10자 이상 적어주세요.' });
+  }
+
+  const systemPrompt = `당신은 15년 경력의 면접관 겸 취업 코치입니다. 학생이 자기소개서에 쓴 문장에 대해 면접관이 꼬리질문을 했고, 학생이 말로 답했습니다.
+이 답변을 면접관 시점에서 판정하세요. 면접관은 자소서와 면접 답변이 어긋나거나, 자소서보다 부풀리거나, 본인이 설명하지 못하면 신뢰를 잃습니다.
+
+[판정 기준 — verdict는 아래 셋 중 하나]
+- ok: 자소서 내용과 일치하고, 본인이 한 일이 구체적으로 설명됨
+- caution: 자소서에 없던 새 사실·숫자가 나오거나, 자소서보다 부풀려짐 → 자소서에 반영하거나 답변을 맞춰야 함
+- weak: 질문에 답하지 못했거나, 추상적이어서 본인 경험인지 확인이 안 됨 → 이 문장은 빼거나 경험을 보충해야 함
+
+[comment 작성]
+- 학생에게 직접 말하듯 부드러운 존댓말 2문장 이내. 첫 문장은 판정 이유, 둘째 문장은 바로 할 수 있는 한 가지 행동.
+- 학생 답변의 단어를 1개 이상 인용한다. 없는 사실을 지어내지 않는다.
+
+[JSON 작성 주의] 문자열 안에 큰따옴표를 쓰지 않는다. 아래 JSON 하나만 출력한다.
+{"verdict": "ok|caution|weak", "comment": "판정 설명"}`;
+
+  const userMsg = `[자소서 전문]\n${essay || '(없음)'}\n\n[면접관이 짚은 문장]\n${sentence}\n\n[면접관 질문]\n${question}\n\n[학생의 말로 한 답변]\n${reply}`;
+
+  try {
+    let parsed = null;
+    for (let attempt = 1; attempt <= 2 && !parsed; attempt++) {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 600,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userMsg }]
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        console.error('Anthropic API 오류:', data);
+        return res.status(500).json({ error: 'AI 호출 중 오류가 발생했습니다.' });
+      }
+      const raw = (data.content || []).map((c) => c.text || '').join('').trim();
+      parsed = parseAIJson(raw);
+      if (!parsed || !parsed.comment) {
+        console.error(`방어 판정 JSON 변환 실패 (${attempt}번째 시도):`, raw.slice(0, 300));
+        parsed = null;
+      }
+    }
+    if (!parsed) return res.status(500).json({ error: 'AI 응답 형식이 올바르지 않습니다. 다시 눌러주세요.' });
+    const verdict = ['ok', 'caution', 'weak'].includes(parsed.verdict) ? parsed.verdict : 'caution';
+    return res.status(200).json({ verdict, comment: String(parsed.comment).trim() });
   } catch (err) {
     console.error('서버 오류:', err);
     return res.status(500).json({ error: '서버 오류가 발생했습니다.' });

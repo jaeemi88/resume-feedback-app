@@ -193,10 +193,12 @@ export default async function handler(req, res) {
   "improvements": "개선할 점 1~2가지를 무엇을·어디에·어떻게 형태로 (2~3문장)",
   "polishedText": "학생 원문을 살려 다듬은 완성 문장. 없는 사실은 만들지 말고, 보완이 필요한 자리는 [여기에 ○○ 경험 한 줄]처럼 표시한다. 글자수 제한이 있으면 그 안에서 작성한다.",
   "followUpQuestions": { "reasonType": "왜 그 선택을 했는지 묻는 면접 질문", "alternativeType": "다른 대안은 없었는지 묻는 질문", "quantifyType": "숫자로 설명하게 하는 질문" },
-  "redFlags": [ { "type": "결격 신호 유형", "quote": "학생 답변 인용", "why": "면접관 시점 한 문장", "fix": "대체 문장 한 줄" } ]
+  "redFlags": [ { "type": "결격 신호 유형", "quote": "학생 답변 인용", "why": "면접관 시점 한 문장", "fix": "대체 문장 한 줄" } ],
+  "defenseQuestions": [ { "sentence": "polishedText에서 그대로 인용한 핵심 문장", "question": "면접관이 그 문장을 파고들 때 할 질문" } ]
 }
 - jobMatch는 채용공고 정보가 없으면 null로 둔다.
 - aiTracePhrases, missingElements, redFlags는 해당 사항이 없으면 빈 배열로 둔다.
+- defenseQuestions는 항상 정확히 2개: polishedText에서 면접관이 가장 파고들 문장 2개(성과·역할·고유명사·결정 이유가 담긴 문장 우선)를 고르고, 그 문장이 사실인지·본인이 한 일인지 확인하는 구체적인 꼬리질문을 만든다. followUpQuestions와 겹치지 않게 한다.
 - strengths, improvements, polishedText, interviewerInference, followUpQuestions는 어떤 경우에도 비워두지 않는다.`;
 
   const context = `
@@ -270,6 +272,8 @@ export default async function handler(req, res) {
 
     if (!feedback.frameworkUsed) feedback.frameworkUsed = fw;
     if (!Array.isArray(feedback.redFlags)) feedback.redFlags = [];
+    if (!Array.isArray(feedback.defenseQuestions)) feedback.defenseQuestions = [];
+    feedback.defenseQuestions = feedback.defenseQuestions.filter((d) => d && d.sentence && d.question).slice(0, 2);
 
     return res.status(200).json(feedback);
   } catch (err) {
