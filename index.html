@@ -253,6 +253,24 @@
 <main id="app"></main>
 <script src="/staff-guard.js" data-mode="admin" data-color="#643DF2"></script>
 <script>
+// ── 날짜 표시 통일 (2026-09-28, 면접스킬 전 앱 공통 규칙) ──
+// 기본(기록) 2026.10.26 · week(일정) 2026.10.26(월) · short 10.26(월) · time 2026.10.26 14:00 · stime 10.26(월) 14:00 · ym 2000.03 · formal 2026년 9월 27일
+function moaDate(v, kind){
+  if(v === null || v === undefined || v === '') return '';
+  var d;
+  if(typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)){ var p = v.split('-'); d = new Date(+p[0], +p[1]-1, +p[2]); }
+  else d = new Date(v);
+  if(isNaN(d.getTime())) return String(v);
+  var y = d.getFullYear(), m = ('0'+(d.getMonth()+1)).slice(-2), dd = ('0'+d.getDate()).slice(-2), w = '(' + '일월화수목금토'[d.getDay()] + ')';
+  var hm = ('0'+d.getHours()).slice(-2) + ':' + ('0'+d.getMinutes()).slice(-2);
+  if(kind === 'week') return y + '.' + m + '.' + dd + w;
+  if(kind === 'short') return m + '.' + dd + w;
+  if(kind === 'time') return y + '.' + m + '.' + dd + ' ' + hm;
+  if(kind === 'stime') return m + '.' + dd + w + ' ' + hm;
+  if(kind === 'ym') return y + '.' + m;
+  if(kind === 'formal') return y + '년 ' + (d.getMonth()+1) + '월 ' + d.getDate() + '일';
+  return y + '.' + m + '.' + dd;
+}
 const params = new URLSearchParams(location.search);
 const isAdmin = params.get('admin') === '1';
 let TEACHER_ID = (params.get('t') || '').trim().toLowerCase().replace(/[^a-z0-9가-힣_-]/g, '').slice(0, 40);
@@ -448,7 +466,7 @@ function daysRemainingText(expiresAt) {
   if (!expiresAt) return '무제한';
   const diff = Math.ceil((expiresAt - Date.now()) / (24 * 60 * 60 * 1000));
   if (diff <= 0) return '기간만료';
-  return `${diff}일 남음 (${new Date(expiresAt).toLocaleDateString('ko-KR')}까지)`;
+  return `${diff}일 남음 (${moaDate(expiresAt)}까지)`;
 }
 
 // ---------- 강사 등록 ----------
@@ -609,7 +627,7 @@ function renderMasterTeacherList() {
         <div style="${rowStyle}">
           <div>
             <b>${escapeHtml(t.name)}</b> <span style="color:var(--muted);font-size:12px">(코드: ${escapeHtml(t.code)})</span> ${t.permanent ? '<span class="star-tag ok">영구</span>' : '<span class="star-tag miss">임시</span>'}<br>
-            <span style="font-size:12px;color:var(--muted)">등록일: ${new Date(t.approvedAt).toLocaleDateString('ko-KR')} · 첫 등록 앱: ${escapeHtml(t.firstApp) || '-'}</span>
+            <span style="font-size:12px;color:var(--muted)">등록일: ${moaDate(t.approvedAt)} · 첫 등록 앱: ${escapeHtml(t.firstApp) || '-'}</span>
           </div>
           <div class="btn-row" style="margin:0">
             <button class="btn-secondary teacher-perm-btn" data-code="${escapeHtml(t.code)}" data-perm="${t.permanent ? '1' : '0'}">${t.permanent ? '임시로 전환' : '영구로 전환'}</button>
@@ -668,7 +686,7 @@ function renderMasterTeacherList() {
         <div style="${rowStyle}">
           <div>
             <b>${escapeHtml(iv.code)}</b>${iv.label ? ` <span style="color:var(--navy);font-size:12px">(${escapeHtml(iv.label)})</span>` : ''} ${statusHtml}<br>
-            <span style="font-size:12px;color:var(--muted)">발급일: ${new Date(iv.createdAt).toLocaleDateString('ko-KR')} · 유효기간: ${daysRemainingText(iv.expiresAt)}</span>
+            <span style="font-size:12px;color:var(--muted)">발급일: ${moaDate(iv.createdAt)} · 유효기간: ${daysRemainingText(iv.expiresAt)}</span>
           </div>
           ${iv.used ? '' : `<button class="btn-danger invite-cancel-btn" data-code="${escapeHtml(iv.code)}">취소</button>`}
         </div>`;
@@ -704,7 +722,7 @@ function renderMasterTeacherList() {
         <div style="${rowStyle}">
           <div>
             <b>${escapeHtml(t.name)}</b> <span style="color:var(--muted);font-size:12px">(코드: ${escapeHtml(t.code)})</span><br>
-            <span style="font-size:12px;color:var(--muted)">삭제일: ${new Date(t.removedAt).toLocaleDateString('ko-KR')}</span>
+            <span style="font-size:12px;color:var(--muted)">삭제일: ${moaDate(t.removedAt)}</span>
           </div>
           <button class="btn-secondary teacher-restore-btn" data-code="${escapeHtml(t.code)}" data-name="${escapeHtml(t.name)}">복구</button>
         </div>
@@ -1804,7 +1822,7 @@ function buildReviewCard(record, presetName) {
         <span style="font-weight:700;color:var(--navy);font-size:15px">${escapeHtml(record.studentName) || '(이름 없음)'}</span>
         <span class="star-tag ok" style="margin-left:6px">${escapeHtml(presetName || '기본')}</span>
         ${record.studentInstitution ? `<span class="star-tag ok" style="margin-left:4px">${escapeHtml(record.studentInstitution)}</span>` : ''}
-        <span style="font-size:12px;color:var(--muted);margin-left:8px">문항 ${items.length}개 · 코드 ${escapeHtml(record.code) || '-'} · ${new Date(record.createdAt).toLocaleString('ko-KR')} · 클릭해서 펼치기</span>
+        <span style="font-size:12px;color:var(--muted);margin-left:8px">문항 ${items.length}개 · 코드 ${escapeHtml(record.code) || '-'} · ${moaDate(record.createdAt, 'time')} · 클릭해서 펼치기</span>
       </summary>
       <div style="margin-top:14px">
         ${record.jobPosting ? `<div class="field-block"><div class="fb-label">지원 채용공고 핵심 내용 (전체 문항 공통)</div><p style="white-space:pre-wrap">${escapeHtml(record.jobPosting)}</p></div>` : ''}
@@ -2077,7 +2095,7 @@ async function renderResultsTab(content) {
     const row = document.createElement('div');
     row.className = 'preset-item';
     row.innerHTML = `
-      <div><b>${escapeHtml(it.studentName) || '(이름 없음)'}</b> — 문항 ${it.itemCount || 1}개${expiredBadge}<div style="font-size:12px;color:var(--muted)">${new Date(it.approvedAt).toLocaleString('ko-KR')}${it.code ? ' · 확인코드 <b style="color:var(--green);letter-spacing:1px">' + escapeHtml(it.code) + '</b>' : ''}</div></div>
+      <div><b>${escapeHtml(it.studentName) || '(이름 없음)'}</b> — 문항 ${it.itemCount || 1}개${expiredBadge}<div style="font-size:12px;color:var(--muted)">${moaDate(it.approvedAt, 'time')}${it.code ? ' · 확인코드 <b style="color:var(--green);letter-spacing:1px">' + escapeHtml(it.code) + '</b>' : ''}</div></div>
       <div class="btn-row" style="margin:8px 0 0;flex-wrap:wrap;gap:6px;width:100%">
         <a href="${link}" target="_blank" class="btn-secondary" style="text-decoration:none;padding:8px 14px;border-radius:8px">결과 보기</a>
         <button class="btn-secondary copy-student-btn" style="padding:8px 12px;font-size:13px">학생 링크 복사</button>
