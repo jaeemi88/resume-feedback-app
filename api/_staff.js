@@ -38,7 +38,11 @@ export async function whoIs(req, client) {
       const raw = await client.hget(TEACHERS_KEY, code);
       if (raw) {
         const data = JSON.parse(raw);
-        if (data.hubKey === key) return { role: 'teacher', code, name: data.name || code };
+        const expired = data.expiresAt && Date.now() > data.expiresAt; // 사용 기간이 지난 임시 강사
+        if (data.hubKey === key && !expired) {
+          try { await client.hset('moa_teacher_lastseen', code, String(Date.now())); } catch (e) {}
+          return { role: 'teacher', code, name: data.name || code };
+        }
       }
     }
   }

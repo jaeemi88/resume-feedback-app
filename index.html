@@ -570,54 +570,76 @@ function renderMissingTeacherNotice() {
 
 // ---------- 원장님 전용 관리 화면 ----------
 function renderMasterTeacherList() {
+  // ── 강사 명부 (2026-09-28) — 초대코드·강사·중지 목록을 한 명부로 ──
+  const PW_KEY = 'moa_master_pw_session';
+  const ssGet = () => { try { return sessionStorage.getItem(PW_KEY) || ''; } catch (e) { return ''; } };
+  const ssSet = v => { try { sessionStorage.setItem(PW_KEY, v); } catch (e) {} };
+  let DATA = null, FILTER = 'all', QUERY = '';
+
   app.innerHTML = `
-    <div class="card">
+    <style>
+      .rb-chips{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 10px}
+      .rb-chip{border:1px solid var(--border);background:#fff;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit}
+      .rb-chip.on{background:var(--green);border-color:var(--green);color:#fff}
+      .rb-row{border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;background:#fff}
+      .rb-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap}
+      .rb-name{font-size:15px;font-weight:800;color:var(--text)}
+      .rb-code{font-size:12px;color:var(--muted);font-weight:400;margin-left:4px}
+      .rb-badge{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:3px 9px;white-space:nowrap}
+      .b-active{background:#E8F5EE;color:#1E7A4A}.b-wait{background:#FFF4DC;color:#9A6200}.b-temp{background:var(--green-light);color:var(--navy)}
+      .b-end{background:#FDECEC;color:#B42318}.b-need{background:#FDECEC;color:#B42318}.b-inv{background:#F1F3F7;color:#4B5563}
+      .rb-sub{font-size:12px;color:var(--muted);margin:4px 0 10px;line-height:1.6}
+      .rb-btns{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+      .rb-btns button{font-size:13px;padding:8px 12px}
+      .rb-more{position:relative}
+      .rb-more summary{list-style:none;cursor:pointer;border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:13px;font-weight:700;color:var(--muted);background:#fff}
+      .rb-more summary::-webkit-details-marker{display:none}
+      .rb-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:5;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.08);padding:6px;min-width:170px}
+      .rb-menu button{display:block;width:100%;text-align:left;background:none;border:0;padding:9px 10px;border-radius:6px;font-size:13px;font-family:inherit;cursor:pointer;color:var(--text)}
+      .rb-menu button:hover{background:var(--navy-light)}
+      .rb-menu button.danger{color:#B42318}
+      .rb-add{background:var(--navy-light);border-radius:10px;padding:14px;margin-bottom:12px}
+      .rb-add .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+      @media (max-width:480px){.rb-add .grid{grid-template-columns:1fr}}
+      .rb-done{background:#E8F5EE;border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:13px;line-height:1.7;word-break:break-all}
+    </style>
+    <div class="card" id="rbLogin">
       <h2>관리자 비밀번호</h2>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">원장님만 보실 수 있는 화면입니다. 비밀번호를 입력한 뒤 아래 기능을 사용하세요.</p>
-      <input type="text" id="masterPasswordInput" placeholder="관리자 비밀번호">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">원장님만 보실 수 있는 화면이에요. 비밀번호를 넣으면 강사 명부가 바로 열려요.</p>
+      <input type="password" id="masterPasswordInput" placeholder="관리자 비밀번호" autocomplete="current-password">
+      <div class="btn-row"><button class="btn-primary" id="rbOpenBtn">명부 열기</button></div>
+      <div id="rbLoginErr" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
     </div>
-    <div class="card">
-      <h2>새 초대코드 발급</h2>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">새 강사님 한 분당 코드를 하나씩 발급해서 전달해 주세요. 한 번 쓰면 그 코드는 다시 못 씁니다.</p>
-      <label>발급 대상 메모 (선택, 예: 김민지 강사)</label>
-      <input type="text" id="inviteLabelInput" placeholder="누구에게 줄 코드인지 적어두면 목록에서 알아보기 쉬워요">
-      <label>초대코드 유효기간 (일)</label>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">이 코드를 며칠 안에 등록해야 하는지 정해요. 일회성 강의를 위한 임시 강사라면 짧게(예: 7일), 정규 강사라면 비워두면 기간 제한 없이 유효해요. 비워두고 발급한 코드로 등록한 강사는 "영구 강사"가 돼요.</div>
-      <input type="text" id="inviteExpiryInput" placeholder="예) 7 (비워두면 무제한)">
-      <div class="btn-row"><button class="btn-primary" id="genInviteBtn">초대코드 발급하기</button></div>
-      <div id="genInviteError" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
-      <div id="genInviteResult" style="margin-top:12px;font-size:15px;font-weight:700;display:none"></div>
-    </div>
-    <div class="card">
-      <h2>승인된 강사 목록</h2>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">강사를 삭제하면 세 앱(모의면접·자소서·트래커) 강사 목록에서 빠지고, 이 앱의 강사 화면과 학생 제출 링크가 막혀요. 프리셋·첨삭 기록은 보관되어 언제든 복구할 수 있어요. "영구" 강사에게만 강사 화면의 "기능 안내" 탭이 보여요.</p>
-      <p style="font-size:13px;color:var(--ink);background:#F3EFFE;border-radius:8px;padding:10px 12px;line-height:1.7;margin-bottom:10px">🔗 <b>승인 링크</b> — 강사님께 이 링크만 보내면 암호 없이 허브에서 <b>자소서·모의면접</b>만 쓸 수 있어요 (트래커·운영보드·제안서는 안 보임). 링크가 퍼졌다면 "재발급"을 누르면 예전 링크는 바로 막혀요.</p>
-      <div class="btn-row" style="margin-top:0"><button class="btn-primary" id="masterListBtn">강사 목록 보기</button></div>
-      <div id="masterListError" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
-      <div id="masterListResult" style="margin-top:16px"></div>
-    </div>
-    <div class="card">
-      <h2>발급된 초대코드 목록</h2>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">아직 사용되지 않은 코드는 "취소"로 무효화할 수 있어요.</p>
-      <div class="btn-row" style="margin-top:0"><button class="btn-primary" id="inviteListBtn">초대코드 목록 보기</button></div>
-      <div id="inviteListError" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
-      <div id="inviteListResult" style="margin-top:16px"></div>
-    </div>
-    <div class="card">
-      <h2>삭제된 강사 (복구 가능)</h2>
-      <div class="btn-row" style="margin-top:0"><button class="btn-primary" id="removedListBtn">삭제된 강사 보기</button></div>
-      <div id="removedListError" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
-      <div id="removedListResult" style="margin-top:16px"></div>
+    <div class="card" id="rbBook" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <h2 style="margin:0">👥 강사 명부</h2>
+        <button class="btn-primary" id="rbAddToggle">+ 강사 추가</button>
+      </div>
+      <p style="font-size:12.5px;color:var(--muted);margin:6px 0 12px;line-height:1.6">강사님께는 <b>📤 링크 보내기</b>로 승인 링크만 보내면 돼요. 링크를 누르면 암호 없이 허브에서 <b>자소서·모의면접</b>만 쓸 수 있어요.</p>
+      <div class="rb-add" id="rbAdd" style="display:none">
+        <div class="grid">
+          <div><label>강사 이름</label><input type="text" id="rbAddName" placeholder="예: 김민지"></div>
+          <div><label>강사 코드 <span style="font-weight:400;color:var(--muted)">(영문·숫자)</span></label><input type="text" id="rbAddCode" placeholder="예: kim01" autocapitalize="none"></div>
+        </div>
+        <label>사용 기간 <span style="font-weight:400;color:var(--muted)">(일 · 비워두면 영구)</span></label>
+        <input type="text" id="rbAddDays" inputmode="numeric" placeholder="예) 7 — 단기 캠프·일회성 강의라면">
+        <div class="btn-row"><button class="btn-primary" id="rbAddBtn">추가하고 링크 복사</button></div>
+        <div id="rbAddErr" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
+      </div>
+      <div id="rbDone"></div>
+      <div class="rb-chips" id="rbChips"></div>
+      <input type="text" id="rbSearch" placeholder="🔍 이름·코드 검색" style="margin-bottom:10px">
+      <div id="rbList"></div>
+      <div id="rbRemoved" style="margin-top:14px"></div>
     </div>
   `;
 
-  const pw = () => document.getElementById('masterPasswordInput').value;
-  const rowStyle = 'border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap';
+  const $ = id => document.getElementById(id);
+  const pw = () => $('masterPasswordInput').value.trim();
 
   async function registryPost(body) {
     const res = await fetch('/api/teacher-registry', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...body, master: pw() })
     });
     const data = await res.json().catch(() => ({}));
@@ -625,208 +647,245 @@ function renderMasterTeacherList() {
     return data;
   }
 
-  async function registryGet(listParam) {
-    const res = await fetch('/api/teacher-registry?' + (listParam ? 'list=' + listParam + '&' : '') + 'master=' + encodeURIComponent(pw()));
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || '조회에 실패했습니다.');
-    return data;
+  function relDay(ms) {
+    if (!ms) return '';
+    const a = new Date(); a.setHours(0, 0, 0, 0);
+    const b = new Date(ms); b.setHours(0, 0, 0, 0);
+    const n = Math.round((a - b) / 86400000);
+    return n <= 0 ? '오늘' : n === 1 ? '어제' : n + '일 전';
+  }
+  function dLeft(ms) {
+    const a = new Date(); a.setHours(0, 0, 0, 0);
+    const b = new Date(ms); b.setHours(0, 0, 0, 0);
+    return Math.round((b - a) / 86400000);
   }
 
-  function showError(id, msg) {
-    const el = document.getElementById(id);
-    el.textContent = msg;
-    el.style.display = msg ? 'block' : 'none';
+  // 한 사람의 상태: [필터 이름, 배지 class, 배지 글자]
+  function statusOf(t) {
+    if (t.expired) return ['temp', 'b-end', '⌛ 기간 끝남'];
+    if (!t.hubKey) return ['wait', 'b-need', '🔗 링크 필요'];
+    if (!t.lastSeen) return ['wait', 'b-wait', '🟡 접속 전'];
+    if (t.expiresAt) { const n = dLeft(t.expiresAt); return ['temp', 'b-temp', '⏳ 임시 ' + (n <= 0 ? 'D-day' : 'D-' + n)]; }
+    return ['active', 'b-active', '🟢 활동중'];
   }
 
-  function copyHubLink(name, key) {
+  function hubMsg(name, key) {
     const link = MOA_HUB_URL + '?k=' + encodeURIComponent(key);
-    const msg = `[MOA FORMULA] ${name} 강사님 승인 링크입니다.\n아래 링크를 누르면 암호 없이 자소서 첨삭·모의면접 강사용 화면을 쓸 수 있어요. (본인만 사용해 주세요)\n${link}`;
-    const done = () => alert(`${name} 강사님 승인 링크를 복사했어요.\n카톡에 붙여넣어 보내주세요.\n\n${link}`);
-    if (navigator.clipboard) navigator.clipboard.writeText(msg).then(done).catch(() => prompt('아래 내용을 복사해 주세요', msg));
-    else prompt('아래 내용을 복사해 주세요', msg);
+    return { link, msg: `[MOA FORMULA] ${name} 강사님 승인 링크입니다.\n아래 링크를 누르면 암호 없이 자소서 첨삭·모의면접 강사용 화면을 쓸 수 있어요. (본인만 사용해 주세요)\n${link}` };
+  }
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); return true; }
+    catch (e) { prompt('아래 내용을 길게 눌러 복사해 주세요', text); return false; }
+  }
+  function showDone(html) {
+    $('rbDone').innerHTML = `<div class="rb-done">${html}</div>`;
+    $('rbDone').scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
-  async function loadTeachers() {
-    const resultEl = document.getElementById('masterListResult');
-    showError('masterListError', '');
-    resultEl.innerHTML = '불러오는 중...';
-    try {
-      const data = await registryGet('');
-      if (!data.teachers.length) { resultEl.innerHTML = '<div class="empty">아직 등록된 강사가 없습니다.</div>'; return; }
-      resultEl.innerHTML = data.teachers.map(t => `
-        <div style="${rowStyle}">
-          <div>
-            <b>${escapeHtml(t.name)}</b> <span style="color:var(--muted);font-size:12px">(코드: ${escapeHtml(t.code)})</span> ${t.permanent ? '<span class="star-tag ok">영구</span>' : '<span class="star-tag miss">임시</span>'}<br>
-            <span style="font-size:12px;color:var(--muted)">등록일: ${moaDate(t.approvedAt)} · 첫 등록 앱: ${escapeHtml(t.firstApp) || '-'}</span>
-          </div>
-          <div class="btn-row" style="margin:0">
-            ${t.hubKey
-              ? `<button class="btn-secondary teacher-hub-copy" data-key="${escapeHtml(t.hubKey)}" data-name="${escapeHtml(t.name)}">🔗 승인 링크 복사</button>
-                 <button class="btn-secondary teacher-hub-make" data-code="${escapeHtml(t.code)}" data-name="${escapeHtml(t.name)}" data-re="1">재발급</button>`
-              : `<button class="btn-secondary teacher-hub-make" data-code="${escapeHtml(t.code)}" data-name="${escapeHtml(t.name)}">🔗 승인 링크 만들기</button>`}
-            <button class="btn-secondary teacher-perm-btn" data-code="${escapeHtml(t.code)}" data-perm="${t.permanent ? '1' : '0'}">${t.permanent ? '임시로 전환' : '영구로 전환'}</button>
-            <button class="btn-danger teacher-del-btn" data-code="${escapeHtml(t.code)}" data-name="${escapeHtml(t.name)}">삭제</button>
-          </div>
+  async function sendLink(t) {
+    let key = t.hubKey;
+    if (!key) key = (await registryPost({ action: 'makeHubLink', code: t.code })).hubKey;
+    const { link, msg } = hubMsg(t.name, key);
+    await copyText(msg);
+    registryPost({ action: 'markLinkSent', code: t.code }).catch(() => {});
+    showDone(`✅ <b>${escapeHtml(t.name)}</b> 강사님 승인 링크를 복사했어요. 카톡에 붙여넣어 보내주세요.<br><span style="color:var(--muted)">${escapeHtml(link)}</span>`);
+    await load();
+  }
+
+  function row(t) {
+    const [, cls, label] = statusOf(t);
+    const bits = [];
+    if (t.lastSeen) bits.push(relDay(t.lastSeen) + ' 접속');
+    else if (t.linkSentAt) bits.push('링크 보냄 ' + moaDate(t.linkSentAt));
+    if (t.expiresAt) bits.push((t.expired ? '사용 기간 끝남 ' : '사용 기간 ~') + moaDate(t.expiresAt));
+    else bits.push('영구');
+    bits.push('등록 ' + moaDate(t.approvedAt));
+    return `
+      <div class="rb-row">
+        <div class="rb-top">
+          <div class="rb-name">${escapeHtml(t.name)}<span class="rb-code">${escapeHtml(t.code)}</span></div>
+          <span class="rb-badge ${cls}">${label}</span>
         </div>
-      `).join('');
-      resultEl.querySelectorAll('.teacher-hub-copy').forEach(btn => {
-        btn.addEventListener('click', () => copyHubLink(btn.dataset.name, btn.dataset.key));
-      });
-      resultEl.querySelectorAll('.teacher-hub-make').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const { code, name, re } = btn.dataset;
-          if (re && !confirm(`${name} 강사님 승인 링크를 새로 만들까요?\n\n예전 링크는 바로 쓸 수 없게 돼요. (링크가 다른 사람에게 퍼졌을 때 사용)\n새 링크를 강사님께 다시 보내드려야 해요.`)) return;
-          btn.disabled = true; btn.textContent = '만드는 중...';
-          try {
-            const d = await registryPost({ action: 'makeHubLink', code });
-            await loadTeachers();
-            copyHubLink(name, d.hubKey);
-          } catch (err) {
-            alert(err.message);
-            btn.disabled = false; btn.textContent = re ? '재발급' : '🔗 승인 링크 만들기';
-          }
-        });
-      });
-      resultEl.querySelectorAll('.teacher-perm-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const makePermanent = btn.dataset.perm !== '1';
-          btn.disabled = true; btn.textContent = '변경 중...';
-          try {
-            await registryPost({ action: 'setPermanent', code: btn.dataset.code, permanent: makePermanent });
-            await loadTeachers();
-          } catch (err) {
-            alert('변경 실패: ' + err.message);
-            btn.disabled = false; btn.textContent = makePermanent ? '영구로 전환' : '임시로 전환';
-          }
-        });
-      });
-      resultEl.querySelectorAll('.teacher-del-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const { code, name } = btn.dataset;
-          if (!confirm(`${name}(${code}) 강사를 삭제할까요?\n\n· 세 앱(모의면접·자소서·트래커) 강사 목록에서 모두 빠져요.\n· 이 앱의 강사 화면과 학생 제출 링크가 막혀요.\n· 프리셋·첨삭 기록은 보관되며, "삭제된 강사"에서 복구할 수 있어요.`)) return;
-          btn.disabled = true; btn.textContent = '삭제 중...';
-          try {
-            await registryPost({ action: 'deleteTeacher', code });
-            await loadTeachers();
-            if (document.getElementById('removedListResult').innerHTML) await loadRemoved();
-          } catch (err) {
-            alert(err.message);
-            btn.disabled = false; btn.textContent = '삭제';
-          }
-        });
-      });
-    } catch (err) {
-      showError('masterListError', err.message);
-      resultEl.innerHTML = '';
-    }
-  }
-
-  async function loadInvites() {
-    const resultEl = document.getElementById('inviteListResult');
-    showError('inviteListError', '');
-    resultEl.innerHTML = '불러오는 중...';
-    try {
-      const data = await registryGet('invites');
-      if (!data.invites.length) { resultEl.innerHTML = '<div class="empty">아직 발급된 초대코드가 없습니다.</div>'; return; }
-      resultEl.innerHTML = data.invites.map(iv => {
-        const statusHtml = iv.used
-          ? '<span style="color:#b91c1c;font-size:12px">(사용됨 · ' + escapeHtml(iv.usedBy || '') + ')</span>'
-          : iv.isExpired
-            ? '<span style="color:#b91c1c;font-size:12px">(기간만료)</span>'
-            : '<span style="color:var(--green);font-size:12px">(미사용)</span>';
-        return `
-        <div style="${rowStyle}">
-          <div>
-            <b>${escapeHtml(iv.code)}</b>${iv.label ? ` <span style="color:var(--navy);font-size:12px">(${escapeHtml(iv.label)})</span>` : ''} ${statusHtml}<br>
-            <span style="font-size:12px;color:var(--muted)">발급일: ${moaDate(iv.createdAt)} · 유효기간: ${daysRemainingText(iv.expiresAt)}</span>
-          </div>
-          ${iv.used ? '' : `<button class="btn-danger invite-cancel-btn" data-code="${escapeHtml(iv.code)}">취소</button>`}
-        </div>`;
-      }).join('');
-      resultEl.querySelectorAll('.invite-cancel-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const code = btn.dataset.code;
-          if (!confirm(`초대코드 ${code}를 취소할까요?\n취소하면 이 코드로는 더 이상 등록할 수 없어요.`)) return;
-          btn.disabled = true; btn.textContent = '취소 중...';
-          try {
-            await registryPost({ action: 'cancelInvite', inviteCode: code });
-            await loadInvites();
-          } catch (err) {
-            alert(err.message);
-            btn.disabled = false; btn.textContent = '취소';
-          }
-        });
-      });
-    } catch (err) {
-      showError('inviteListError', err.message);
-      resultEl.innerHTML = '';
-    }
-  }
-
-  async function loadRemoved() {
-    const resultEl = document.getElementById('removedListResult');
-    showError('removedListError', '');
-    resultEl.innerHTML = '불러오는 중...';
-    try {
-      const data = await registryGet('removed');
-      if (!data.teachers.length) { resultEl.innerHTML = '<div class="empty">삭제된 강사가 없습니다.</div>'; return; }
-      resultEl.innerHTML = data.teachers.map(t => `
-        <div style="${rowStyle}">
-          <div>
-            <b>${escapeHtml(t.name)}</b> <span style="color:var(--muted);font-size:12px">(코드: ${escapeHtml(t.code)})</span><br>
-            <span style="font-size:12px;color:var(--muted)">삭제일: ${moaDate(t.removedAt)}</span>
-          </div>
-          <button class="btn-secondary teacher-restore-btn" data-code="${escapeHtml(t.code)}" data-name="${escapeHtml(t.name)}">복구</button>
+        <div class="rb-sub">${bits.map(escapeHtml).join(' · ')}</div>
+        <div class="rb-btns">
+          <button class="btn-primary" data-act="send" data-code="${escapeHtml(t.code)}">📤 ${t.linkSentAt || t.lastSeen ? '링크 다시 보내기' : '링크 보내기'}</button>
+          <button class="btn-secondary" data-act="expiry" data-code="${escapeHtml(t.code)}">${t.expired ? '⏳ 기간 연장' : t.expiresAt ? '⏳ 기간 변경' : '⏳ 기간 정하기'}</button>
+          <details class="rb-more"><summary>⋯</summary><div class="rb-menu">
+            ${t.expiresAt ? `<button data-act="perm" data-code="${escapeHtml(t.code)}">♾️ 영구로 바꾸기</button>` : ''}
+            ${t.hubKey ? `<button data-act="rekey" data-code="${escapeHtml(t.code)}">🔄 링크 재발급 (옛 링크 막기)</button>` : ''}
+            <button class="danger" data-act="del" data-code="${escapeHtml(t.code)}">⛔ 사용 중지</button>
+          </div></details>
         </div>
-      `).join('');
-      resultEl.querySelectorAll('.teacher-restore-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const { code, name } = btn.dataset;
-          if (!confirm(`${name}(${code}) 강사를 복구할까요?\n기존 프리셋·첨삭 기록과 함께 다시 사용할 수 있게 돼요.`)) return;
-          btn.disabled = true; btn.textContent = '복구 중...';
-          try {
-            await registryPost({ action: 'restoreTeacher', code });
-            await loadRemoved();
-            if (document.getElementById('masterListResult').innerHTML) await loadTeachers();
-          } catch (err) {
-            alert(err.message);
-            btn.disabled = false; btn.textContent = '복구';
-          }
-        });
-      });
-    } catch (err) {
-      showError('removedListError', err.message);
-      resultEl.innerHTML = '';
+      </div>`;
+  }
+
+  function inviteRow(v) {
+    return `
+      <div class="rb-row" style="background:#FAFBFD">
+        <div class="rb-top">
+          <div class="rb-name">${escapeHtml(v.label || '이름 메모 없음')}<span class="rb-code">초대코드 ${escapeHtml(v.code)}</span></div>
+          <span class="rb-badge b-inv">${v.isExpired ? '✉️ 초대 기간 끝남' : '✉️ 초대만 보냄'}</span>
+        </div>
+        <div class="rb-sub">예전 방식 초대코드예요. 아직 등록 전이에요 · 발급 ${escapeHtml(moaDate(v.createdAt))}${v.expiresAt ? ' · ~' + escapeHtml(moaDate(v.expiresAt)) : ''}</div>
+        <div class="rb-btns">
+          ${v.isExpired ? '' : `<button class="btn-secondary" data-act="invcopy" data-inv="${escapeHtml(v.code)}">초대 링크 복사</button>`}
+          <button class="btn-danger" data-act="invcancel" data-inv="${escapeHtml(v.code)}">취소</button>
+        </div>
+      </div>`;
+  }
+
+  function render() {
+    if (!DATA) return;
+    const T = DATA.teachers, R = DATA.removed, I = DATA.invites;
+    const cnt = { all: T.length + I.length, active: 0, wait: I.length, temp: 0, off: R.length };
+    T.forEach(t => { cnt[statusOf(t)[0]]++; });
+    const chips = [['all', '전체'], ['active', '활동'], ['wait', '대기'], ['temp', '임시'], ['off', '중지']];
+    $('rbChips').innerHTML = chips.map(([k, n]) => `<button class="rb-chip${FILTER === k ? ' on' : ''}" data-f="${k}">${n} ${cnt[k]}</button>`).join('');
+
+    const q = QUERY.toLowerCase();
+    const hit = (...xs) => !q || xs.some(x => String(x || '').toLowerCase().includes(q));
+    let html = '';
+    if (FILTER !== 'off') {
+      const rows = T.filter(t => (FILTER === 'all' || statusOf(t)[0] === FILTER) && hit(t.name, t.code));
+      // 조치가 필요한 사람(링크 필요·기간 끝남·접속 전)을 위로
+      const order = { 'b-need': 0, 'b-end': 1, 'b-wait': 2, 'b-temp': 3, 'b-active': 4 };
+      rows.sort((a, b) => order[statusOf(a)[1]] - order[statusOf(b)[1]]);
+      html += rows.map(row).join('');
+      if (FILTER === 'all' || FILTER === 'wait') html += I.filter(v => hit(v.label, v.code)).map(inviteRow).join('');
+    }
+    if (FILTER === 'off') {
+      html += R.filter(r => hit(r.name, r.code)).map(r => `
+        <div class="rb-row" style="background:#FAFBFD">
+          <div class="rb-top"><div class="rb-name">${escapeHtml(r.name)}<span class="rb-code">${escapeHtml(r.code)}</span></div><span class="rb-badge b-inv">⚫ 중지</span></div>
+          <div class="rb-sub">중지 ${escapeHtml(moaDate(r.removedAt))} · 기록은 보관 중</div>
+          <div class="rb-btns"><button class="btn-secondary" data-act="restore" data-code="${escapeHtml(r.code)}">복구</button></div>
+        </div>`).join('');
+    }
+    $('rbList').innerHTML = html || '<div class="empty">해당하는 강사가 없어요.</div>';
+
+    // 전체 보기에서는 중지된 강사를 맨 아래 접어둠
+    $('rbRemoved').innerHTML = (FILTER === 'all' && R.length) ? `
+      <details><summary style="cursor:pointer;font-size:13px;font-weight:700;color:var(--muted)">▸ 중지된 강사 ${R.length}명</summary>
+        <div style="margin-top:8px">${R.map(r => `
+          <div class="rb-row" style="background:#FAFBFD;display:flex;justify-content:space-between;align-items:center;gap:8px">
+            <div><b>${escapeHtml(r.name)}</b><span class="rb-code">${escapeHtml(r.code)}</span><div class="rb-sub" style="margin:2px 0 0">중지 ${escapeHtml(moaDate(r.removedAt))}</div></div>
+            <button class="btn-secondary" data-act="restore" data-code="${escapeHtml(r.code)}">복구</button>
+          </div>`).join('')}</div>
+      </details>` : '';
+  }
+
+  async function load() {
+    const res = await fetch('/api/teacher-registry?list=all&master=' + encodeURIComponent(pw()));
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || '불러오지 못했어요.');
+    DATA = data;
+    render();
+  }
+
+  async function open() {
+    const err = $('rbLoginErr');
+    err.style.display = 'none';
+    if (!pw()) { err.textContent = '비밀번호를 입력해 주세요.'; err.style.display = 'block'; return; }
+    $('rbOpenBtn').disabled = true; $('rbOpenBtn').textContent = '여는 중...';
+    try {
+      await load();
+      ssSet(pw());
+      $('rbLogin').style.display = 'none';
+      $('rbBook').style.display = 'block';
+    } catch (e) {
+      err.textContent = e.message; err.style.display = 'block';
+    }
+    $('rbOpenBtn').disabled = false; $('rbOpenBtn').textContent = '명부 열기';
+  }
+
+  const find = code => DATA.teachers.find(t => t.code === code);
+
+  async function onAct(btn) {
+    const act = btn.dataset.act, code = btn.dataset.code, inv = btn.dataset.inv;
+    const t = code ? (find(code) || DATA.removed.find(r => r.code === code)) : null;
+    const menu = btn.closest('details.rb-more'); if (menu) menu.open = false;
+    const busy = txt => { btn.disabled = true; btn.dataset.orig = btn.textContent; btn.textContent = txt; };
+    const done = () => { btn.disabled = false; if (btn.dataset.orig) btn.textContent = btn.dataset.orig; };
+    try {
+      if (act === 'send') { busy('복사 중...'); await sendLink(t); }
+      else if (act === 'expiry') {
+        const v = prompt(`${t.name} 강사님 사용 기간을 며칠로 할까요?\n\n· 오늘부터 며칠인지 숫자만 (예: 7)\n· 비워두면 영구\n· 기간이 끝나면 승인 링크와 학생 링크가 자동으로 막혀요`, '');
+        if (v === null) return;
+        const days = parseInt(v, 10) || 0;
+        busy('저장 중...');
+        await registryPost({ action: 'setExpiry', code, expiryDays: days });
+        await load();
+        showDone(`✅ <b>${escapeHtml(t.name)}</b> 강사님 사용 기간을 ${days ? days + '일(~' + moaDate(Date.now() + (days - 1) * 86400000) + ')' : '영구'}로 정했어요.`);
+      }
+      else if (act === 'perm') { busy('저장 중...'); await registryPost({ action: 'setExpiry', code, expiryDays: 0 }); await load(); }
+      else if (act === 'rekey') {
+        if (!confirm(`${t.name} 강사님 승인 링크를 새로 만들까요?\n\n예전 링크는 바로 막혀요. (링크가 다른 사람에게 퍼졌을 때 사용)\n새 링크가 복사되니 강사님께 다시 보내주세요.`)) return;
+        busy('만드는 중...');
+        const d = await registryPost({ action: 'makeHubLink', code });
+        await sendLink({ ...t, hubKey: d.hubKey });
+      }
+      else if (act === 'del') {
+        if (!confirm(`${t.name}(${code}) 강사님을 사용 중지할까요?\n\n· 승인 링크와 학생 제출 링크가 바로 막혀요.\n· 프리셋·첨삭 기록은 보관되며, "중지된 강사"에서 언제든 복구할 수 있어요.`)) return;
+        busy('처리 중...');
+        await registryPost({ action: 'deleteTeacher', code });
+        await load();
+      }
+      else if (act === 'restore') {
+        if (!confirm(`${t.name}(${code}) 강사님을 복구할까요?\n예전 승인 링크와 기록을 그대로 다시 쓸 수 있어요.`)) return;
+        busy('복구 중...');
+        await registryPost({ action: 'restoreTeacher', code });
+        await load();
+      }
+      else if (act === 'invcopy') {
+        const link = location.origin + location.pathname + '?admin=1&invite=' + encodeURIComponent(inv);
+        await copyText(link);
+        showDone(`초대 링크를 복사했어요. 강사님이 이 링크로 등록하시면 승인 링크가 바로 나와요.<br><span style="color:var(--muted)">${escapeHtml(link)}</span>`);
+      }
+      else if (act === 'invcancel') {
+        if (!confirm(`초대코드 ${inv}를 취소할까요?\n취소하면 이 코드로는 등록할 수 없어요.`)) return;
+        busy('취소 중...');
+        await registryPost({ action: 'cancelInvite', inviteCode: inv });
+        await load();
+      }
+    } catch (e) {
+      alert(e.message);
+      done();
     }
   }
 
-  document.getElementById('genInviteBtn').addEventListener('click', async () => {
-    const resultEl = document.getElementById('genInviteResult');
-    const expiryDays = document.getElementById('inviteExpiryInput').value.trim();
-    const label = document.getElementById('inviteLabelInput').value.trim();
-    showError('genInviteError', '');
-    resultEl.style.display = 'none';
-    try {
-      const data = await registryPost({ action: 'generateInvite', expiryDays: expiryDays ? parseInt(expiryDays, 10) : 0, label });
-      const inviteLink = location.origin + location.pathname + '?admin=1&invite=' + encodeURIComponent(data.inviteCode);
-      resultEl.innerHTML = `
-        <div>발급된 초대코드: ${escapeHtml(data.inviteCode)}${label ? ` <span style="font-weight:400;color:var(--navy)">(${escapeHtml(label)})</span>` : ''} <span style="font-weight:400;color:var(--muted);font-size:12px">(${daysRemainingText(data.expiresAt)})</span></div>
-        <div class="link-box" style="margin-top:8px">
-          <span style="word-break:break-all;font-weight:400;font-size:13px">${inviteLink}</span>
-          <button class="btn-secondary" style="margin-left:auto" onclick="navigator.clipboard.writeText('${inviteLink}')">링크 복사</button>
-        </div>
-        <p style="font-size:12px;color:var(--muted);font-weight:400;margin:6px 0 0">이 링크 하나만 보내주세요 — 강사님이 열면 초대코드가 자동으로 입력되어 있어요.</p>
-      `;
-      resultEl.style.display = 'block';
-      document.getElementById('inviteLabelInput').value = '';
-      if (document.getElementById('inviteListResult').innerHTML) await loadInvites();
-    } catch (err) {
-      showError('genInviteError', err.message);
-    }
+  $('rbOpenBtn').addEventListener('click', open);
+  $('masterPasswordInput').addEventListener('keydown', e => { if (e.key === 'Enter') open(); });
+  $('rbAddToggle').addEventListener('click', () => {
+    const box = $('rbAdd'); const show = box.style.display === 'none';
+    box.style.display = show ? 'block' : 'none';
+    if (show) setTimeout(() => $('rbAddName').focus(), 50);
   });
-  document.getElementById('masterListBtn').addEventListener('click', loadTeachers);
-  document.getElementById('inviteListBtn').addEventListener('click', loadInvites);
-  document.getElementById('removedListBtn').addEventListener('click', loadRemoved);
+  $('rbAddBtn').addEventListener('click', async () => {
+    const err = $('rbAddErr'), btn = $('rbAddBtn');
+    err.style.display = 'none';
+    const name = $('rbAddName').value.trim();
+    const code = $('rbAddCode').value.trim().toLowerCase().replace(/[^a-z0-9가-힣_-]/g, '');
+    const days = parseInt($('rbAddDays').value, 10) || 0;
+    if (!name || !code) { err.textContent = '이름과 강사 코드를 모두 넣어 주세요.'; err.style.display = 'block'; return; }
+    btn.disabled = true; btn.textContent = '추가 중...';
+    try {
+      const d = await registryPost({ action: 'addTeacher', name, code, expiryDays: days });
+      ['rbAddName', 'rbAddCode', 'rbAddDays'].forEach(id => { $(id).value = ''; });
+      $('rbAdd').style.display = 'none';
+      FILTER = 'all';
+      await sendLink({ code: d.code, name: d.name, hubKey: d.hubKey });
+    } catch (e) {
+      err.textContent = e.message; err.style.display = 'block';
+    }
+    btn.disabled = false; btn.textContent = '추가하고 링크 복사';
+  });
+  $('rbChips').addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (!b) return; FILTER = b.dataset.f; render(); });
+  $('rbSearch').addEventListener('input', e => { QUERY = e.target.value.trim(); render(); });
+  $('rbBook').addEventListener('click', e => { const b = e.target.closest('button[data-act]'); if (b) onAct(b); });
+
+  // 같은 창에서 다시 들어오면 비밀번호를 다시 묻지 않음 (창을 닫으면 지워짐)
+  const saved = ssGet();
+  if (saved) { $('masterPasswordInput').value = saved; open(); }
 }
 
 // 삭제(사용 중지)된 강사 코드인지 확인 — 확인에 실패하면 막지 않고 통과시킴

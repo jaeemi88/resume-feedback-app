@@ -11,6 +11,10 @@
 //   POST { action:'deleteTeacher', master, code }  → 강사 삭제(접속 차단, 기록은 보관)
 //   POST { action:'restoreTeacher', master, code } → 삭제된 강사 복구
 //   POST { action:'makeHubLink', master, code }    → 강사 개인 승인 링크 키 발급(재발급 시 옛 링크는 즉시 무효)
+//   GET  ?master=비밀번호&list=all          → 강사 명부 한 번에 (승인·중지·미사용 초대코드 + 마지막 접속일)
+//   POST { action:'addTeacher', master, name, code, expiryDays } → 초대코드 없이 강사 바로 추가 + 승인 링크 발급
+//   POST { action:'setExpiry', master, code, expiryDays }        → 사용 기간 지정(0·빈칸이면 영구)
+//        기간이 지난 강사는 승인 링크·학생 링크가 자동으로 막힘 (기록은 그대로)
 //
 // [누구나 호출 가능]
 //   GET  ?check=강사코드 → 삭제(차단)된 강사 코드인지 확인 { blocked: true/false }
@@ -47,6 +51,17 @@ const TEACHERS_KEY = 'moa_approved_teachers';
 const INVITES_KEY = 'moa_invite_codes';
 const REMOVED_KEY = 'moa_removed_teachers';
 const HUB_KEYS = 'moa_hub_keys';
+const LASTSEEN_KEY = 'moa_teacher_lastseen'; // 강사 코드 → 마지막 접속 시각(ms), api/_staff.js 가 기록
+
+function isExpired(data) {
+  return !!(data && data.expiresAt && Date.now() > data.expiresAt);
+}
+function daysToExpiry(days) {
+  const d = parseInt(days, 10);
+  if (!d || d <= 0) return null;
+  const end = new Date(); end.setHours(23, 59, 59, 999); // 마지막 날 밤까지 사용 가능
+  return end.getTime() + (d - 1) * 24 * 60 * 60 * 1000;
+}
 
 function genHubKey() {
   return crypto.randomBytes(18).toString('base64url'); // 24글자, 추측 불가
@@ -78,6 +93,7 @@ export default async function handler(req, res) {
         const removed = await client.hexists(REMOVED_KEY, c);
         if (removed) return res.status(200).json({ blocked: true, permanent: false });
         const raw = await client.hget(TEACHERS_KEY, c);
+        if (raw && isExpired(JSON.parse(raw))) return res.status(200).json({ blocked: true, permanent: false, expired: true });
         // permanent 필드가 없는 기존 강사(이 기능 이전에 등록됨)는 정규 강사로 간주해 기본값 true
         const permanent = raw ? (JSON.parse(raw).permanent !== false) : false;
         return res.status(200).json({ blocked: false, permanent });
@@ -95,6 +111,28 @@ export default async function handler(req, res) {
     }
 
     try {
+      if (list === 'all') {
+        const [tHash, rHash, iHash, seen] = await Promise.all([
+          client.hgetall(TEACHERS_KEY), client.hgetall(REMOVED_KEY), client.hgetall(INVITES_KEY), client.hgetall(LASTSEEN_KEY)
+        ]);
+        const teachers = Object.entries(tHash).map(([code, raw]) => {
+          const d = JSON.parse(raw);
+          return { code, name: d.name || code, approvedAt: d.approvedAt, firstApp: d.firstApp || '',
+            permanent: d.permanent !== false, expiresAt: d.expiresAt || null, expired: isExpired(d),
+            hubKey: d.hubKey || '', linkSentAt: d.linkSentAt || null, lastSeen: seen[code] ? +seen[code] : null };
+        }).sort((a, b) => new Date(b.approvedAt) - new Date(a.approvedAt));
+        const removed = Object.entries(rHash).map(([code, raw]) => {
+          const d = JSON.parse(raw);
+          return { code, name: d.name || code, removedAt: d.removedAt, lastSeen: seen[code] ? +seen[code] : null };
+        }).sort((a, b) => new Date(b.removedAt) - new Date(a.removedAt));
+        // 아직 아무도 안 쓴 초대코드만 (쓴 코드는 이미 강사 줄에 들어가 있음)
+        const invites = Object.entries(iHash).map(([code, raw]) => ({ code, ...JSON.parse(raw) }))
+          .filter(v => !v.used)
+          .map(v => ({ code: v.code, label: v.label || '', createdAt: v.createdAt, expiresAt: v.expiresAt || null,
+            isExpired: !!v.expiresAt && Date.now() > v.expiresAt }))
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        return res.status(200).json({ teachers, removed, invites });
+      }
       if (list === 'invites') {
         const hash = await client.hgetall(INVITES_KEY);
         const invites = Object.entries(hash).map(([code, raw]) => {
@@ -180,12 +218,67 @@ export default async function handler(req, res) {
         if (!raw) return res.status(404).json({ error: '승인된 강사 목록에서 찾을 수 없어요.' });
         const data = JSON.parse(raw);
         data.permanent = !!body.permanent;
+        if (data.permanent) data.expiresAt = null;
         await client.hset(TEACHERS_KEY, c, JSON.stringify(data));
         return res.status(200).json({ ok: true });
       } catch (err) {
         console.error(err);
         return res.status(500).json({ error: '변경 중 오류가 발생했습니다.' });
       }
+    }
+
+    // 원장님이 초대코드 없이 강사를 바로 추가 → 승인 링크 즉시 발급
+    if (body.action === 'addTeacher') {
+      if (!checkAdmin(body.master)) {
+        return res.status(401).json({ error: '관리자 비밀번호가 올바르지 않습니다.' });
+      }
+      try {
+        const c = safeCode(body.code);
+        const name = String(body.name || '').trim().slice(0, 30);
+        if (!name) return res.status(400).json({ error: '강사 이름을 입력해 주세요.' });
+        if (!c) return res.status(400).json({ error: '강사 코드를 영문·숫자로 입력해 주세요. (예: kim01)' });
+        if (await client.hexists(TEACHERS_KEY, c)) return res.status(409).json({ error: `"${c}"는 이미 쓰고 있는 강사 코드예요. 다른 코드로 정해 주세요.` });
+        if (await client.hexists(REMOVED_KEY, c)) return res.status(409).json({ error: `"${c}"는 중지된 강사 코드예요. 아래 "중지된 강사"에서 복구해 주세요.` });
+        const expiresAt = daysToExpiry(body.expiryDays);
+        const record = { name, approvedAt: new Date().toISOString(), firstApp: '원장님 추가', permanent: !expiresAt, expiresAt };
+        const hubKey = await issueHubKey(client, c, record);
+        await client.hset(TEACHERS_KEY, c, JSON.stringify(record));
+        return res.status(200).json({ ok: true, code: c, name, hubKey, expiresAt });
+      } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: '강사 추가 중 오류가 발생했습니다.' });
+      }
+    }
+
+    // 원장님이 강사 사용 기간 지정 (0·빈칸이면 영구)
+    if (body.action === 'setExpiry') {
+      if (!checkAdmin(body.master)) {
+        return res.status(401).json({ error: '관리자 비밀번호가 올바르지 않습니다.' });
+      }
+      try {
+        const c = safeCode(body.code);
+        const raw = await client.hget(TEACHERS_KEY, c);
+        if (!raw) return res.status(404).json({ error: '강사 명부에서 찾을 수 없어요.' });
+        const data = JSON.parse(raw);
+        data.expiresAt = daysToExpiry(body.expiryDays);
+        data.permanent = !data.expiresAt;
+        await client.hset(TEACHERS_KEY, c, JSON.stringify(data));
+        return res.status(200).json({ ok: true, expiresAt: data.expiresAt });
+      } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: '기간 변경 중 오류가 발생했습니다.' });
+      }
+    }
+
+    // 원장님이 링크를 보냈다고 표시 (복사 버튼을 누를 때)
+    if (body.action === 'markLinkSent') {
+      if (!checkAdmin(body.master)) {
+        return res.status(401).json({ error: '관리자 비밀번호가 올바르지 않습니다.' });
+      }
+      const c = safeCode(body.code);
+      const raw = await client.hget(TEACHERS_KEY, c);
+      if (raw) { const d = JSON.parse(raw); d.linkSentAt = Date.now(); await client.hset(TEACHERS_KEY, c, JSON.stringify(d)); }
+      return res.status(200).json({ ok: true });
     }
 
     // 원장님이 강사 개인 승인 링크 발급·재발급
