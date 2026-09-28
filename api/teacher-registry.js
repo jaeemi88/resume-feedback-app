@@ -10,14 +10,21 @@
 //   POST { action:'cancelInvite', master, inviteCode } → 미사용 초대코드 취소
 //   POST { action:'deleteTeacher', master, code }  → 강사 삭제(접속 차단, 기록은 보관)
 //   POST { action:'restoreTeacher', master, code } → 삭제된 강사 복구
+//   POST { action:'makeHubLink', master, code }    → 강사 개인 승인 링크 키 발급(재발급 시 옛 링크는 즉시 무효)
 //
 // [누구나 호출 가능]
 //   GET  ?check=강사코드 → 삭제(차단)된 강사 코드인지 확인 { blocked: true/false }
 //   POST { code, name, inviteCode } → 강사 등록. 이미 승인된 코드면 초대코드 없이도 통과.
 //                                      새 코드면 초대코드가 유효+미사용+기간내여야 통과, 통과 즉시 그 초대코드는 사용 처리됨.
+//                                      새로 등록되면 개인 승인 링크 키(hubKey)도 함께 발급해서 돌려줌.
+//
+// [강사 개인 승인 링크 — 2026-09-28]
+//   허브 주소 + ?k=키 로 들어오면 암호 없이 자소서·모의면접 강사용만 열림 (moa_hub_keys: 키 → 강사 코드)
+//   키 확인은 각 앱의 api/_staff.js 가 함. 트래커·제안서는 키를 인정하지 않음(원장님 암호만).
 //
 // ※ 차단은 "삭제 목록"에 있는 코드만 막습니다. 예전부터 쓰던 코드가 승인 목록에 없더라도 막히지 않아요.
 import Redis from 'ioredis';
+import crypto from 'crypto';
 
 let redis;
 function getRedis() {
@@ -39,6 +46,19 @@ function genInviteCode() {
 const TEACHERS_KEY = 'moa_approved_teachers';
 const INVITES_KEY = 'moa_invite_codes';
 const REMOVED_KEY = 'moa_removed_teachers';
+const HUB_KEYS = 'moa_hub_keys';
+
+function genHubKey() {
+  return crypto.randomBytes(18).toString('base64url'); // 24글자, 추측 불가
+}
+
+// 강사에게 새 승인 링크 키를 달아줌 — 옛 키는 목록에서 지워 즉시 무효
+async function issueHubKey(client, code, data) {
+  if (data.hubKey) await client.hdel(HUB_KEYS, data.hubKey);
+  data.hubKey = genHubKey();
+  await client.hset(HUB_KEYS, data.hubKey, code);
+  return data.hubKey;
+}
 
 function checkAdmin(password) {
   return !!process.env.MASTER_ADMIN_PASSWORD && password === process.env.MASTER_ADMIN_PASSWORD;
@@ -96,7 +116,7 @@ export default async function handler(req, res) {
       const hash = await client.hgetall(TEACHERS_KEY);
       const teachers = Object.entries(hash).map(([code, raw]) => {
         const data = JSON.parse(raw);
-        return { code, name: data.name || code, approvedAt: data.approvedAt, firstApp: data.firstApp || '', permanent: data.permanent !== false };
+        return { code, name: data.name || code, approvedAt: data.approvedAt, firstApp: data.firstApp || '', permanent: data.permanent !== false, hubKey: data.hubKey || '' };
       });
       teachers.sort((a, b) => new Date(b.approvedAt) - new Date(a.approvedAt));
       return res.status(200).json({ teachers });
@@ -168,6 +188,25 @@ export default async function handler(req, res) {
       }
     }
 
+    // 원장님이 강사 개인 승인 링크 발급·재발급
+    if (body.action === 'makeHubLink') {
+      if (!checkAdmin(body.master)) {
+        return res.status(401).json({ error: '관리자 비밀번호가 올바르지 않습니다.' });
+      }
+      try {
+        const c = safeCode(body.code);
+        const raw = await client.hget(TEACHERS_KEY, c);
+        if (!raw) return res.status(404).json({ error: '승인된 강사 목록에서 찾을 수 없어요.' });
+        const data = JSON.parse(raw);
+        const hubKey = await issueHubKey(client, c, data);
+        await client.hset(TEACHERS_KEY, c, JSON.stringify(data));
+        return res.status(200).json({ ok: true, hubKey });
+      } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: '승인 링크 발급 중 오류가 발생했습니다.' });
+      }
+    }
+
     // 원장님이 강사 삭제 — 승인 목록에서 빼고 삭제 목록으로 옮김 (프리셋·첨삭 기록은 그대로 보관)
     if (body.action === 'deleteTeacher') {
       if (!checkAdmin(body.master)) {
@@ -179,6 +218,7 @@ export default async function handler(req, res) {
         if (!raw) return res.status(404).json({ error: '승인된 강사 목록에서 찾을 수 없어요.' });
         const data = JSON.parse(raw);
         data.removedAt = new Date().toISOString();
+        if (data.hubKey) await client.hdel(HUB_KEYS, data.hubKey); // 승인 링크도 즉시 무효
         await client.hset(REMOVED_KEY, c, JSON.stringify(data));
         await client.hdel(TEACHERS_KEY, c);
         return res.status(200).json({ ok: true });
@@ -199,6 +239,7 @@ export default async function handler(req, res) {
         if (!raw) return res.status(404).json({ error: '삭제된 강사 목록에서 찾을 수 없어요.' });
         const data = JSON.parse(raw);
         delete data.removedAt;
+        if (data.hubKey) await client.hset(HUB_KEYS, data.hubKey, c); // 승인 링크 다시 살림
         await client.hset(TEACHERS_KEY, c, JSON.stringify(data));
         await client.hdel(REMOVED_KEY, c);
         return res.status(200).json({ ok: true });
@@ -247,9 +288,13 @@ export default async function handler(req, res) {
 
       // 무제한(영구) 초대코드로 들어온 강사만 permanent:true — 기간제 초대코드로 들어온 임시 강사는 false
       const record = { name: (name || c).trim(), approvedAt: new Date().toISOString(), firstApp: body.app || '', permanent: !invite.expiresAt };
+      const oldRemoved = await client.hget(REMOVED_KEY, c);
+      if (oldRemoved) { const o = JSON.parse(oldRemoved); if (o.hubKey) await client.hdel(HUB_KEYS, o.hubKey); }
+      const hubKey = await issueHubKey(client, c, record);
       await client.hset(TEACHERS_KEY, c, JSON.stringify(record));
       await client.hdel(REMOVED_KEY, c); // 삭제됐던 코드를 새 초대코드로 다시 등록한 경우 차단 해제
-      return res.status(200).json({ ok: true, alreadyApproved: false });
+      // 승인 링크 키는 "초대코드로 새로 등록한 순간"에만 돌려줌 (코드만 아는 사람은 못 받음)
+      return res.status(200).json({ ok: true, alreadyApproved: false, hubKey });
     } catch (err) {
       console.error(err);
       return res.status(500).json({ error: '등록 중 오류가 발생했습니다.' });

@@ -469,6 +469,9 @@ function daysRemainingText(expiresAt) {
   return `${diff}일 남음 (${moaDate(expiresAt)}까지)`;
 }
 
+// 강사 개인 승인 링크가 여는 허브 주소
+const MOA_HUB_URL = 'https://moa-hub.vercel.app/';
+
 // ---------- 강사 등록 ----------
 function renderTeacherSetup() {
   const urlInvite = new URLSearchParams(location.search).get('invite') || '';
@@ -518,6 +521,24 @@ function renderTeacherSetup() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '등록에 실패했습니다.');
       localStorage.removeItem('moa_teacher_setup_draft');
+      if (data.hubKey) {
+        try { localStorage.setItem('moa_staff_key', data.hubKey); } catch (e) {}
+        const hubLink = MOA_HUB_URL + '?k=' + encodeURIComponent(data.hubKey);
+        app.innerHTML = `
+          <div class="card">
+            <h2>✅ 등록 완료!</h2>
+            <p style="font-size:14px;line-height:1.7">지금 보고 계신 카톡 링크는 <b>1회용 초대 링크</b>라 앞으로는 못 써요. 아래가 <b>${escapeHtml(name || code)}님만의 승인 링크</b>예요 — 꼭 복사해서 카톡 "나에게 보내기"로 저장해두세요.</p>
+            <p style="font-size:13px;color:var(--muted);line-height:1.7;margin-top:6px">이 링크를 누르면 <b>암호 없이</b> MOA FORMULA 허브가 열리고, 자소서 첨삭·모의면접 강사용 화면을 바로 쓸 수 있어요. 다른 사람에게는 공유하지 마세요.</p>
+            <div class="link-box" style="margin-top:10px">
+              <span style="word-break:break-all">${hubLink}</span>
+              <button class="btn-secondary" style="margin-left:auto" onclick="navigator.clipboard.writeText('${hubLink}')">링크 복사</button>
+            </div>
+            <div class="btn-row"><button class="btn-primary" id="goToDashboardBtn">허브로 가기</button></div>
+          </div>
+        `;
+        document.getElementById('goToDashboardBtn').addEventListener('click', () => { location.href = hubLink; });
+        return;
+      }
       const p = new URLSearchParams(location.search);
       p.set('admin', '1');
       p.set('t', code);
@@ -570,6 +591,7 @@ function renderMasterTeacherList() {
     <div class="card">
       <h2>승인된 강사 목록</h2>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">강사를 삭제하면 세 앱(모의면접·자소서·트래커) 강사 목록에서 빠지고, 이 앱의 강사 화면과 학생 제출 링크가 막혀요. 프리셋·첨삭 기록은 보관되어 언제든 복구할 수 있어요. "영구" 강사에게만 강사 화면의 "기능 안내" 탭이 보여요.</p>
+      <p style="font-size:13px;color:var(--ink);background:#F3EFFE;border-radius:8px;padding:10px 12px;line-height:1.7;margin-bottom:10px">🔗 <b>승인 링크</b> — 강사님께 이 링크만 보내면 암호 없이 허브에서 <b>자소서·모의면접</b>만 쓸 수 있어요 (트래커·운영보드·제안서는 안 보임). 링크가 퍼졌다면 "재발급"을 누르면 예전 링크는 바로 막혀요.</p>
       <div class="btn-row" style="margin-top:0"><button class="btn-primary" id="masterListBtn">강사 목록 보기</button></div>
       <div id="masterListError" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
       <div id="masterListResult" style="margin-top:16px"></div>
@@ -616,6 +638,14 @@ function renderMasterTeacherList() {
     el.style.display = msg ? 'block' : 'none';
   }
 
+  function copyHubLink(name, key) {
+    const link = MOA_HUB_URL + '?k=' + encodeURIComponent(key);
+    const msg = `[MOA FORMULA] ${name} 강사님 승인 링크입니다.\n아래 링크를 누르면 암호 없이 자소서 첨삭·모의면접 강사용 화면을 쓸 수 있어요. (본인만 사용해 주세요)\n${link}`;
+    const done = () => alert(`${name} 강사님 승인 링크를 복사했어요.\n카톡에 붙여넣어 보내주세요.\n\n${link}`);
+    if (navigator.clipboard) navigator.clipboard.writeText(msg).then(done).catch(() => prompt('아래 내용을 복사해 주세요', msg));
+    else prompt('아래 내용을 복사해 주세요', msg);
+  }
+
   async function loadTeachers() {
     const resultEl = document.getElementById('masterListResult');
     showError('masterListError', '');
@@ -630,11 +660,33 @@ function renderMasterTeacherList() {
             <span style="font-size:12px;color:var(--muted)">등록일: ${moaDate(t.approvedAt)} · 첫 등록 앱: ${escapeHtml(t.firstApp) || '-'}</span>
           </div>
           <div class="btn-row" style="margin:0">
+            ${t.hubKey
+              ? `<button class="btn-secondary teacher-hub-copy" data-key="${escapeHtml(t.hubKey)}" data-name="${escapeHtml(t.name)}">🔗 승인 링크 복사</button>
+                 <button class="btn-secondary teacher-hub-make" data-code="${escapeHtml(t.code)}" data-name="${escapeHtml(t.name)}" data-re="1">재발급</button>`
+              : `<button class="btn-secondary teacher-hub-make" data-code="${escapeHtml(t.code)}" data-name="${escapeHtml(t.name)}">🔗 승인 링크 만들기</button>`}
             <button class="btn-secondary teacher-perm-btn" data-code="${escapeHtml(t.code)}" data-perm="${t.permanent ? '1' : '0'}">${t.permanent ? '임시로 전환' : '영구로 전환'}</button>
             <button class="btn-danger teacher-del-btn" data-code="${escapeHtml(t.code)}" data-name="${escapeHtml(t.name)}">삭제</button>
           </div>
         </div>
       `).join('');
+      resultEl.querySelectorAll('.teacher-hub-copy').forEach(btn => {
+        btn.addEventListener('click', () => copyHubLink(btn.dataset.name, btn.dataset.key));
+      });
+      resultEl.querySelectorAll('.teacher-hub-make').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const { code, name, re } = btn.dataset;
+          if (re && !confirm(`${name} 강사님 승인 링크를 새로 만들까요?\n\n예전 링크는 바로 쓸 수 없게 돼요. (링크가 다른 사람에게 퍼졌을 때 사용)\n새 링크를 강사님께 다시 보내드려야 해요.`)) return;
+          btn.disabled = true; btn.textContent = '만드는 중...';
+          try {
+            const d = await registryPost({ action: 'makeHubLink', code });
+            await loadTeachers();
+            copyHubLink(name, d.hubKey);
+          } catch (err) {
+            alert(err.message);
+            btn.disabled = false; btn.textContent = re ? '재발급' : '🔗 승인 링크 만들기';
+          }
+        });
+      });
       resultEl.querySelectorAll('.teacher-perm-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const makePermanent = btn.dataset.perm !== '1';
