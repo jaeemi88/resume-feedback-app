@@ -45,7 +45,7 @@ const LENSES = [
 ];
 
 const OPENERS = [
-  '장면 묘사형', '숫자 제시형', '질문형', '결론 먼저형', '가치관 한 문장형'
+  '장면 묘사형', '숫자 제시형', '계기 제시형', '결론 먼저형', '가치관 한 문장형'
 ];
 
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -63,7 +63,7 @@ const DIVERSITY_RULES = `
 2. 비유·예시는 아래 [오늘의 예시 영역]에서 가져오고, 한 첨삭 안에서 같은 비유를 두 번 쓰지 않는다.
 3. improvements의 첫 포인트는 아래 [오늘의 코칭 렌즈]로 잡는다.
 4. 상투 표현 금지 — "전반적으로 잘 작성되었습니다", "~하면 더 좋을 것 같습니다", "구체적인 사례를 추가하세요", "진정성이 느껴집니다"는 쓰지 않는다. 대신 "무엇을, 어느 문장 뒤에, 어떻게" 넣을지 콕 집어 제시한다.
-5. polishedText는 아래 [오늘의 도입 방식]으로 시작하되, 학생 본인의 경험을 살려 재구성한다.
+5. polishedText는 아래 [오늘의 도입 방식]으로 시작하되, 학생 본인의 경험을 살려 재구성한다. 도입도 반드시 학생이 1인칭으로 쓴 자소서 문장이어야 한다. "~을 떠올려 보세요", "~였을까요?"처럼 학생에게 묻거나 안내하는 문장, 질문으로 시작하는 문장은 쓰지 않는다. 장면 묘사형인데 원문에 장면이 없으면 [그때의 장면 한 줄] 빈칸으로 시작한다.
 6. 위 원칙은 표현 방식에만 적용하며, 아래 [응답 형식]의 JSON 필드 구성은 반드시 그대로 지킨다.`;
 
 
@@ -191,7 +191,7 @@ export default async function handler(req, res) {
   "missingElements": ["답변에 빠진 핵심 요소"],
   "strengths": "잘된 점 1~2가지를 학생 문장을 인용하며 구체적으로 (2~3문장)",
   "improvements": "개선할 점 1~2가지를 무엇을·어디에·어떻게 형태로 (2~3문장)",
-  "polishedText": "학생 원문을 살려 다듬은 완성 문장. 없는 사실은 만들지 말고, 보완이 필요한 자리는 [여기에 ○○ 경험 한 줄]처럼 표시한다. 글자수 제한이 있으면 그 안에서 작성한다.",
+  "polishedText": "학생 원문을 살려 다듬은 완성 문장. 없는 사실은 만들지 말고, 보완이 필요한 자리는 [여기에 ○○ 경험 한 줄]처럼 표시한다. 글자수 제한이 있으면 빈칸 안내 문구를 뺀 본문 기준으로 제한의 90% 안쪽에서 작성한다(학생이 빈칸을 채울 여유). 자소서 본문 문장만 쓰고, 학생에게 하는 안내·질문은 improvements로 보낸다.",
   "followUpQuestions": { "reasonType": "왜 그 선택을 했는지 묻는 면접 질문", "alternativeType": "다른 대안은 없었는지 묻는 질문", "quantifyType": "숫자로 설명하게 하는 질문" },
   "redFlags": [ { "type": "결격 신호 유형", "quote": "학생 답변 인용", "why": "면접관 시점 한 문장", "fix": "대체 문장 한 줄" } ],
   "defenseQuestions": [ { "sentence": "polishedText에서 그대로 인용한 핵심 문장", "question": "면접관이 그 문장을 파고들 때 할 질문" } ]
@@ -199,7 +199,8 @@ export default async function handler(req, res) {
 - jobMatch는 채용공고 정보가 없으면 null로 둔다.
 - aiTracePhrases, missingElements, redFlags는 해당 사항이 없으면 빈 배열로 둔다.
 - defenseQuestions는 항상 정확히 2개: polishedText에서 면접관이 가장 파고들 문장 2개(성과·역할·고유명사·결정 이유가 담긴 문장 우선)를 고르고, 그 문장이 사실인지·본인이 한 일인지 확인하는 구체적인 꼬리질문을 만든다. followUpQuestions와 겹치지 않게 한다.
-- strengths, improvements, polishedText, interviewerInference, followUpQuestions는 어떤 경우에도 비워두지 않는다.`;
+- strengths, improvements, polishedText, interviewerInference, followUpQuestions는 어떤 경우에도 비워두지 않는다.
+- [학생 신분 맞추기] 원문 단서(내신, 학년, 고등학교·중학교, 담임 등이면 고등학생 / 학점, 교수, 학과 등이면 대학생 / 회사, 팀장 등이면 경력자)로 신분을 판단하고, 그 신분에 맞는 말만 쓴다. 고등학생에게 "교수님", "학점", "강의"를 쓰지 않고 "선생님", "과목", "수업"을 쓴다. 원문에 없는 인물·호칭은 만들지 않는다.`;
 
   const context = `
 
