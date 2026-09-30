@@ -1088,6 +1088,9 @@ const SCAFFOLDS = {
     { label: '3. 3~5년', q: '그 뒤 어떤 역할을 맡고 싶나요?', hint: '' },
     { label: '4. 회사 기여', q: '그게 회사에 어떤 도움이 될까요?', hint: '' } ] }
 };
+// 스토리텔링용 선택 칸 (2026-09-30 추가) — 모든 문항 뼈대 맨 아래에 붙음
+const QUOTE_ROW = { label: '＋ 한마디 (선택)', q: '그때 들었던 말이나 내가 속으로 한 다짐이 있나요?', hint: '예: 선생님의 격려, 친구·팀원·손님이 한 말, 스스로에게 한 말 — 떠오르는 게 있을 때만', warn: '실제로 들었거나 한 말만 적어요. 면접에서 물어볼 수 있어요' };
+Object.values(SCAFFOLDS).forEach(sc => sc.rows.push(QUOTE_ROW));
 const BLIND_TIP = '블라인드 채용이에요 — 학교·지역·가족이 드러나는 이름(○○대학교, ○○점, 부모님 직업 등)은 빼고 적어요. 과목명·활동명은 괜찮아요.';
 
 function currentHiringType() {
