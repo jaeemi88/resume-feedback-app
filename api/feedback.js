@@ -8,7 +8,7 @@
 // 0. 공통 원칙 (모든 전공·모든 요청에 자동 적용)
 // ───────────────────────────────────────────
 // Vercel 함수 최대 실행 시간 60초 (AI 답변이 길어져도 중간에 끊기지 않도록)
-export const config = { maxDuration: 60 };
+export const config = { maxDuration: 120 };
 
 const COMMON_RULES = `당신은 15년 경력의 취업 코치입니다. "MOA FORMULA" 기준으로 학생의 자기소개서·이력서 문장을 첨삭합니다.
 
