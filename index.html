@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>자소서·이력서 첨삭 — 진로모아커리어센터</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800;900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800;900&family=Noto+Serif+KR:wght@400;600&display=swap">
 <meta name="theme-color" content="#643DF2">
 <style>
   :root{
@@ -232,6 +232,44 @@
     font-size:11px; font-weight:900; line-height:1; text-decoration:none;
   }
   .moa-q:hover{ background:#C0D904; }
+
+  /* ===== 2026-09-30 디자인 개편: 학생 결과 화면 '교정지' 스타일 ===== */
+  .proof-kicker{font-size:12px;font-weight:700;letter-spacing:.12em;color:var(--green);margin-bottom:4px}
+  .proof-title{font-family:'Noto Serif KR',serif;font-size:26px;font-weight:600;line-height:1.35;margin:0 0 6px;color:var(--text);border:none;padding:0}
+  .proof-sub{font-size:14px;color:var(--muted);margin:0}
+  .proof-legend{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 18px}
+  .proof-chip{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:999px;font-size:12.5px;font-weight:500}
+  .proof-chip.p{background:#F3EFFE;color:#3F2799}
+  .proof-chip.p i{width:16px;height:3px;border-radius:2px;background:var(--green)}
+  .proof-chip.y{background:#FFF6DC;color:#6B4A00}
+  .proof-chip.y i{width:12px;height:12px;border-radius:3px;background:#FBE08A}
+  .proof-wrap{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:18px;align-items:start}
+  @media (max-width:760px){ .proof-wrap{grid-template-columns:1fr} .proof-title{font-size:22px} }
+  .proof-paper{border:1px solid var(--border);border-radius:14px;background:#FFFEFB;overflow:hidden}
+  .proof-paper-head{padding:11px 18px;border-bottom:1px solid #EFEBDF;background:#FBF9F3;display:flex;justify-content:space-between;gap:10px;font-size:13px;font-weight:700;color:var(--text)}
+  .proof-paper-head span:last-child{font-weight:400;color:var(--muted);white-space:nowrap}
+  .proof-paper-body{position:relative;padding:16px 18px 18px 34px;font-family:'Noto Serif KR',serif;font-size:16px;line-height:34px;color:#2A2738;white-space:pre-wrap;background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 33px,#EEEAF8 33px,#EEEAF8 34px);background-origin:content-box;background-clip:content-box}
+  .proof-paper-body::before{content:'';position:absolute;left:20px;top:0;bottom:0;width:1px;background:#E4DAF9}
+  .mk-p{background:#F3EFFE;border-bottom:2px solid var(--green);padding:1px 0}
+  .mk-y{background:#FBE08A;padding:2px 0}
+  .mk-n{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin:0 3px;border-radius:50%;font-family:'Noto Sans KR',sans-serif;font-size:11px;font-weight:700;line-height:1;vertical-align:5px}
+  .mk-n.p{background:var(--green);color:#fff}
+  .mk-n.y{background:#F5C24A;color:#3D2A00}
+  .proof-notes{display:flex;flex-direction:column;gap:10px}
+  .proof-notes-label{font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--muted)}
+  .proof-note{border:1px solid var(--border);border-radius:12px;padding:12px 14px;background:#fff;font-size:13.5px;line-height:1.6}
+  .proof-note-head{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;margin-bottom:4px}
+  .proof-note.p .proof-note-head{color:#3F2799}
+  .proof-note.y .proof-note-head{color:#6B4A00}
+  .proof-note.ok{background:var(--ok-bg);border-color:transparent;color:var(--ok)}
+  .proof-note .quote{font-weight:700;margin-bottom:2px}
+  .proof-note .fix{margin-top:6px;padding:8px 10px;border-radius:8px}
+  .proof-note.p .fix{background:var(--green-light);color:var(--navy)}
+  .proof-note.y .fix{background:#FFF6DC;color:#6B4A00}
+  .proof-note .nopos{font-size:11.5px;color:var(--muted);font-weight:400}
+  .proof-check{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px 16px;border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+  .pc-item{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--text)}
+  .pc-item svg{flex-shrink:0}
 </style>
 </head>
 <body>
@@ -2326,6 +2364,77 @@ async function renderResultsTab(content) {
 }
 
 // ---------- 학생 결과 열람 화면 ----------
+// 2026-09-30 디자인 개편: '교정지' 화면 — 기존 데이터(aiTracePhrases·redFlags)의 인용 문구를
+// 원문에서 찾아 형광펜 + 번호로 표시하고, 오른쪽 여백 메모에 설명을 붙임 (API·저장 데이터는 그대로)
+function proofCleanQuote(q) {
+  return String(q || '').trim().replace(/^["'“”‘’「『]+|["'“”‘’」』]+$/g, '').trim();
+}
+function proofSheetHtml(item) {
+  const text = String(item.answer || '');
+  const notes = [];
+  (Array.isArray(item.aiTracePhrases) ? item.aiTracePhrases : []).forEach(p => {
+    if (p && (p.phrase || p.note)) notes.push({ kind: 'p', label: '다듬을 표현', quote: proofCleanQuote(p.phrase), body: p.note || '', fix: '' });
+  });
+  (Array.isArray(item.redFlags) ? item.redFlags : []).forEach(f => {
+    if (f && (f.quote || f.why)) notes.push({ kind: 'y', label: f.type ? '면접관이 멈칫 · ' + f.type : '면접관이 멈칫할 표현', quote: proofCleanQuote(f.quote), body: f.why || '', fix: f.fix || '' });
+  });
+  // 원문 위치 찾기 (겹치는 구간은 먼저 잡힌 것만 표시)
+  const taken = [];
+  notes.forEach(n => {
+    n.pos = -1;
+    if (!n.quote) return;
+    let from = 0, at;
+    while ((at = text.indexOf(n.quote, from)) !== -1) {
+      const end = at + n.quote.length;
+      if (!taken.some(t => at < t[1] && end > t[0])) { n.pos = at; n.end = end; taken.push([at, end]); break; }
+      from = at + 1;
+    }
+  });
+  const placed = notes.filter(n => n.pos >= 0).sort((a, b) => a.pos - b.pos);
+  const unplaced = notes.filter(n => n.pos < 0);
+  placed.concat(unplaced).forEach((n, i) => { n.num = i + 1; });
+  let html = '', cur = 0;
+  placed.forEach(n => {
+    html += escapeHtml(text.slice(cur, n.pos));
+    html += `<span class="mk-${n.kind}">${escapeHtml(text.slice(n.pos, n.end))}</span><span class="mk-n ${n.kind}">${n.num}</span>`;
+    cur = n.end;
+  });
+  html += escapeHtml(text.slice(cur));
+  const lenInfo = item.charLimit ? `${text.length} / ${item.charLimit}자` : `${text.length}자`;
+  const noteHtml = notes.length
+    ? placed.concat(unplaced).map(n => `
+      <div class="proof-note ${n.kind}">
+        <div class="proof-note-head"><span class="mk-n ${n.kind}" style="vertical-align:0;margin:0">${n.num}</span>${escapeHtml(n.label)}${n.pos < 0 && n.quote ? ' <span class="nopos">(원문 위치 표시 없음)</span>' : ''}</div>
+        ${n.pos < 0 && n.quote ? `<div class="quote">"${escapeHtml(n.quote)}"</div>` : ''}
+        ${n.body ? `<div>${escapeHtml(n.body)}</div>` : ''}
+        ${n.fix ? `<div class="fix">✏️ 이렇게: ${escapeHtml(n.fix)}</div>` : ''}
+      </div>`).join('')
+    : `<div class="proof-note ok">✅ 따로 표시할 문장이 없어요. 아래 개선 방향과 다듬은 문장을 확인해 보세요.</div>`;
+  return `<div class="proof-wrap">
+    <div class="proof-paper">
+      <div class="proof-paper-head"><span>${escapeHtml(item.questionType === '이력서항목' ? '경력·활동 항목' : '제출한 답변')}</span><span>${lenInfo}</span></div>
+      <div class="proof-paper-body">${html}</div>
+    </div>
+    <div class="proof-notes"><div class="proof-notes-label">여백 메모</div>${noteHtml}</div>
+  </div>`;
+}
+function proofChecklistHtml(item) {
+  const okIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1F7A4D" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.5l2.6 2.6L16 9.5"></path></svg>';
+  const warnIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B7791F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4l9 16H3z"></path><path d="M12 10v4"></path><path d="M12 17.5v.01"></path></svg>';
+  const rows = [];
+  const fw = item.frameworkUsed || 'STAR';
+  const labels = FRAMEWORK_LABELS[fw] || FRAMEWORK_LABELS.STAR;
+  Object.keys(labels).forEach(k => { const ok = item.structure && item.structure[k]; rows.push([ok, labels[k] + (ok ? '' : ' — 보완')]); });
+  if (item.concreteness) {
+    const cl = { hasNumber: '숫자 포함', hasProperNoun: '고유명사 포함', hasJobKeyword: '직무 키워드 포함' };
+    Object.keys(cl).forEach(k => { const ok = item.concreteness[k]; rows.push([ok, cl[k] + (ok ? '' : ' — 보완')]); });
+  }
+  if (Array.isArray(item.redFlags)) {
+    const n = item.redFlags.filter(f => f && (f.quote || f.why)).length;
+    rows.push([n === 0, n === 0 ? '결격 신호 없음' : `결격 신호 ${n}개 — 메모 확인`]);
+  }
+  return `<div class="proof-check">${rows.map(r => `<div class="pc-item">${r[0] ? okIcon : warnIcon}<span>${escapeHtml(r[1])}</span></div>`).join('')}</div>`;
+}
 function resultItemBlockHtml(item, idx, total) {
   return `
     <div class="result-block" style="${idx > 0 ? 'border-top:2px solid var(--line);padding-top:18px;margin-top:18px' : ''}">
@@ -2334,21 +2443,18 @@ function resultItemBlockHtml(item, idx, total) {
       <p style="white-space:pre-wrap">${escapeHtml(item.question)}</p>
     </div>
     <div class="result-block">
-      <h3>제출한 답변</h3>
-      <p style="white-space:pre-wrap">${escapeHtml(item.answer)}</p>
+      <h3>교정지 — 제출한 답변과 선생님 메모</h3>
+      ${proofSheetHtml(item)}
     </div>
     <div class="result-block">
-      <h3>${(item.frameworkUsed || 'STAR')} 구조 진단</h3>
-      <div class="star-row">${structureTagsHtml(item.frameworkUsed || 'STAR', item.structure)}</div>
-      <div class="star-row">${concretenessTagsHtml(item.concreteness)}</div>
+      <h3>제출 전 점검표 · ${(item.frameworkUsed || 'STAR')} 구조</h3>
+      ${proofChecklistHtml(item)}
       ${riskFlagsHtml(item.riskFlags)}
-      ${aiTracePhrasesHtml(item.aiTracePhrases)}
     </div>
     ${item.jobMatch ? `<div class="result-block"><h3>채용공고 매칭도</h3>${jobMatchHtml(item.jobMatch)}</div>` : ''}
     ${item.intentGapComment ? `<div class="result-block"><h3>내가 밝힌 의도 vs 실제 답변</h3><p style="white-space:pre-wrap;background:var(--warn-bg);padding:12px;border-radius:8px">${escapeHtml(item.intentGapComment)}</p></div>` : ''}
     ${item.previousAnswer ? `<div class="result-block"><h3>Before → After 비교</h3><p style="white-space:pre-wrap;line-height:1.9;background:var(--green-light);padding:12px;border-radius:8px">${diffHtml(item.previousAnswer, item.answer)}</p>${item.revisionComment ? `<p style="margin-top:8px">${escapeHtml(item.revisionComment)}</p>` : ''}</div>` : ''}
     ${item.charLimitNote ? `<div class="result-block"><h3>⚠ 글자수 초과 (제한 ${item.charLimit}자)</h3><p style="white-space:pre-wrap;background:var(--warn-bg);padding:12px;border-radius:8px">${escapeHtml(item.charLimitNote)}</p></div>` : ''}
-    ${Array.isArray(item.redFlags) ? `<div class="result-block"><h3>결격 신호 체크</h3>${redFlagsHtml(item.redFlags)}</div>` : ''}
     <div class="result-block">
       <h3>면접관 시점 — 이 답변으로 추론되는 평소 모습</h3>
       <p style="white-space:pre-wrap;background:var(--navy-light);padding:12px;border-radius:8px">${escapeHtml(item.interviewerInference)}</p>
@@ -2381,8 +2487,13 @@ function resultContentHtml(record) {
         <button class="btn-secondary" onclick="downloadResultAsWord('${escapeHtml(record.studentName || '첨삭결과').replace(/'/g, "")}')">📄 워드로 저장</button>
       </div>
       <div id="resultExportArea">
-      <h2>첨삭 결과${record.studentName ? ` — ${escapeHtml(record.studentName)}님` : ''}</h2>
-      ${items.length > 1 ? `<p style="font-size:13px;color:var(--muted);margin-top:-6px">총 ${items.length}개 문항의 첨삭 결과예요.</p>` : ''}
+      <div class="proof-kicker">교정지 · 첨삭 결과${record.studentName ? ` · ${escapeHtml(record.studentName)}님` : ''}</div>
+      <h2 class="proof-title">선생님의 첨삭이 도착했어요</h2>
+      <p class="proof-sub">표시된 번호 순서대로 원고와 옆 메모를 함께 확인해 보세요.${items.length > 1 ? ` 총 ${items.length}개 문항이에요.` : ''}</p>
+      <div class="proof-legend">
+        <span class="proof-chip p"><i></i>다듬을 표현</span>
+        <span class="proof-chip y"><i></i>면접관이 멈칫할 표현</span>
+      </div>
       ${record.jobPosting ? `<div class="result-block"><h3>지원 채용공고 핵심 내용</h3><p style="white-space:pre-wrap">${escapeHtml(record.jobPosting)}</p></div>` : ''}
       ${items.map((it, idx) => resultItemBlockHtml(it, idx, items.length)).join('')}
       </div>
@@ -2419,6 +2530,7 @@ function downloadResultAsWord(studentName) {
     body{font-family:'맑은 고딕','Malgun Gothic',sans-serif;font-size:11pt;line-height:1.6;color:#1a2130}
     h2{font-size:16pt;color:#11308C} h3{font-size:13pt;color:#11308C}
     .star-tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:9pt;font-weight:bold;margin:2px}
+    .mk-p{background:#F3EFFE;border-bottom:1.5pt solid #643DF2} .mk-y{background:#FBE08A} .mk-n{font-size:8pt;font-weight:bold;color:#643DF2} .proof-note{border:1px solid #e2e5ea;padding:6pt;margin:4pt 0} .proof-paper-head{font-weight:bold;border-bottom:1px solid #e2e5ea} .pc-item{margin:2pt 0}
   </style></head><body>${innerHtml}</body></html>`;
   const blob = new Blob(['\ufeff', fullHtml], { type: 'application/msword' });
   const url = URL.createObjectURL(blob);
