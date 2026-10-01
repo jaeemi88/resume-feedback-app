@@ -1117,7 +1117,8 @@ function initClientManager(box, masterPw) {
 
   // ── 네이버 예약 자동 입장 링크 ──
   let SHOPS = [];
-  const shopLink = sh => location.origin + '/go/' + sh.key; // 네이버 입력칸에서 = 기호를 못 써서 /go/키 모양
+  // 네이버 입력칸에서 = 기호를 못 써서 /go/키 모양. 모의면접 상품은 처음부터 모의면접 앱 주소로
+  const shopLink = sh => (sh.product === 'interview' ? INTERVIEW_APP_URL : location.origin + '/') + 'go/' + sh.key;
   // 네이버 유의사항 칸은 · " = 같은 기호를 못 써서, 허용되는 기호(- , : ())만 사용
   const shopNotice = sh => `결제 후 아래 링크에서 이름, 이메일, 네이버 예약번호를 넣으면 바로 시작할 수 있어요.\n${shopLink(sh)}\n\n- 이용 기간: 시작한 날부터 ${sh.days}일\n- 작성 내용은 자동 저장돼요. 기간 안에는 나갔다가 다시 들어와도 이어서 쓸 수 있어요.\n- 다 마치면 최종 제출을 눌러 주세요. 제출은 한 번만 가능해요.\n- 제출 후 영업일 기준 2일 이내에 강사가 직접 검토한 결과를 이메일로 보내드려요.\n- 예약번호는 네이버 앱 예약 내역에서 확인할 수 있어요.`;
   function shopRow(sh) {
@@ -1367,6 +1368,7 @@ async function renderShopJoin(key) {
   let shop;
   try { shop = (await post({ action: 'shopInfo', key })).shop; }
   catch (e) { app.innerHTML = `<div class="card"><h2>입장할 수 없어요</h2><p style="font-size:14px;color:var(--muted);line-height:1.7">${escapeHtml(e.message)}</p></div>`; return; }
+  if (shop.product === 'interview') { location.href = INTERVIEW_APP_URL + 'go/' + encodeURIComponent(key); return; }
   app.innerHTML = `
     <div class="card" style="background:var(--green-light);border-color:transparent">
       <div style="font-size:17px;font-weight:800;color:var(--navy)">${escapeHtml(CLIENT_PRODUCT_NAMES[shop.product] || shop.productName)}</div>
