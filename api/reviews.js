@@ -5,6 +5,7 @@
 //  - 대기함 전체 목록(GET)과 삭제(DELETE)는 강사용 암호 필요
 import Redis from 'ioredis';
 import { isStaff } from './_staff.js';
+import { CLIENT_T, getClient, useClientPart, releaseClientPart, attachReviewCode } from './client-code.js';
 
 let redis;
 function getRedis() {
@@ -68,7 +69,30 @@ export default async function handler(req, res) {
     const id = 'r_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     const code = genCode();
     const item = { id, code, teacherId: t, ...req.body, createdAt: Date.now() };
-    await client.set(itemKey(id), JSON.stringify(item));
+
+    // 개인 고객(네이버 예약): 코드당 1번만 제출 가능 — 서버에서 잠금 (2026-10-01)
+    const clientCode = String((req.body && req.body.clientCode) || '').trim();
+    if (clientCode) {
+      if (t !== CLIENT_T) return res.status(400).json({ error: '잘못된 제출 주소예요.' });
+      const info = await getClient(client, clientCode);
+      const its = Array.isArray(item.items) ? item.items : [];
+      if (info && (its.length > info.items.length || its.some(x => !info.items.includes(x.questionType)))) {
+        return res.status(403).json({ error: '이 상품에서 열리지 않은 문항이 들어 있어요. 화면을 새로고침한 뒤 다시 제출해 주세요.' });
+      }
+      const used = await useClientPart(client, clientCode, 'resume', code);
+      if (used.error) return res.status(used.status).json({ error: used.error });
+      item.clientCode = used.data.code;
+      item.clientProduct = used.data.product;
+      if (!item.studentEmail && used.data.email) item.studentEmail = used.data.email; // 예약 때 받은 이메일
+      if (used.data.memo && !item.clientMemo) item.clientMemo = used.data.memo;
+    }
+
+    try {
+      await client.set(itemKey(id), JSON.stringify(item));
+    } catch (err) {
+      if (clientCode) await releaseClientPart(client, clientCode, 'resume'); // 저장 실패하면 다시 제출할 수 있게
+      throw err;
+    }
 
     const indexRaw = await client.get(indexKey);
     const index = indexRaw ? JSON.parse(indexRaw) : [];
@@ -76,6 +100,8 @@ export default async function handler(req, res) {
     await client.set(indexKey, JSON.stringify(index));
 
     await notifyByEmail(client, t, item); // 서버리스 환경에서는 응답 전에 완료를 기다려야 중간에 끊기지 않음
+
+    if (clientCode) { try { await attachReviewCode(client, clientCode, 'resume', code); } catch (e) { console.error(e); } }
 
     return res.status(200).json({ ok: true, id, code });
   }

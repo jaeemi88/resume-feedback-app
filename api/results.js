@@ -169,11 +169,17 @@ export default async function handler(req, res) {
       item.expiresAt = new Date(approvedDate.getFullYear(), approvedDate.getMonth(), approvedDate.getDate() + groupCodeExpiryDays).getTime();
     }
 
+    // 개인 고객(네이버 예약)은 결과를 승인일부터 30일간 볼 수 있게 (2026-10-01)
+    if (item.clientCode) {
+      const d0 = new Date(item.approvedAt);
+      item.expiresAt = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() + 30).getTime();
+    }
+
     await client.set(itemKey(id), JSON.stringify(item));
 
     const indexRaw = await client.get(indexKey);
     const index = indexRaw ? JSON.parse(indexRaw) : [];
-    index.push({ id, code: item.code || '', studentName: item.studentName || '', presetName: item.presetName || '기본', itemCount: (item.items || []).length, docType: item.docType || 'resume', approvedAt: item.approvedAt, expiresAt: item.expiresAt || null });
+    index.push({ id, code: item.code || '', studentName: item.studentName || '', presetName: item.presetName || '기본', itemCount: (item.items || []).length, docType: item.docType || 'resume', approvedAt: item.approvedAt, expiresAt: item.expiresAt || null, clientCode: item.clientCode || '' });
     await client.set(indexKey, JSON.stringify(index));
 
     await notifyStudentByEmail(t, id, item, req.headers.host); // 서버리스 환경에서는 응답 전에 완료를 기다려야 중간에 끊기지 않음
