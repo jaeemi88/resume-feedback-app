@@ -984,7 +984,10 @@ function initClientManager(box, masterPw) {
   box.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
       <h2 style="margin:0">👤 개인 고객 (네이버 예약)</h2>
-      <button class="btn-primary" id="clAddToggle">+ 고객 코드 만들기</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn-secondary" id="clExcel">📥 엑셀로 받기</button>
+        <button class="btn-primary" id="clAddToggle">+ 고객 코드 만들기</button>
+      </div>
     </div>
     <p style="font-size:12.5px;color:var(--muted);margin:6px 0 12px;line-height:1.6">고객마다 코드를 만들어 <b>링크만</b> 보내면 돼요. 고객은 열어준 문항만 모아 <b>한 번</b> 제출하고, 제출물은 원장님 <b>검수 대기함</b>(jinromoa)으로 들어와요. 승인하면 결과 링크가 고객 이메일로 가요.</p>
     <div class="rb-add" id="clAdd" style="display:none">
@@ -1084,6 +1087,57 @@ function initClientManager(box, masterPw) {
     const hit = PRESETS.find(p => p.id !== 'default' && (job.includes(p.name.replace(/\s|과$/g, '')) || p.name.replace(/\s/g, '').includes(job)));
     if (hit) $('clPreset').value = hit.id;
   });
+  // ── 📥 엑셀로 받기: 누를 때마다 서버의 최신 목록으로 새 파일을 만들어요 ──
+  function loadXlsxLib() {
+    if (window.XLSX) return Promise.resolve();
+    return new Promise((ok, no) => {
+      const sc = document.createElement('script');
+      sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      sc.onload = ok; sc.onerror = () => no(new Error('엑셀 기능을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.'));
+      document.head.appendChild(sc);
+    });
+  }
+  $('clExcel').addEventListener('click', async () => {
+    const btn = $('clExcel'); btn.disabled = true; btn.textContent = '만드는 중...';
+    try {
+      await Promise.all([loadXlsxLib(), load()]); // 최신 목록 다시 불러오기
+      const f = (ms, k) => ms ? moaDate(ms, k || 'time') : '';
+      const rows = LIST.map(d => {
+        const u = d.used || {};
+        const parts = d.product === 'set' ? ['resume', 'interview'] : [d.product];
+        const link = (d.product === 'interview' ? INTERVIEW_APP_URL : location.origin + '/') + '?c=' + d.code;
+        return {
+          '등록일시': f(d.createdAt),
+          '경로': d.auto ? '네이버 자동' : '직접 발급',
+          '이름': d.name || '',
+          '네이버 예약번호': d.bookingNo || '',
+          '메모': d.auto ? (d.shopLabel || '') : (d.memo || ''),
+          '상품': CLIENT_PRODUCT_NAMES[d.product] || d.product,
+          '자소서 문항': d.product === 'interview' ? '' : ((d.maxItems && d.maxItems < allItems.length) ? d.maxItems + '개' : '전 문항'),
+          '지원 직무': d.job || '',
+          '지원 기업': d.company || '',
+          '이메일': d.email || '',
+          '상태': stateOf(d)[0],
+          '자소서 제출': parts.includes('resume') ? (u.resume ? f(u.resume.at) : '미제출') : '-',
+          '자소서 확인코드': u.resume ? (u.resume.reviewCode || '') : '',
+          '면접 제출': parts.includes('interview') ? (u.interview ? f(u.interview.at) : '미제출') : '-',
+          '이용 기간 끝': f(d.expiresAt - 1, 'day'),
+          '고객 코드': d.code,
+          '입장 링크': link
+        };
+      });
+      if (!rows.length) { alert('아직 고객이 없어요.'); return; }
+      const ws = XLSX.utils.json_to_sheet(rows);
+      ws['!cols'] = Object.keys(rows[0]).map(k => ({ wch: Math.min(40, Math.max(k.length * 2 + 2, ...rows.map(r => String(r[k]).length + 2))) }));
+      ws['!autofilter'] = { ref: ws['!ref'] };
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, '개인 고객');
+      const t = new Date(); const ymd = String(t.getFullYear()).slice(2) + ('0' + (t.getMonth() + 1)).slice(-2) + ('0' + t.getDate()).slice(-2);
+      XLSX.writeFile(wb, `진로모아_개인고객_${ymd}.xlsx`);
+    } catch (e) { alert(e.message); }
+    btn.disabled = false; btn.textContent = '📥 엑셀로 받기';
+  });
+
   $('clAddToggle').addEventListener('click', () => { const a = $('clAdd'); a.style.display = a.style.display === 'none' ? 'block' : 'none'; });
   $('clAddBtn').addEventListener('click', async () => {
     const err = $('clAddErr'); err.style.display = 'none';
