@@ -36,6 +36,10 @@
 //   POST { action:'setLimits', master, limits:{resume,interview,set} }
 //   POST { action:'setHold', master, code, hold }        → hold:false = 예약 확인 완료(보류 풀기, 고객에게 메일) / true = 보류로 표시
 //
+// [취소·환불 규정 — 2026-10-02 수익화 랩 확정]
+//   등록 때 환불 규정 동의 필수(agreeRefund → refundAgreedAt 기록), 최종 제출 확인 창에서도 동의 후 제출.
+//   환불로 표시하면(refund) 금액(부분 환불 가능, 세트 40,000원 등) 기록 + 작성 중 저장 내용 삭제 + 고객 링크 막힘.
+//
 // [다른 서버 파일에서 사용] useClientPart(client, code, part) → 제출 1회 사용 처리 (reviews.js)
 // ※ 자소서 앱·모의면접 앱에 같은 파일이 들어 있어요. 고칠 때는 두 앱 모두 똑같이 바꿔 주세요.
 import Redis from 'ioredis';
@@ -100,6 +104,7 @@ async function todayCounts(client) {
   for (const p of Object.keys(PRODUCTS)) out[p] = +(await client.get(DAILY(ymd, p))) || 0;
   return out;
 }
+export const REFUND_MSG = '환불 처리된 예약이에요. 궁금한 점은 jinromoa@naver.com 으로 문의해 주세요.';
 export const HOLD_MSG = '예약 확인이 끝나면 제출할 수 있어요. 작성한 내용은 자동 저장되니 그대로 두시면 돼요. (보통 하루 안에 확인돼요)';
 function partsOf(product) {
   return product === 'set' ? ['resume', 'interview'] : [product];
@@ -210,6 +215,7 @@ export async function useClientPart(client, code, part, reviewCode) {
   if (!d) return { error: '입장 코드를 찾을 수 없어요.', status: 404 };
   if (Date.now() > d.expiresAt) return { error: '이용 기간이 끝난 코드예요. 진로모아로 문의해 주세요.', status: 410 };
   if (!partsOf(d.product).includes(part)) return { error: '이 상품에 포함되지 않은 항목이에요.', status: 403 };
+  if (d.refundedAt) return { error: REFUND_MSG, status: 410 };
   if (d.hold) return { error: HOLD_MSG, status: 423 };
   const ok = await client.set(USED(d.code, part), JSON.stringify({ at: Date.now(), reviewCode: reviewCode || '' }), 'NX');
   if (!ok) return { error: '이미 제출을 마친 코드예요. 제출 후에는 수정할 수 없어요.', status: 409 };
@@ -253,6 +259,7 @@ export default async function handler(req, res) {
         await client.expire(failKey, 900);
         return res.status(404).json({ ok: false, error: '입장 코드가 맞지 않아요. 받으신 링크를 다시 눌러 주세요.' });
       }
+      if (d.refundedAt) return res.status(410).json({ ok: false, error: REFUND_MSG });
       if (Date.now() > d.expiresAt) return res.status(410).json({ ok: false, expired: true, error: '이용 기간이 끝났어요. 진로모아로 문의해 주세요.' });
       const out = { ok: true, client: publicView(await withUsed(client, d)) };
       if (body.part === 'resume' || body.part === 'interview') {
@@ -268,6 +275,7 @@ export default async function handler(req, res) {
       const d = await getClient(client, body.code);
       if (!d || !part) return res.status(404).json({ ok: false, error: '코드를 찾을 수 없어요.' });
       if (Date.now() > d.expiresAt) return res.status(410).json({ ok: false, error: '이용 기간이 끝났어요.' });
+      if (d.refundedAt) return res.status(410).json({ ok: false, error: REFUND_MSG });
       if (await client.get(USED(d.code, part))) return res.status(409).json({ ok: false, error: '이미 제출을 마쳤어요.' });
       const json = JSON.stringify({ data: body.data || null, savedAt: Date.now() });
       if (json.length > DRAFT_MAX) return res.status(413).json({ ok: false, error: '내용이 너무 길어 저장하지 못했어요.' });
@@ -291,6 +299,7 @@ export default async function handler(req, res) {
       if (!name) return res.status(400).json({ ok: false, error: '이름을 입력해 주세요.' });
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return res.status(400).json({ ok: false, error: '이메일 주소를 다시 확인해 주세요.' });
       if (bookingNo.replace(/-/g, '').length < 4) return res.status(400).json({ ok: false, error: '네이버 예약번호를 정확히 입력해 주세요.' });
+      if (!body.agreeRefund) return res.status(400).json({ ok: false, error: '취소·환불 규정을 확인하고 동의해 주세요.' });
 
       // 같은 예약번호로 이미 받은 코드가 있으면 새로 만들지 않고 그 링크를 다시 메일로 보내줌
       const existing = await client.hget(BOOKINGS, bookingNo);
@@ -312,7 +321,7 @@ export default async function handler(req, res) {
         product: shop.product, items: RESUME_ITEMS.slice(), maxItems: shop.maxItems || RESUME_ITEMS.length, interviewCats: [],
         memo: `예약 ${bookingNo}`, name, bookingNo, shopId: shop.id, shopLabel: shop.label, auto: true, price: shop.price || 0,
         job, company: clean(body.company, 40), presetId: await matchPreset(client, job), email,
-        createdAt: now, expiresAt: now + days * 24 * 3600 * 1000,
+        createdAt: now, expiresAt: now + days * 24 * 3600 * 1000, refundAgreedAt: now,
         ...(limit > 0 && nToday > limit ? { hold: { reason: `하루 상한 초과 (오늘 ${nToday}번째 · 상한 ${limit})`, at: now } } : {})
       };
       const d = await createClient(client, base, days);
@@ -416,7 +425,13 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, item: await withUsed(client, d) });
     }
     if (req.method === 'POST' && body.action === 'refund') {
-      d.refundedAt = body.refunded ? Date.now() : null;
+      if (body.refunded) {
+        d.refundedAt = Date.now();
+        d.refundAmount = body.amount == null || body.amount === '' ? (d.price || 0) : cleanPrice(body.amount);
+        await client.del(DRAFT(d.code, 'resume'), DRAFT(d.code, 'interview')); // 규정: 자동 저장 내용은 환불과 함께 삭제
+      } else {
+        d.refundedAt = null; d.refundAmount = null;
+      }
       await save(client, d);
       return res.status(200).json({ ok: true, item: await withUsed(client, d) });
     }
