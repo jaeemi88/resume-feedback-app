@@ -40,6 +40,14 @@
 //   등록 때 환불 규정 동의 필수(agreeRefund → refundAgreedAt 기록), 최종 제출 확인 창에서도 동의 후 제출.
 //   환불로 표시하면(refund) 금액(부분 환불 가능, 세트 40,000원 등) 기록 + 작성 중 저장 내용 삭제 + 고객 링크 막힘.
 //
+// [5년 정산 장부 · 오류 알림 — 2026-10-02 수익화 랩 확정]
+//   개인정보처리방침: 계약·결제·환불 기록 5년 / 작성 내용·결과물은 이용 기간 끝나고 30일 뒤 삭제.
+//   → 고객 코드(moa_client:*)는 지금처럼 30일 뒤 사라지고, 정산에 필요한 항목만 장부(moa_client_ledger)에 5년 보관.
+//     장부 항목: 코드·이름·이메일·예약번호·상품·금액·환불(금액·일시)·등록/동의/제출 시각·대조 기록 (작성 내용은 넣지 않음)
+//   GET ?ledger=1&master=비밀번호 → 장부 전체 (5년 지난 줄은 이때 자동 삭제)
+//   오류가 나면(입장 메일 실패·고객 제출 실패 등) 원장님 메일로 자동 알림 (같은 종류는 1시간에 1번만)
+//   POST { action:'reportError', code, where, message } → 고객 화면에서 제출 실패 알림 (누구나 · 코드가 있어야 함)
+//
 // [다른 서버 파일에서 사용] useClientPart(client, code, part) → 제출 1회 사용 처리 (reviews.js)
 // ※ 자소서 앱·모의면접 앱에 같은 파일이 들어 있어요. 고칠 때는 두 앱 모두 똑같이 바꿔 주세요.
 import Redis from 'ioredis';
@@ -63,6 +71,9 @@ const BOOKINGS = 'moa_client_bookings';        // 해시: 네이버 예약번호
 const LIMITS = 'moa_client_limits';            // JSON: 상품별 하루 자동 등록 상한
 const DAILY = (ymd, product) => `moa_client_daily:${ymd}:${product}`; // 그날 자동 등록 수
 const DEFAULT_LIMITS = { resume: 2, interview: 2, set: 1 };
+const LEDGER = 'moa_client_ledger';            // 해시: 코드 → 정산 기록 JSON (5년 보관)
+const LEDGER_KEEP = 5 * 365 * 24 * 3600 * 1000;
+const ADMIN_FALLBACK = 'jinromoa@naver.com';
 export const RESUME_APP_URL = 'https://resume-feedback-app-phi.vercel.app/';
 export const INTERVIEW_APP_URL = 'https://moa-interview-app.vercel.app/';
 
@@ -91,6 +102,56 @@ function genCode() {
   for (let i = 0; i < 6; i++) c += chars[crypto.randomInt(0, chars.length)];
   return c;
 }
+// ── 5년 정산 장부 ──
+export async function ledgerSync(client, d, patch) {
+  try {
+    if (!d || !d.code) return;
+    const raw = await client.hget(LEDGER, d.code);
+    const old = raw ? JSON.parse(raw) : {};
+    const row = {
+      ...old,
+      code: d.code, product: d.product, auto: !!d.auto, name: d.name || old.name || '', email: d.email || old.email || '',
+      bookingNo: d.bookingNo || old.bookingNo || '', memo: d.memo || '', shopLabel: d.shopLabel || '',
+      price: d.price || 0, createdAt: d.createdAt || old.createdAt || Date.now(), expiresAt: d.expiresAt,
+      refundAgreedAt: d.refundAgreedAt || old.refundAgreedAt || null,
+      refundedAt: d.refundedAt || null, refundAmount: d.refundedAt ? (d.refundAmount != null ? d.refundAmount : (d.price || 0)) : null,
+      checkedAt: d.checkedAt || old.checkedAt || null, holdReason: d.hold ? d.hold.reason : (old.holdReason || ''),
+      submitted: { ...(old.submitted || {}) }, errors: old.errors || [],
+      ...(patch || {})
+    };
+    if (patch && patch.submitted) row.submitted = { ...(old.submitted || {}), ...patch.submitted };
+    if (patch && patch.error) { row.errors = [...(old.errors || []), patch.error].slice(-10); delete row.error; }
+    await client.hset(LEDGER, d.code, JSON.stringify(row));
+  } catch (e) { console.error('장부 기록 실패:', e); }
+}
+async function adminEmail(client) {
+  try { const raw = await client.get('resume_app_config:' + CLIENT_T); const c = raw ? JSON.parse(raw) : {}; if (c.notifyEmail) return c.notifyEmail; } catch (e) {}
+  return process.env.ADMIN_EMAIL || ADMIN_FALLBACK;
+}
+// 원장님께 오류 알림 메일 (같은 kind는 1시간에 1번)
+export async function alertAdmin(client, kind, subject, text) {
+  try {
+    if (!process.env.RESEND_API_KEY) return false;
+    const k = 'moa_alert:' + kind;
+    if (!(await client.set(k, '1', 'EX', 3600, 'NX'))) return false;
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: 'MOA FORMULA <moaformula@jinromoa.co.kr>', to: [await adminEmail(client)], subject: '[취업스킬 알림] ' + subject, text: text + '\n\n원장 화면: ' + RESUME_APP_URL + '?master=1' })
+    });
+    return r.ok;
+  } catch (e) { console.error('알림 실패:', e); return false; }
+}
+export async function getAdminEmail(client) { return adminEmail(client); }
+export async function readLedger(client) {
+  const all = await client.hgetall(LEDGER);
+  const out = [], cut = Date.now() - LEDGER_KEEP;
+  for (const [code, raw] of Object.entries(all)) {
+    try { const r = JSON.parse(raw); if ((r.createdAt || 0) < cut) { await client.hdel(LEDGER, code); continue; } out.push(r); } catch (e) {}
+  }
+  return out.sort((a, b) => b.createdAt - a.createdAt);
+}
+
 function kstYmd(ms) {
   const d = new Date((ms || Date.now()) + 9 * 3600 * 1000);
   return d.getUTCFullYear() + String(d.getUTCMonth() + 1).padStart(2, '0') + String(d.getUTCDate()).padStart(2, '0');
@@ -112,6 +173,7 @@ function partsOf(product) {
 async function save(client, d) {
   const ttl = Math.max(3600, Math.ceil((d.expiresAt - Date.now()) / 1000) + KEEP_AFTER_END);
   await client.set(PREFIX + d.code, JSON.stringify(d), 'EX', ttl);
+  await ledgerSync(client, d);
 }
 async function withUsed(client, d) {
   const used = {};
@@ -140,7 +202,7 @@ async function createClient(client, base, days) {
   for (let i = 0; i < 20; i++) {
     const code = genCode();
     const ok = await client.set(PREFIX + code, JSON.stringify({ code, ...base }), 'EX', days * 24 * 3600 + KEEP_AFTER_END, 'NX');
-    if (ok) { await client.hset(INDEX, code, String(base.createdAt)); return { code, ...base }; }
+    if (ok) { await client.hset(INDEX, code, String(base.createdAt)); await ledgerSync(client, { code, ...base }); return { code, ...base }; }
   }
   return null;
 }
@@ -174,6 +236,14 @@ async function mailEntryLink(d) {
     if (!r.ok) console.error('입장 링크 메일 실패:', r.status, await r.text());
     return r.ok;
   } catch (e) { console.error('입장 링크 메일 실패:', e); return false; }
+}
+async function mailEntryLinkOrAlert(client, d) {
+  const ok = await mailEntryLink(d);
+  if (!ok && d.email) {
+    await ledgerSync(client, d, { error: { at: Date.now(), where: '입장 메일', message: '입장 링크 메일 발송 실패' } });
+    await alertAdmin(client, 'entrymail', '입장 링크 메일이 안 나갔어요', `고객 코드 ${d.code} (${d.name || ''} · 예약 ${d.bookingNo || '-'})에게 입장 링크 메일을 보내지 못했어요.\n고객 화면에는 링크가 바로 열려 있어 작성은 할 수 있어요. 원장 화면에서 링크 보내기로 다시 안내해 주세요.`);
+  }
+  return ok;
 }
 async function mailHoldReleased(d) {
   try {
@@ -221,6 +291,7 @@ export async function useClientPart(client, code, part, reviewCode) {
   if (!ok) return { error: '이미 제출을 마친 코드예요. 제출 후에는 수정할 수 없어요.', status: 409 };
   try { await client.del(DRAFT(d.code, part)); } catch (e) {} // 제출했으니 임시 저장은 지움
   await client.expire(USED(d.code, part), Math.max(3600, Math.ceil((d.expiresAt - Date.now()) / 1000) + KEEP_AFTER_END));
+  await ledgerSync(client, d, { submitted: { [part]: Date.now() } });
   return { data: d };
 }
 // 이미 제출했는지 확인 (세트 상품: 자소서를 먼저 내야 면접 제출 가능)
@@ -284,6 +355,16 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, savedAt: Date.now() });
     }
 
+    // ── 고객 화면 오류 알림 (코드를 가진 고객) ──
+    if (req.method === 'POST' && body.action === 'reportError') {
+      const d = await getClient(client, body.code);
+      if (!d) return res.status(404).json({ ok: false });
+      const where = clean(body.where, 30) || '고객 화면', message = clean(body.message, 300);
+      await ledgerSync(client, d, { error: { at: Date.now(), where, message } });
+      await alertAdmin(client, 'client:' + d.code, `${d.name || d.code} 고객 ${where} 오류`, `고객 코드 ${d.code} (${PRODUCTS[d.product]} · 예약 ${d.bookingNo || '-'})\n위치: ${where}\n내용: ${message || '(없음)'}\n\n고객이 다시 시도하면 해결될 수 있어요. 계속되면 "시스템 오류 시 전액 환불" 대상인지 확인해 주세요.`);
+      return res.status(200).json({ ok: true });
+    }
+
     // ── 네이버 예약 자동 입장 (누구나) ──
     if (req.method === 'POST' && (body.action === 'shopInfo' || body.action === 'shopJoin')) {
       const shop = await findShop(client, String(body.key || '').slice(0, 40));
@@ -306,7 +387,7 @@ export default async function handler(req, res) {
       if (existing) {
         const d0 = await getClient(client, existing);
         if (d0) {
-          if (d0.email === email) { await mailEntryLink(d0); return res.status(200).json({ ok: true, again: true, code: d0.code, link: entryLink(d0) }); }
+          if (d0.email === email) { await mailEntryLinkOrAlert(client, d0); return res.status(200).json({ ok: true, again: true, code: d0.code, link: entryLink(d0) }); }
           return res.status(409).json({ ok: false, error: '이미 등록된 예약번호예요. 처음 등록한 이메일의 안내 메일을 확인하시거나 진로모아로 문의해 주세요.' });
         }
       }
@@ -327,8 +408,8 @@ export default async function handler(req, res) {
       const d = await createClient(client, base, days);
       if (!d) return res.status(503).json({ ok: false, error: '잠시 후 다시 시도해 주세요.' });
       const okB = await client.hsetnx(BOOKINGS, bookingNo, d.code);
-      if (!okB) { await client.del(PREFIX + d.code); await client.hdel(INDEX, d.code); return res.status(409).json({ ok: false, error: '이미 등록된 예약번호예요.' }); }
-      const mailed = await mailEntryLink(d);
+      if (!okB) { await client.del(PREFIX + d.code); await client.hdel(INDEX, d.code); await client.hdel(LEDGER, d.code); return res.status(409).json({ ok: false, error: '이미 등록된 예약번호예요.' }); }
+      const mailed = await mailEntryLinkOrAlert(client, d);
       return res.status(200).json({ ok: true, code: d.code, link: entryLink(d), mailed, hold: !!d.hold });
     }
 
@@ -337,6 +418,9 @@ export default async function handler(req, res) {
     if (!process.env.MASTER_ADMIN_PASSWORD) return res.status(500).json({ ok: false, error: '서버에 관리자 비밀번호가 설정되지 않았어요.' });
     if (!checkAdmin(pw)) return res.status(401).json({ ok: false, error: '관리자 비밀번호가 맞지 않아요.' });
 
+    if (req.method === 'GET' && req.query.ledger) {
+      return res.status(200).json({ ok: true, items: await readLedger(client) });
+    }
     if (req.method === 'GET' && req.query.limits) {
       return res.status(200).json({ ok: true, limits: await getLimits(client), today: await todayCounts(client) });
     }
@@ -461,6 +545,7 @@ export default async function handler(req, res) {
       await client.del(PREFIX + d.code, USED(d.code, 'resume'), USED(d.code, 'interview'), DRAFT(d.code, 'resume'), DRAFT(d.code, 'interview'));
       await client.hdel(INDEX, d.code);
       if (d.bookingNo) await client.hdel(BOOKINGS, d.bookingNo);
+      await ledgerSync(client, d, { deletedAt: Date.now() }); // 코드는 지워도 정산 기록은 5년 보관
       return res.status(200).json({ ok: true });
     }
 

@@ -1118,7 +1118,15 @@ function initClientManager(box, masterPw) {
     try {
       await Promise.all([loadXlsxLib(), load()]); // 최신 목록 다시 불러오기
       const f = (ms, k) => ms ? moaDate(ms, k || 'time') : '';
-      const rows = LIST.map(d => {
+      // 30일 지나 지워진 고객·삭제한 코드도 5년 장부에서 함께 (2026-10-02)
+      let LEDGER_ROWS = [];
+      try { const lr = await fetch('/api/client-code?ledger=1&master=' + encodeURIComponent(masterPw)); LEDGER_ROWS = (await lr.json()).items || []; } catch (e) {}
+      const have = new Set(LIST.map(d => d.code));
+      const ALL = LIST.concat(LEDGER_ROWS.filter(r => !have.has(r.code)).map(r => ({
+        ...r, items: [], gone: true, memo: r.memo || r.shopLabel || '', expiresAt: r.expiresAt || r.createdAt,
+        used: { resume: r.submitted && r.submitted.resume ? { at: r.submitted.resume } : null, interview: r.submitted && r.submitted.interview ? { at: r.submitted.interview } : null }
+      })));
+      const rows = ALL.map(d => {
         const u = d.used || {};
         const parts = d.product === 'set' ? ['resume', 'interview'] : [d.product];
         const link = (d.product === 'interview' ? INTERVIEW_APP_URL : location.origin + '/') + '?c=' + d.code;
@@ -1138,7 +1146,7 @@ function initClientManager(box, masterPw) {
           '환불': d.refundedAt ? '환불 (' + f(d.refundedAt, 'day') + ')' : '',
           '환불 금액': d.refundedAt ? (d.refundAmount != null ? d.refundAmount : (d.price || 0)) : '',
           '환불 규정 동의': d.refundAgreedAt ? f(d.refundAgreedAt) : (d.auto ? '' : '직접 발급 (제출 때 동의)'),
-          '상태': stateOf(d)[0],
+          '상태': d.gone ? (d.deletedAt ? '코드 삭제 (장부 보관)' : '보관 기간 지남 (장부 보관)') : stateOf(d)[0],
           '자소서 제출': parts.includes('resume') ? (u.resume ? f(u.resume.at) : '미제출') : '-',
           '자소서 확인코드': u.resume ? (u.resume.reviewCode || '') : '',
           '면접 제출': parts.includes('interview') ? (u.interview ? f(u.interview.at) : '미제출') : '-',
@@ -1155,12 +1163,13 @@ function initClientManager(box, masterPw) {
       XLSX.utils.book_append_sheet(wb, ws, '개인 고객');
       // ── 2번째 시트: 월별 정산 요약 (등록한 달 기준, 환불 건은 매출에서 제외) ──
       const sum = {};
-      LIST.forEach(d => {
+      ALL.forEach(d => {
         const dt = new Date(d.createdAt);
         const ym = dt.getFullYear() + '.' + ('0' + (dt.getMonth() + 1)).slice(-2);
         const prod = CLIENT_PRODUCT_NAMES[d.product] || d.product;
         const k = ym + '|' + prod;
         sum[k] = sum[k] || { '월': ym, '상품': prod, '판매 건수': 0, '예상 매출': 0, '환불 건수': 0, '환불 금액': 0, '금액 미입력': 0 };
+        if (d.deletedAt && !d.refundedAt) return; // 삭제한 코드(가짜 등록 등)는 정산에서 제외
         const price = d.price || 0;
         const rf = d.refundedAt ? Math.min(price || Infinity, d.refundAmount != null ? d.refundAmount : price) : 0;
         if (d.refundedAt) { sum[k]['환불 건수']++; sum[k]['환불 금액'] += rf; }
@@ -1420,7 +1429,7 @@ const REFUND_POLICY_HTML = `<div style="font-size:13px;line-height:1.75;color:#3
 <b>■ 최종 제출 전: 전액 환불</b><br>- 결제 후 앱에서 '최종 제출'을 누르기 전까지는 언제든 전액 환불됩니다.<br>- 작성 중 자동 저장된 내용은 환불과 함께 삭제됩니다.<br>
 <b>■ 최종 제출 후: 환불 불가</b><br>- 제출과 동시에 AI 분석 및 강사 검토가 시작되어 서비스 제공이 개시됩니다.<br>- 제출 전 확인 창에서 이 내용에 동의한 후 제출됩니다.<br>
 <b>■ 세트 상품(자소서 + 모의면접)</b><br>- 자소서 제출 후 모의면접 제출 전 취소 시: 40,000원 환불<br>- 두 항목 모두 제출 후: 환불 불가<br>
-<b>■ 이용 기간</b><br>- 입장 링크 발송일로부터 14일 이내에 제출해 주세요.<br>- 기간 내 사정이 생기면 만료 전 이메일로 요청 시 1회 7일 연장됩니다.<br>- 기간 만료 후 미제출 건은 환불되지 않습니다.<br>
+<b>■ 이용 기간</b><br>- 입장 링크 발송일로부터 14일 이내에 제출해 주세요.<br>- 기간 내 사정이 생기면 만료 전 이메일로 요청 시 1회 7일 연장됩니다.<br>- 기간 만료 후 미제출 건은 환불되지 않습니다.<br>- 결제 후 30일 이내 입장 등록이 없으면 이용 의사가 없는 것으로 보고 전액 환불 후 종료합니다.<br>
 <b>■ 예외:</b> 시스템 오류 등 당사 사정으로 결과를 제공하지 못한 경우 전액 환불합니다.<br>
 <span style="color:#666">※ 본 서비스는 제출 시점에 제공이 개시되는 용역으로, 제출 후에는 전자상거래법 제17조 제2항에 따라 청약철회가 제한됩니다.</span><br>환불 문의: jinromoa@naver.com</div>`;
 function refundDetailsHtml() {
@@ -1585,7 +1594,7 @@ async function renderShopJoin(key) {
       <label>지원 기업 <span style="font-weight:400;color:var(--muted)">(선택)</span></label><input type="text" id="sjCompany" placeholder="예) ○○병원">
       <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;font-size:13px;line-height:1.6;margin-top:14px;cursor:pointer">
         <input type="checkbox" id="sjAgree" style="width:auto;margin-top:3px">
-        <span>[필수] 개인정보 수집·이용에 동의해요.<br><span style="color:var(--muted)">수집 항목: 이름·이메일·예약번호·작성 내용 / 목적: 첨삭·모의면접 결과 제공 / 보관: 이용 기간이 끝나고 30일 뒤 자동 삭제</span></span>
+        <span>[필수] 개인정보 수집·이용에 동의해요.<br><span style="color:var(--muted)">수집 항목: 이름·이메일·예약번호·작성 내용 / 목적: 첨삭·모의면접 결과 제공 / 보관: 작성 내용은 이용 기간이 끝나고 30일 뒤 자동 삭제, 결제·환불 기록(이름·이메일·예약번호·금액)은 법령에 따라 5년</span> <a href="https://moa-hub.vercel.app/privacy.html" target="_blank" rel="noopener">개인정보처리방침 보기</a></span>
       </label>
       <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;font-size:13px;line-height:1.6;margin-top:10px;cursor:pointer">
         <input type="checkbox" id="sjRefund" style="width:auto;margin-top:3px">
@@ -2228,6 +2237,7 @@ async function renderStudentSubmitForm() {
       document.getElementById('addItemBtn').style.display = 'none';
       submitBtn.style.display = 'none';
     } catch (e) {
+      if (CLIENT && !/예약 확인|환불 처리|이미 제출/.test(e.message)) { try { fetch('/api/client-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reportError', code: CLIENT.code, where: '자소서 최종 제출', message: e.message }) }); } catch (x) {} }
       statusMsg.textContent = '오류가 발생했습니다: ' + e.message;
       statusMsg.className = 'status-msg error';
       statusMsg.style.display = 'block';
