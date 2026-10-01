@@ -1005,7 +1005,7 @@ function initClientManager(box, masterPw) {
     <div id="clList"><div class="empty">불러오는 중...</div></div>
   `;
   const $ = id => document.getElementById(id);
-  const linkOf = code => location.origin + location.pathname + '?c=' + code;
+  const linkOf = code => { const d = LIST.find(x => x.code === code); return (d && d.product === 'interview' ? INTERVIEW_APP_URL : location.origin + location.pathname) + '?c=' + code; };
   const msgOf = d => `[진로모아커리어센터]\n예약해 주셔서 감사합니다.\n아래 링크에서 ${CLIENT_PRODUCT_NAMES[d.product] || ''}을(를) 진행해 주세요.\n\n${linkOf(d.code)}\n\n· 이용 기간: ${moaDate(d.expiresAt - 1, 'formal')}까지\n· 문항을 모두 모아 한 번에 제출해 주세요. 제출 후에는 수정할 수 없어요.`;
   async function post(body) {
     const res = await fetch('/api/client-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ master: masterPw, ...body }) });
@@ -1073,7 +1073,7 @@ function initClientManager(box, masterPw) {
       const { item } = await post({ action: 'create', memo: $('clMemo').value, product: $('clProduct').value, days: $('clDays').value, job: $('clJob').value, company: $('clCompany').value, presetId: $('clPreset').value, email: $('clEmail').value, items });
       $('clDone').innerHTML = `<div class="rb-done">✅ 코드 <b>${item.code}</b> 를 만들었어요.
         <div class="rb-btns" style="margin-top:8px"><button class="btn-primary" data-cl="copy" data-code="${item.code}">${SHARE_LABEL}</button></div>
-        <span style="color:var(--muted);font-size:12px">${escapeHtml(linkOf(item.code))}</span></div>`;
+        <span style="color:var(--muted);font-size:12px">${escapeHtml((item.product === 'interview' ? INTERVIEW_APP_URL : location.origin + location.pathname) + '?c=' + item.code)}</span></div>`;
       ['clMemo', 'clJob', 'clCompany', 'clEmail'].forEach(id => $(id).value = '');
       $('clAdd').style.display = 'none';
       await load();
@@ -1200,6 +1200,7 @@ function aspirationExtra(questionType, company) {
 // - 제출물은 원장님(jinromoa) 검수 대기함으로 들어가고, 강사 승인 후에만 결과가 보여요
 let CLIENT = null;
 const CLIENT_PRODUCT_NAMES = { resume: '자소서 첨삭', interview: '모의면접', set: '세트 (자소서 → 모의면접)' };
+const INTERVIEW_APP_URL = 'https://moa-interview-app.vercel.app/';
 
 function clientFilterOptions(html) {
   if (!CLIENT) return html;
@@ -1239,7 +1240,7 @@ async function renderClientEntry(rawCode) {
     return;
   }
   if (CLIENT.product === 'interview') {
-    app.innerHTML = `${clientBannerHtml()}<div class="card"><h2>모의면접 상품이에요</h2><p style="font-size:14px;color:var(--muted);line-height:1.7">모의면접 링크는 따로 안내드려요. 받으신 안내 메시지를 확인해 주세요.</p></div>`;
+    app.innerHTML = `${clientBannerHtml()}<div class="card"><h2>모의면접 상품이에요</h2><p style="font-size:14px;color:var(--muted);line-height:1.7">아래 버튼으로 이동해 주세요.</p><a class="btn-primary" style="display:inline-block;text-decoration:none;padding:10px 18px;border-radius:8px" href="${INTERVIEW_APP_URL}?c=${encodeURIComponent(CLIENT.code)}">모의면접 시작하기 →</a></div>`;
     return;
   }
   if (CLIENT.used && CLIENT.used.resume) {
@@ -1252,7 +1253,7 @@ async function renderClientEntry(rawCode) {
 // 제출 직후 / 이미 제출한 고객이 링크를 다시 열었을 때
 async function renderClientDone(reviewCode, justNow) {
   const nextStep = CLIENT.product === 'set'
-    ? `<div style="margin-top:12px;padding:12px;background:var(--navy-light);border-radius:8px;font-size:13px;line-height:1.7">다음 단계 <b>② 모의면접</b>은 자소서 첨삭 결과가 나온 뒤 같은 방법으로 안내드려요.</div>` : '';
+    ? `<div style="margin-top:12px;padding:12px;background:var(--navy-light);border-radius:8px;font-size:13px;line-height:1.7">다음 단계는 <b>② 모의면접</b>이에요. 같은 코드로 바로 이어서 할 수 있어요.${CLIENT.used && CLIENT.used.interview ? '<br><b>모의면접도 제출을 마치셨어요.</b>' : `<div style="margin-top:10px"><a class="btn-primary" style="display:inline-block;text-decoration:none;padding:10px 18px;border-radius:8px" href="${INTERVIEW_APP_URL}?c=${encodeURIComponent(CLIENT.code)}">② 모의면접 시작하기 →</a></div>`}</div>` : '';
   app.innerHTML = `
     ${clientBannerHtml()}
     <div class="card">

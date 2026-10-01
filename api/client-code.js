@@ -18,6 +18,7 @@
 //        같은 IP에서 20번 틀리면 15분 차단
 //
 // [다른 서버 파일에서 사용] useClientPart(client, code, part) → 제출 1회 사용 처리 (reviews.js)
+// ※ 자소서 앱·모의면접 앱에 같은 파일이 들어 있어요. 고칠 때는 두 앱 모두 똑같이 바꿔 주세요.
 import Redis from 'ioredis';
 import crypto from 'crypto';
 
@@ -100,6 +101,10 @@ export async function useClientPart(client, code, part, reviewCode) {
   if (!ok) return { error: '이미 제출을 마친 코드예요. 제출 후에는 수정할 수 없어요.', status: 409 };
   await client.expire(USED(d.code, part), Math.max(3600, Math.ceil((d.expiresAt - Date.now()) / 1000) + KEEP_AFTER_END));
   return { data: d };
+}
+// 이미 제출했는지 확인 (세트 상품: 자소서를 먼저 내야 면접 제출 가능)
+export async function isPartUsed(client, code, part) {
+  return !!(await client.get(USED(normCode(code), part)));
 }
 // 제출 저장이 실패했을 때 잠금을 되돌림
 export async function releaseClientPart(client, code, part) {
