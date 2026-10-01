@@ -20,6 +20,14 @@
 //   POST { action:'saveDraft', code, part, data } → 제출 전 작성 중인 내용 자동 저장 (2026-10-01)
 //        기간 안·제출 전에는 몇 번이든 나갔다 들어와도 이어서 쓸 수 있어요 (다른 기기에서도)
 //
+// [네이버 예약 자동 입장 링크 — 2026-10-02]
+//   상품별 고정 링크(?shop=키)를 네이버 예약 안내 문구에 넣어두면, 고객이 결제 후 스스로
+//   이름·이메일·예약번호를 넣고 바로 개인 코드를 받아 시작해요. (원장님 확인 없이 즉시)
+//   POST { action:'shopInfo', key }                       → 링크 정보 (누구나)
+//   POST { action:'shopJoin', key, name, email, bookingNo, job, company } → 코드 발급 + 입장 링크 메일 (누구나)
+//   GET  ?shops=1&master=비밀번호                          → 링크 목록 (원장님)
+//   POST { action:'shopCreate'|'shopRotate'|'shopToggle'|'shopDelete', master, ... } (원장님)
+//
 // [다른 서버 파일에서 사용] useClientPart(client, code, part) → 제출 1회 사용 처리 (reviews.js)
 // ※ 자소서 앱·모의면접 앱에 같은 파일이 들어 있어요. 고칠 때는 두 앱 모두 똑같이 바꿔 주세요.
 import Redis from 'ioredis';
@@ -37,7 +45,11 @@ const INDEX = 'moa_clients';                   // 해시: 코드 → 만든 시�
 const USED = (code, part) => `moa_client_used:${code}:${part}`; // 제출 1회 잠금 (있으면 이미 제출)
 const DRAFT = (code, part) => `moa_client_draft:${code}:${part}`; // 제출 전 임시 저장
 const DRAFT_MAX = 300 * 1024;                  // 임시 저장 최대 300KB
-const KEEP_AFTER_END = 60 * 24 * 3600;         // 기간 끝난 뒤 60일 지나면 Redis에서 자동 삭제
+const KEEP_AFTER_END = 30 * 24 * 3600;         // 기간 끝난 뒤 30일 지나면 Redis에서 자동 삭제 (개인정보처리방침 30일)
+const SHOPS = 'moa_client_shops';              // 해시: 링크 id → JSON (네이버 예약 자동 입장 링크)
+const BOOKINGS = 'moa_client_bookings';        // 해시: 네이버 예약번호 → 코드 (같은 번호 두 번 등록 막기)
+export const RESUME_APP_URL = 'https://resume-feedback-app-phi.vercel.app/';
+export const INTERVIEW_APP_URL = 'https://moa-interview-app.vercel.app/';
 
 export const RESUME_ITEMS = ['성장과정', '성격장단점', '지원동기', '협업갈등', '도전경험', '실패경험', '경력활동', '입사후포부'];
 const PRODUCTS = { resume: '자소서 첨삭', interview: '모의면접', set: '세트(자소서→면접)' };
@@ -84,11 +96,62 @@ async function withUsed(client, d) {
 function publicView(d) {
   return {
     code: d.code, product: d.product, productName: PRODUCTS[d.product],
-    items: d.items, interviewCats: d.interviewCats || [],
+    items: d.items, maxItems: d.maxItems || d.items.length, interviewCats: d.interviewCats || [],
     job: d.job || '', company: d.company || '', presetId: d.presetId || '',
-    hasEmail: !!d.email, expiresAt: d.expiresAt, t: CLIENT_T,
+    name: d.name || '', hasEmail: !!d.email, expiresAt: d.expiresAt, t: CLIENT_T,
     used: Object.fromEntries(Object.entries(d.used || {}).map(([k, v]) => [k, v ? { at: v.at, reviewCode: v.reviewCode || '' } : null]))
   };
+}
+
+function entryLink(d) {
+  return (d.product === 'interview' ? INTERVIEW_APP_URL : RESUME_APP_URL) + '?c=' + d.code;
+}
+async function createClient(client, base, days) {
+  for (let i = 0; i < 20; i++) {
+    const code = genCode();
+    const ok = await client.set(PREFIX + code, JSON.stringify({ code, ...base }), 'EX', days * 24 * 3600 + KEEP_AFTER_END, 'NX');
+    if (ok) { await client.hset(INDEX, code, String(base.createdAt)); return { code, ...base }; }
+  }
+  return null;
+}
+// 지원 직무와 이름이 겹치는 자소서 프리셋 고르기 (원장님 jinromoa 프리셋 목록)
+async function matchPreset(client, job) {
+  try {
+    const j = String(job || '').replace(/\s/g, '');
+    if (!j) return '';
+    const raw = await client.get('resume_app_config:' + CLIENT_T);
+    const presets = raw ? (JSON.parse(raw).presets || []) : [];
+    const hit = presets.find(p => { const n = String(p.name || '').replace(/\s|과$/g, ''); return p.id !== 'default' && n && (j.includes(n) || n.includes(j)); });
+    return hit ? hit.id : '';
+  } catch (e) { return ''; }
+}
+async function mailEntryLink(d) {
+  try {
+    if (!process.env.RESEND_API_KEY || !d.email) return false;
+    const link = entryLink(d);
+    const end = new Date(d.expiresAt - 1 + 9 * 3600 * 1000);
+    const endText = `${end.getUTCFullYear()}년 ${end.getUTCMonth() + 1}월 ${end.getUTCDate()}일`;
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'MOA FORMULA <moaformula@jinromoa.co.kr>',
+        to: [d.email],
+        subject: `[진로모아커리어센터] ${PRODUCTS[d.product]} 입장 링크를 보내드려요`,
+        text: `${d.name || '고객'}님, 예약해 주셔서 감사합니다.\n\n아래 링크로 언제든 다시 들어와 이어서 작성할 수 있어요.\n${link}\n\n· 이용 기간: ${endText}까지\n· 작성 내용은 자동 저장돼요. 다 마치면 "최종 제출"을 눌러 주세요 (제출은 한 번만 가능해요).\n· 제출 후 강사가 직접 검토해 결과를 이 이메일로 보내드려요.\n\n진로모아커리어센터`
+      })
+    });
+    if (!r.ok) console.error('입장 링크 메일 실패:', r.status, await r.text());
+    return r.ok;
+  } catch (e) { console.error('입장 링크 메일 실패:', e); return false; }
+}
+function genShopKey() {
+  return crypto.randomBytes(9).toString('base64url'); // 12자리
+}
+async function findShop(client, key) {
+  const all = await client.hgetall(SHOPS);
+  for (const raw of Object.values(all)) { try { const s = JSON.parse(raw); if (s.key === key) return s; } catch (e) {} }
+  return null;
 }
 
 export async function getClient(client, code) {
@@ -167,10 +230,77 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, savedAt: Date.now() });
     }
 
+    // ── 네이버 예약 자동 입장 (누구나) ──
+    if (req.method === 'POST' && (body.action === 'shopInfo' || body.action === 'shopJoin')) {
+      const shop = await findShop(client, String(body.key || '').slice(0, 40));
+      if (!shop || !shop.active) return res.status(404).json({ ok: false, error: '사용할 수 없는 링크예요. 진로모아로 문의해 주세요.' });
+      const info = { label: shop.label, product: shop.product, productName: PRODUCTS[shop.product], days: shop.days, maxItems: shop.maxItems || RESUME_ITEMS.length };
+      if (body.action === 'shopInfo') return res.status(200).json({ ok: true, shop: info });
+
+      const ipKey = 'moa_shopjoin:' + ipOf(req);
+      const n = await client.incr(ipKey); if (n === 1) await client.expire(ipKey, 3600);
+      if (n > 10) return res.status(429).json({ ok: false, error: '잠시 후 다시 시도해 주세요.' });
+      const name = clean(body.name, 30), email = clean(body.email, 120).toLowerCase();
+      const bookingNo = String(body.bookingNo || '').toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 30);
+      if (!name) return res.status(400).json({ ok: false, error: '이름을 입력해 주세요.' });
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return res.status(400).json({ ok: false, error: '이메일 주소를 다시 확인해 주세요.' });
+      if (bookingNo.replace(/-/g, '').length < 4) return res.status(400).json({ ok: false, error: '네이버 예약번호를 정확히 입력해 주세요.' });
+
+      // 같은 예약번호로 이미 받은 코드가 있으면 새로 만들지 않고 그 링크를 다시 메일로 보내줌
+      const existing = await client.hget(BOOKINGS, bookingNo);
+      if (existing) {
+        const d0 = await getClient(client, existing);
+        if (d0) {
+          if (d0.email === email) { await mailEntryLink(d0); return res.status(200).json({ ok: true, again: true, code: d0.code, link: entryLink(d0) }); }
+          return res.status(409).json({ ok: false, error: '이미 등록된 예약번호예요. 처음 등록한 이메일의 안내 메일을 확인하시거나 진로모아로 문의해 주세요.' });
+        }
+      }
+      const days = shop.days || 14;
+      const now = Date.now();
+      const job = clean(body.job, 60);
+      const base = {
+        product: shop.product, items: RESUME_ITEMS.slice(), maxItems: shop.maxItems || RESUME_ITEMS.length, interviewCats: [],
+        memo: `예약 ${bookingNo}`, name, bookingNo, shopId: shop.id, shopLabel: shop.label, auto: true,
+        job, company: clean(body.company, 40), presetId: await matchPreset(client, job), email,
+        createdAt: now, expiresAt: now + days * 24 * 3600 * 1000
+      };
+      const d = await createClient(client, base, days);
+      if (!d) return res.status(503).json({ ok: false, error: '잠시 후 다시 시도해 주세요.' });
+      const okB = await client.hsetnx(BOOKINGS, bookingNo, d.code);
+      if (!okB) { await client.del(PREFIX + d.code); await client.hdel(INDEX, d.code); return res.status(409).json({ ok: false, error: '이미 등록된 예약번호예요.' }); }
+      const mailed = await mailEntryLink(d);
+      return res.status(200).json({ ok: true, code: d.code, link: entryLink(d), mailed });
+    }
+
     // ── 여기부터 원장님만 ──
     const pw = req.method === 'GET' ? req.query.master : body.master;
     if (!process.env.MASTER_ADMIN_PASSWORD) return res.status(500).json({ ok: false, error: '서버에 관리자 비밀번호가 설정되지 않았어요.' });
     if (!checkAdmin(pw)) return res.status(401).json({ ok: false, error: '관리자 비밀번호가 맞지 않아요.' });
+
+    if (req.method === 'GET' && req.query.shops) {
+      const all = await client.hgetall(SHOPS);
+      const items = Object.values(all).map(r => { try { return JSON.parse(r); } catch (e) { return null; } }).filter(Boolean).sort((a, b) => a.createdAt - b.createdAt);
+      return res.status(200).json({ ok: true, items });
+    }
+    if (req.method === 'POST' && body.action === 'shopCreate') {
+      const product = PRODUCTS[body.product] ? body.product : 'set';
+      let days = parseInt(body.days, 10); if (!(days >= 1 && days <= 180)) days = 14;
+      let maxItems = parseInt(body.maxItems, 10); if (!(maxItems >= 1 && maxItems <= RESUME_ITEMS.length)) maxItems = RESUME_ITEMS.length;
+      const id = 'shop_' + Date.now().toString(36);
+      const shop = { id, key: genShopKey(), label: clean(body.label, 30) || PRODUCTS[product], product, days, maxItems, active: true, createdAt: Date.now() };
+      await client.hset(SHOPS, id, JSON.stringify(shop));
+      return res.status(200).json({ ok: true, item: shop });
+    }
+    if (req.method === 'POST' && ['shopRotate', 'shopToggle', 'shopDelete'].includes(body.action)) {
+      const raw = await client.hget(SHOPS, String(body.id || ''));
+      if (!raw) return res.status(404).json({ ok: false, error: '링크를 찾을 수 없어요.' });
+      const shop = JSON.parse(raw);
+      if (body.action === 'shopDelete') { await client.hdel(SHOPS, shop.id); return res.status(200).json({ ok: true }); }
+      if (body.action === 'shopRotate') shop.key = genShopKey();   // 옛 링크는 바로 막힘 (이미 받은 고객 코드는 그대로)
+      if (body.action === 'shopToggle') shop.active = !shop.active;
+      await client.hset(SHOPS, shop.id, JSON.stringify(shop));
+      return res.status(200).json({ ok: true, item: shop });
+    }
 
     if (req.method === 'GET' && req.query.list) {
       const all = await client.hgetall(INDEX);
@@ -198,14 +328,8 @@ export default async function handler(req, res) {
         presetId: clean(body.presetId, 60), email: clean(body.email, 120),
         createdAt: now, expiresAt: now + days * 24 * 3600 * 1000
       };
-      for (let i = 0; i < 20; i++) {
-        const code = genCode();
-        const ok = await client.set(PREFIX + code, JSON.stringify({ code, ...base }), 'EX', days * 24 * 3600 + KEEP_AFTER_END, 'NX');
-        if (ok) {
-          await client.hset(INDEX, code, String(now));
-          return res.status(200).json({ ok: true, item: await withUsed(client, { code, ...base }) });
-        }
-      }
+      const made = await createClient(client, base, days);
+      if (made) return res.status(200).json({ ok: true, item: await withUsed(client, made) });
       return res.status(503).json({ ok: false, error: '잠시 후 다시 시도해 주세요.' });
     }
 
@@ -229,6 +353,7 @@ export default async function handler(req, res) {
     if (req.method === 'POST' && body.action === 'delete') {
       await client.del(PREFIX + d.code, USED(d.code, 'resume'), USED(d.code, 'interview'), DRAFT(d.code, 'resume'), DRAFT(d.code, 'interview'));
       await client.hdel(INDEX, d.code);
+      if (d.bookingNo) await client.hdel(BOOKINGS, d.bookingNo);
       return res.status(200).json({ ok: true });
     }
 

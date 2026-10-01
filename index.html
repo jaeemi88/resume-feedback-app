@@ -1002,6 +1002,23 @@ function initClientManager(box, masterPw) {
       <div id="clAddErr" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
     </div>
     <div id="clDone"></div>
+    <div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <b style="font-size:15px">🔗 네이버 예약 자동 입장 링크</b>
+        <button class="btn-secondary" id="shAddToggle" style="font-size:13px;padding:7px 12px">+ 링크 만들기</button>
+      </div>
+      <p style="font-size:12.5px;color:var(--muted);margin:6px 0 10px;line-height:1.6">상품별 링크를 <b>네이버 예약 안내 문구에 한 번만</b> 넣어두면, 고객이 결제 후 스스로 등록하고 <b>바로 시작</b>해요. 등록한 고객은 아래 목록에 <b>🤖 자동</b>으로 쌓여요 — 예약번호만 네이버 예약 내역과 맞춰 보세요.</p>
+      <div class="rb-add" id="shAdd" style="display:none">
+        <div class="grid">
+          <div><label>링크 이름</label><input type="text" id="shLabel" placeholder="예) 세트 상품 (11월)"></div>
+          <div><label>상품</label><select id="shProduct"><option value="set">세트 (자소서 → 모의면접)</option><option value="resume">자소서 첨삭</option><option value="interview">모의면접</option></select></div>
+          <div><label>자소서 문항 수</label><select id="shMax"><option value="8">전 문항 (최대 8개)</option><option value="2">2개 (기본 상품)</option><option value="1">1개</option><option value="3">3개</option><option value="4">4개</option></select></div>
+          <div><label>이용 기간 (일)</label><input type="text" id="shDays" inputmode="numeric" value="14"></div>
+        </div>
+        <div class="btn-row"><button class="btn-primary" id="shAddBtn">링크 만들기</button></div>
+      </div>
+      <div id="shList"><div class="empty">불러오는 중...</div></div>
+    </div>
     <div id="clList"><div class="empty">불러오는 중...</div></div>
   `;
   const $ = id => document.getElementById(id);
@@ -1025,9 +1042,9 @@ function initClientManager(box, masterPw) {
   function row(d) {
     const [label, cls] = stateOf(d);
     const left = Math.ceil((d.expiresAt - Date.now()) / 86400000);
-    const items = d.items.length === allItems.length ? '전 문항' : d.items.map(k => CLIENT_ITEM_LABELS[k]).join('·');
+    const items = (d.maxItems && d.maxItems < allItems.length) ? `문항 ${d.maxItems}개` : d.items.length === allItems.length ? '전 문항' : d.items.map(k => CLIENT_ITEM_LABELS[k]).join('·');
     return `<div class="rb-row">
-      <div class="rb-top"><div class="rb-name">${escapeHtml(d.memo || '(메모 없음)')}<span class="rb-code">${d.code}</span></div><span class="rb-badge ${cls}">${label}</span></div>
+      <div class="rb-top"><div class="rb-name">${d.auto ? '🤖 ' + escapeHtml(d.name || '') + ' · 예약 ' + escapeHtml(d.bookingNo || '') : escapeHtml(d.memo || '(메모 없음)')}<span class="rb-code">${d.code}</span></div><span class="rb-badge ${cls}">${label}</span></div>
       <div class="rb-sub">${escapeHtml(CLIENT_PRODUCT_NAMES[d.product])} · ${escapeHtml(items)}${d.job ? ' · ' + escapeHtml(d.job) : ''}${d.company ? ' · ' + escapeHtml(d.company) : ''}<br>
         ${left > 0 ? `${moaDate(d.expiresAt - 1, 'short')}까지 (D-${left})` : '이용 기간 끝남'} · 이메일 ${d.email ? '있음' : '<b style="color:#B42318">없음</b>'}${d.used && d.used.resume ? ' · 자소서 확인코드 ' + escapeHtml(d.used.resume.reviewCode || '-') : ''}</div>
       <div class="rb-btns">
@@ -1093,6 +1110,52 @@ function initClientManager(box, masterPw) {
       await load();
     } catch (e) { alert(e.message); }
   });
+
+  // ── 네이버 예약 자동 입장 링크 ──
+  let SHOPS = [];
+  const shopLink = sh => location.origin + location.pathname + '?shop=' + sh.key;
+  const shopNotice = sh => `[${CLIENT_PRODUCT_NAMES[sh.product]} 시작 안내]\n결제 후 아래 링크에서 이름·이메일·네이버 예약번호를 넣으면 바로 시작할 수 있어요.\n${shopLink(sh)}\n\n· 이용 기간: 시작한 날부터 ${sh.days}일\n· 작성 내용은 자동 저장돼요. 다 마치면 "최종 제출"을 눌러 주세요.\n· 제출 후 영업일 기준 2일 이내에 강사가 직접 검토한 결과를 이메일로 보내드려요.`;
+  function shopRow(sh) {
+    return `<div class="rb-row" style="${sh.active ? '' : 'opacity:.6'}">
+      <div class="rb-top"><div class="rb-name">${escapeHtml(sh.label)}</div><span class="rb-badge ${sh.active ? 'b-active' : 'b-inv'}">${sh.active ? '🟢 사용 중' : '⏸ 꺼짐'}</span></div>
+      <div class="rb-sub">${escapeHtml(CLIENT_PRODUCT_NAMES[sh.product])} · ${sh.product === 'interview' ? '' : (sh.maxItems >= allItems.length ? '전 문항 · ' : '자소서 ' + sh.maxItems + '문항 · ')}${sh.days}일<br><span style="word-break:break-all">${escapeHtml(shopLink(sh))}</span></div>
+      <div class="rb-btns">
+        <button class="btn-primary" data-sh="notice" data-id="${sh.id}">📋 안내 문구 복사</button>
+        <button class="btn-secondary" data-sh="link" data-id="${sh.id}">🔗 링크만 복사</button>
+        <details class="rb-more"><summary>⋯</summary><div class="rb-menu">
+          <button data-sh="rotate" data-id="${sh.id}">링크 새로 바꾸기</button>
+          <button data-sh="toggle" data-id="${sh.id}">${sh.active ? '잠시 끄기' : '다시 켜기'}</button>
+          <button class="danger" data-sh="delete" data-id="${sh.id}">링크 삭제</button>
+        </div></details>
+      </div></div>`;
+  }
+  async function loadShops() {
+    const r = await fetch('/api/client-code?shops=1&master=' + encodeURIComponent(masterPw));
+    const d = await r.json().catch(() => ({}));
+    SHOPS = d.items || [];
+    $('shList').innerHTML = SHOPS.length ? SHOPS.map(shopRow).join('') : '<div class="empty">아직 만든 링크가 없어요. "+ 링크 만들기"로 상품별 링크를 만들어 주세요.</div>';
+  }
+  $('shAddToggle').addEventListener('click', () => { const a = $('shAdd'); a.style.display = a.style.display === 'none' ? 'block' : 'none'; });
+  $('shAddBtn').addEventListener('click', async () => {
+    try { await post({ action: 'shopCreate', label: $('shLabel').value, product: $('shProduct').value, maxItems: $('shMax').value, days: $('shDays').value }); $('shLabel').value = ''; $('shAdd').style.display = 'none'; await loadShops(); }
+    catch (e) { alert(e.message); }
+  });
+  $('shList').addEventListener('click', async ev => {
+    const b = ev.target.closest('[data-sh]'); if (!b) return;
+    const sh = SHOPS.find(x => x.id === b.dataset.id); if (!sh) return;
+    const menu = b.closest('details'); if (menu) menu.open = false;
+    try {
+      if (b.dataset.sh === 'notice' || b.dataset.sh === 'link') {
+        await copy(b.dataset.sh === 'notice' ? shopNotice(sh) : shopLink(sh));
+        const t = b.textContent; b.textContent = '✅ 복사됨'; setTimeout(() => b.textContent = t, 1500); return;
+      }
+      if (b.dataset.sh === 'rotate' && !confirm('링크를 새로 바꿀까요?\n\n예전 링크는 바로 막혀요 (링크가 퍼졌을 때 사용). 이미 등록한 고객은 그대로 이용할 수 있어요.\n바꾼 뒤 네이버 예약 안내 문구도 새 링크로 바꿔 주세요.')) return;
+      if (b.dataset.sh === 'delete' && !confirm('이 링크를 삭제할까요? 링크가 바로 막혀요.')) return;
+      await post({ action: { rotate: 'shopRotate', toggle: 'shopToggle', delete: 'shopDelete' }[b.dataset.sh], id: sh.id });
+      await loadShops();
+    } catch (e) { alert(e.message); }
+  });
+  loadShops();
   load();
 }
 
@@ -1118,6 +1181,10 @@ async function route() {
   const params = new URLSearchParams(location.search);
   if (params.get('c') && !isAdmin) {
     renderClientEntry(params.get('c'));
+    return;
+  }
+  if (params.get('shop') && !isAdmin) {
+    renderShopJoin(params.get('shop'));
     return;
   }
   if (params.get('master') === '1') {
@@ -1247,7 +1314,7 @@ function clientWireDraft(presetSelect, docTypeSelect) {
     if (d.presetId && Array.from(presetSelect.options).some(o => o.value === d.presetId)) presetSelect.value = d.presetId;
     const hr = document.querySelector(`input[name="hiringType"][value="${d.hiring === 'blind' ? 'blind' : 'general'}"]`);
     if (hr) hr.checked = true;
-    const items = (d.items || []).slice(0, CLIENT.items.length);
+    const items = (d.items || []).slice(0, (CLIENT.maxItems || CLIENT.items.length));
     for (let i = 1; i < items.length; i++) document.getElementById('addItemBtn').click();
     const blocks = document.querySelectorAll('.item-block');
     items.forEach((it, i) => {
@@ -1276,6 +1343,61 @@ function clientWireDraft(presetSelect, docTypeSelect) {
   app.addEventListener('input', save);
   app.addEventListener('change', save);
   app.addEventListener('click', e => { if (e.target.closest('.item-remove-btn, #addItemBtn')) save(); });
+}
+
+// ---------- 네이버 예약 자동 입장 (2026-10-02) ----------
+// 네이버 예약 안내 문구에 넣어둔 상품별 고정 링크(?shop=키) → 고객이 스스로 등록하고 바로 시작
+async function renderShopJoin(key) {
+  document.body.classList.remove('role-teacher');
+  document.body.classList.add('role-student');
+  document.getElementById('roleBadge').textContent = '개인 고객';
+  document.querySelectorAll('.moa-hubbar a').forEach(a => a.style.display = 'none');
+  const post = async body => {
+    const r = await fetch('/api/client-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.ok) throw new Error(d.error || '잠시 후 다시 시도해 주세요.');
+    return d;
+  };
+  app.innerHTML = `<div class="card"><div class="empty">불러오는 중...</div></div>`;
+  let shop;
+  try { shop = (await post({ action: 'shopInfo', key })).shop; }
+  catch (e) { app.innerHTML = `<div class="card"><h2>입장할 수 없어요</h2><p style="font-size:14px;color:var(--muted);line-height:1.7">${escapeHtml(e.message)}</p></div>`; return; }
+  app.innerHTML = `
+    <div class="card" style="background:var(--green-light);border-color:transparent">
+      <div style="font-size:17px;font-weight:800;color:var(--navy)">${escapeHtml(CLIENT_PRODUCT_NAMES[shop.product] || shop.productName)}</div>
+      <p style="font-size:13px;color:var(--muted);margin:6px 0 0;line-height:1.7">예약해 주셔서 감사해요. 아래 정보를 넣으면 <b>바로 시작</b>할 수 있어요.<br>이용 기간은 오늘부터 <b>${shop.days}일</b>이고, 입장 링크는 이메일로도 보내드려요.</p>
+    </div>
+    <div class="card">
+      <h2>시작하기</h2>
+      <label>이름</label><input type="text" id="sjName" autocomplete="name">
+      <label>이메일 <span style="font-weight:400;color:var(--muted)">(입장 링크와 결과를 받을 주소)</span></label>
+      <input type="text" inputmode="email" autocapitalize="none" id="sjEmail" autocomplete="email" placeholder="example@naver.com">
+      <label>네이버 예약번호</label>
+      <input type="text" id="sjBooking" inputmode="numeric" placeholder="예약 확정 안내에 있는 번호">
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">네이버 앱 › 예약 내역에서 확인할 수 있어요.</div>
+      <label>지원 직무</label><input type="text" id="sjJob" placeholder="예) 병원 물리치료사, 객실승무원">
+      <label>지원 기업 <span style="font-weight:400;color:var(--muted)">(선택)</span></label><input type="text" id="sjCompany" placeholder="예) ○○병원">
+      <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;font-size:13px;line-height:1.6;margin-top:14px;cursor:pointer">
+        <input type="checkbox" id="sjAgree" style="width:auto;margin-top:3px">
+        <span>[필수] 개인정보 수집·이용에 동의해요.<br><span style="color:var(--muted)">수집 항목: 이름·이메일·예약번호·작성 내용 / 목적: 첨삭·모의면접 결과 제공 / 보관: 이용 기간이 끝나고 30일 뒤 자동 삭제</span></span>
+      </label>
+      <div class="btn-row"><button class="btn-primary" id="sjGo">시작하기</button></div>
+      <div class="status-msg" id="sjMsg"></div>
+    </div>`;
+  document.getElementById('sjGo').addEventListener('click', async () => {
+    const btn = document.getElementById('sjGo'), msg = document.getElementById('sjMsg');
+    const v = id => document.getElementById(id).value.trim();
+    const fail = t => { msg.textContent = t; msg.className = 'status-msg error'; msg.style.display = 'block'; };
+    if (!v('sjName')) return fail('이름을 입력해 주세요.');
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v('sjEmail'))) return fail('이메일 주소를 다시 확인해 주세요.');
+    if (v('sjBooking').replace(/[^0-9A-Za-z]/g, '').length < 4) return fail('네이버 예약번호를 입력해 주세요.');
+    if (!document.getElementById('sjAgree').checked) return fail('개인정보 수집·이용에 동의해 주세요.');
+    btn.disabled = true; btn.textContent = '준비하는 중...';
+    try {
+      const d = await post({ action: 'shopJoin', key, name: v('sjName'), email: v('sjEmail'), bookingNo: v('sjBooking'), job: v('sjJob'), company: v('sjCompany') });
+      location.href = d.link;
+    } catch (e) { fail(e.message); btn.disabled = false; btn.textContent = '시작하기'; }
+  });
 }
 
 async function renderClientEntry(rawCode) {
@@ -1709,7 +1831,7 @@ async function renderStudentSubmitForm() {
     ${studentTabsHtml()}
     <div class="card">
       <h2>첨삭 요청</h2>
-      ${CLIENT ? `<p style="font-size:13px;color:var(--muted);margin:-4px 0 14px;line-height:1.7">첨삭받을 문항을 <b>모두 모아서 한 번에</b> 제출해 주세요. "+ 문항 추가"로 최대 ${CLIENT.items.length}개까지 넣을 수 있어요. <b style="color:var(--text)">제출은 한 번만 가능하고, 제출 후에는 수정할 수 없어요.</b></p>` : `<p style="font-size:13px;color:var(--muted);margin:-4px 0 14px">자소서 문항이 여러 개면 아래 "+ 문항 추가"로 다 모아서 한 번에 제출해 주세요. ${limitNum === Infinity ? '' : limitNum === 1 ? '이 기기에서는 <b>한 번만</b> 제출할 수 있으니, ' : `이 기기에서는 <b>최대 ${limitNum}번</b>까지만 제출할 수 있으니, `}신중하게 작성한 뒤 제출해 주세요.</p>`}
+      ${CLIENT ? `<p style="font-size:13px;color:var(--muted);margin:-4px 0 14px;line-height:1.7">첨삭받을 문항을 <b>모두 모아서 한 번에</b> 제출해 주세요. "+ 문항 추가"로 최대 ${(CLIENT.maxItems || CLIENT.items.length)}개까지 넣을 수 있어요. <b style="color:var(--text)">제출은 한 번만 가능하고, 제출 후에는 수정할 수 없어요.</b></p>` : `<p style="font-size:13px;color:var(--muted);margin:-4px 0 14px">자소서 문항이 여러 개면 아래 "+ 문항 추가"로 다 모아서 한 번에 제출해 주세요. ${limitNum === Infinity ? '' : limitNum === 1 ? '이 기기에서는 <b>한 번만</b> 제출할 수 있으니, ' : `이 기기에서는 <b>최대 ${limitNum}번</b>까지만 제출할 수 있으니, `}신중하게 작성한 뒤 제출해 주세요.</p>`}
       <label>이름</label>
       <input type="text" id="studentNameInput" placeholder="본인 이름을 입력해 주세요">
       <label>이메일 주소 (선택)</label>
@@ -1770,12 +1892,13 @@ async function renderStudentSubmitForm() {
 
   if (CLIENT) {
     if (CLIENT.job) document.getElementById('jobPostingInput').value = CLIENT.job;
+    if (CLIENT.name) document.getElementById('studentNameInput').value = CLIENT.name;
     if (CLIENT.company) document.getElementById('targetCompanyInput').value = CLIENT.company;
   }
 
   document.getElementById('addItemBtn').addEventListener('click', () => {
-    if (CLIENT && document.querySelectorAll('.item-block').length >= CLIENT.items.length) {
-      alert(`이 상품은 문항을 최대 ${CLIENT.items.length}개까지 넣을 수 있어요.`);
+    if (CLIENT && document.querySelectorAll('.item-block').length >= (CLIENT.maxItems || CLIENT.items.length)) {
+      alert(`이 상품은 문항을 최대 ${(CLIENT.maxItems || CLIENT.items.length)}개까지 넣을 수 있어요.`);
       return;
     }
     const id = itemCounter++;

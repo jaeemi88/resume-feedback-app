@@ -76,7 +76,7 @@ export default async function handler(req, res) {
       if (t !== CLIENT_T) return res.status(400).json({ error: '잘못된 제출 주소예요.' });
       const info = await getClient(client, clientCode);
       const its = Array.isArray(item.items) ? item.items : [];
-      if (info && (its.length > info.items.length || its.some(x => !info.items.includes(x.questionType)))) {
+      if (info && (its.length > (info.maxItems || info.items.length) || its.some(x => !info.items.includes(x.questionType)))) {
         return res.status(403).json({ error: '이 상품에서 열리지 않은 문항이 들어 있어요. 화면을 새로고침한 뒤 다시 제출해 주세요.' });
       }
       const used = await useClientPart(client, clientCode, 'resume', code);
