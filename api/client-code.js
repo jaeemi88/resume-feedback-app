@@ -29,6 +29,13 @@
 //   POST { action:'shopCreate'|'shopRotate'|'shopToggle'|'shopDelete'|'shopPrice', master, ... } (원장님)
 //   POST { action:'setPrice', master, code, price } / { action:'refund', master, code, refunded } → 정산용 (원장님)
 //
+// [예약번호 대조 · 하루 등록 상한 — 2026-10-02 수익화 랩 인계]
+//   네이버 예약 하루 상한과 같은 숫자로 맞춰두면, 그보다 많이 들어온 등록은 결제 안 한 사람일 가능성이 높아요.
+//   → 상한을 넘은 고객은 작성·자동 저장은 그대로 되지만 "최종 제출"(= AI 첨삭 실행)은 원장님 확인 전까지 보류.
+//   GET  ?limits=1&master=비밀번호                          → 상품별 하루 상한 + 오늘 등록 수
+//   POST { action:'setLimits', master, limits:{resume,interview,set} }
+//   POST { action:'setHold', master, code, hold }        → hold:false = 예약 확인 완료(보류 풀기, 고객에게 메일) / true = 보류로 표시
+//
 // [다른 서버 파일에서 사용] useClientPart(client, code, part) → 제출 1회 사용 처리 (reviews.js)
 // ※ 자소서 앱·모의면접 앱에 같은 파일이 들어 있어요. 고칠 때는 두 앱 모두 똑같이 바꿔 주세요.
 import Redis from 'ioredis';
@@ -49,6 +56,9 @@ const DRAFT_MAX = 300 * 1024;                  // 임시 저장 최대 300KB
 const KEEP_AFTER_END = 30 * 24 * 3600;         // 기간 끝난 뒤 30일 지나면 Redis에서 자동 삭제 (개인정보처리방침 30일)
 const SHOPS = 'moa_client_shops';              // 해시: 링크 id → JSON (네이버 예약 자동 입장 링크)
 const BOOKINGS = 'moa_client_bookings';        // 해시: 네이버 예약번호 → 코드 (같은 번호 두 번 등록 막기)
+const LIMITS = 'moa_client_limits';            // JSON: 상품별 하루 자동 등록 상한
+const DAILY = (ymd, product) => `moa_client_daily:${ymd}:${product}`; // 그날 자동 등록 수
+const DEFAULT_LIMITS = { resume: 2, interview: 2, set: 1 };
 export const RESUME_APP_URL = 'https://resume-feedback-app-phi.vercel.app/';
 export const INTERVIEW_APP_URL = 'https://moa-interview-app.vercel.app/';
 
@@ -77,6 +87,20 @@ function genCode() {
   for (let i = 0; i < 6; i++) c += chars[crypto.randomInt(0, chars.length)];
   return c;
 }
+function kstYmd(ms) {
+  const d = new Date((ms || Date.now()) + 9 * 3600 * 1000);
+  return d.getUTCFullYear() + String(d.getUTCMonth() + 1).padStart(2, '0') + String(d.getUTCDate()).padStart(2, '0');
+}
+async function getLimits(client) {
+  try { const raw = await client.get(LIMITS); if (raw) return { ...DEFAULT_LIMITS, ...JSON.parse(raw) }; } catch (e) {}
+  return { ...DEFAULT_LIMITS };
+}
+async function todayCounts(client) {
+  const ymd = kstYmd(), out = {};
+  for (const p of Object.keys(PRODUCTS)) out[p] = +(await client.get(DAILY(ymd, p))) || 0;
+  return out;
+}
+export const HOLD_MSG = '예약 확인이 끝나면 제출할 수 있어요. 작성한 내용은 자동 저장되니 그대로 두시면 돼요. (보통 하루 안에 확인돼요)';
 function partsOf(product) {
   return product === 'set' ? ['resume', 'interview'] : [product];
 }
@@ -99,7 +123,7 @@ function publicView(d) {
     code: d.code, product: d.product, productName: PRODUCTS[d.product],
     items: d.items, maxItems: d.maxItems || d.items.length, interviewCats: d.interviewCats || [],
     job: d.job || '', company: d.company || '', presetId: d.presetId || '',
-    name: d.name || '', hasEmail: !!d.email, expiresAt: d.expiresAt, t: CLIENT_T,
+    name: d.name || '', hasEmail: !!d.email, expiresAt: d.expiresAt, t: CLIENT_T, hold: !!d.hold,
     used: Object.fromEntries(Object.entries(d.used || {}).map(([k, v]) => [k, v ? { at: v.at, reviewCode: v.reviewCode || '' } : null]))
   };
 }
@@ -146,6 +170,22 @@ async function mailEntryLink(d) {
     return r.ok;
   } catch (e) { console.error('입장 링크 메일 실패:', e); return false; }
 }
+async function mailHoldReleased(d) {
+  try {
+    if (!process.env.RESEND_API_KEY || !d.email) return false;
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'MOA FORMULA <moaformula@jinromoa.co.kr>',
+        to: [d.email],
+        subject: `[진로모아커리어센터] 예약 확인이 끝났어요 — 이제 제출할 수 있어요`,
+        text: `${d.name || '고객'}님, 기다려 주셔서 감사합니다.\n\n예약 확인이 끝났어요. 아래 링크로 들어가 작성한 내용을 확인하고 "최종 제출"을 눌러 주세요.\n${entryLink(d)}\n\n진로모아커리어센터`
+      })
+    });
+    return r.ok;
+  } catch (e) { console.error('보류 해제 메일 실패:', e); return false; }
+}
 function cleanPrice(v) {
   const n = parseInt(String(v == null ? '' : v).replace(/[^0-9]/g, ''), 10);
   return n >= 0 && n <= 10000000 ? n : 0;
@@ -170,6 +210,7 @@ export async function useClientPart(client, code, part, reviewCode) {
   if (!d) return { error: '입장 코드를 찾을 수 없어요.', status: 404 };
   if (Date.now() > d.expiresAt) return { error: '이용 기간이 끝난 코드예요. 진로모아로 문의해 주세요.', status: 410 };
   if (!partsOf(d.product).includes(part)) return { error: '이 상품에 포함되지 않은 항목이에요.', status: 403 };
+  if (d.hold) return { error: HOLD_MSG, status: 423 };
   const ok = await client.set(USED(d.code, part), JSON.stringify({ at: Date.now(), reviewCode: reviewCode || '' }), 'NX');
   if (!ok) return { error: '이미 제출을 마친 코드예요. 제출 후에는 수정할 수 없어요.', status: 409 };
   try { await client.del(DRAFT(d.code, part)); } catch (e) {} // 제출했으니 임시 저장은 지움
@@ -262,25 +303,43 @@ export default async function handler(req, res) {
       }
       const days = shop.days || 14;
       const now = Date.now();
+      // 하루 등록 상한 (네이버 하루 예약 수와 같게) — 넘으면 등록은 받되 제출은 원장님 확인 후
+      const dayKey = DAILY(kstYmd(now), shop.product);
+      const nToday = await client.incr(dayKey); if (nToday === 1) await client.expire(dayKey, 3 * 24 * 3600);
+      const limit = (await getLimits(client))[shop.product];
       const job = clean(body.job, 60);
       const base = {
         product: shop.product, items: RESUME_ITEMS.slice(), maxItems: shop.maxItems || RESUME_ITEMS.length, interviewCats: [],
         memo: `예약 ${bookingNo}`, name, bookingNo, shopId: shop.id, shopLabel: shop.label, auto: true, price: shop.price || 0,
         job, company: clean(body.company, 40), presetId: await matchPreset(client, job), email,
-        createdAt: now, expiresAt: now + days * 24 * 3600 * 1000
+        createdAt: now, expiresAt: now + days * 24 * 3600 * 1000,
+        ...(limit > 0 && nToday > limit ? { hold: { reason: `하루 상한 초과 (오늘 ${nToday}번째 · 상한 ${limit})`, at: now } } : {})
       };
       const d = await createClient(client, base, days);
       if (!d) return res.status(503).json({ ok: false, error: '잠시 후 다시 시도해 주세요.' });
       const okB = await client.hsetnx(BOOKINGS, bookingNo, d.code);
       if (!okB) { await client.del(PREFIX + d.code); await client.hdel(INDEX, d.code); return res.status(409).json({ ok: false, error: '이미 등록된 예약번호예요.' }); }
       const mailed = await mailEntryLink(d);
-      return res.status(200).json({ ok: true, code: d.code, link: entryLink(d), mailed });
+      return res.status(200).json({ ok: true, code: d.code, link: entryLink(d), mailed, hold: !!d.hold });
     }
 
     // ── 여기부터 원장님만 ──
     const pw = req.method === 'GET' ? req.query.master : body.master;
     if (!process.env.MASTER_ADMIN_PASSWORD) return res.status(500).json({ ok: false, error: '서버에 관리자 비밀번호가 설정되지 않았어요.' });
     if (!checkAdmin(pw)) return res.status(401).json({ ok: false, error: '관리자 비밀번호가 맞지 않아요.' });
+
+    if (req.method === 'GET' && req.query.limits) {
+      return res.status(200).json({ ok: true, limits: await getLimits(client), today: await todayCounts(client) });
+    }
+    if (req.method === 'POST' && body.action === 'setLimits') {
+      const lim = {};
+      for (const p of Object.keys(PRODUCTS)) {
+        const n = parseInt((body.limits || {})[p], 10);
+        lim[p] = n >= 0 && n <= 999 ? n : DEFAULT_LIMITS[p]; // 0 = 상한 없음
+      }
+      await client.set(LIMITS, JSON.stringify(lim));
+      return res.status(200).json({ ok: true, limits: lim, today: await todayCounts(client) });
+    }
 
     if (req.method === 'GET' && req.query.shops) {
       const all = await client.hgetall(SHOPS);
@@ -360,6 +419,21 @@ export default async function handler(req, res) {
       d.refundedAt = body.refunded ? Date.now() : null;
       await save(client, d);
       return res.status(200).json({ ok: true, item: await withUsed(client, d) });
+    }
+
+    // 예약번호 대조: hold:false = 확인 완료(보류 풀기) / hold:true = 보류로 표시
+    if (req.method === 'POST' && body.action === 'setHold') {
+      let mailed = false;
+      if (body.hold) {
+        d.hold = { reason: '원장님이 보류로 표시', at: Date.now() };
+      } else {
+        const wasHeld = !!d.hold;
+        d.hold = null;
+        d.checkedAt = Date.now();
+        if (wasHeld) mailed = await mailHoldReleased(d);
+      }
+      await save(client, d);
+      return res.status(200).json({ ok: true, mailed, item: await withUsed(client, d) });
     }
 
     if (req.method === 'POST' && body.action === 'reopen') {

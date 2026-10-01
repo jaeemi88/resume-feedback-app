@@ -1017,6 +1017,15 @@ function initClientManager(box, masterPw) {
         <button class="btn-secondary" id="shAddToggle" style="font-size:13px;padding:7px 12px">+ 링크 만들기</button>
       </div>
       <p style="font-size:12.5px;color:var(--muted);margin:6px 0 10px;line-height:1.6">상품별 링크를 <b>네이버 예약 안내 문구에 한 번만</b> 넣어두면, 고객이 결제 후 스스로 등록하고 <b>바로 시작</b>해요. 등록한 고객은 아래 목록에 <b>🤖 자동</b>으로 쌓여요 — 예약번호만 네이버 예약 내역과 맞춰 보세요.</p>
+      <div id="shLimits" style="background:var(--navy-light);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:13px;line-height:1.7">
+        <b>🛡 하루 자동 등록 상한</b> <span style="color:var(--muted)">— 네이버 예약의 하루 예약 수와 <b>같은 숫자</b>로 맞춰 주세요. 넘게 들어온 고객은 <b>🟠 예약번호 대조 필요</b>로 표시되고, 원장님이 확인할 때까지 제출(AI 첨삭)이 보류돼요. (0 = 상한 없음)</span>
+        <div style="display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin-top:6px">
+          <label style="display:flex;align-items:center;gap:4px;margin:0;font-weight:400">자소서 <input type="text" id="lmResume" inputmode="numeric" style="width:46px;margin:0;padding:5px 6px;text-align:center"> <span id="tdResume" style="color:var(--muted);font-size:12px"></span></label>
+          <label style="display:flex;align-items:center;gap:4px;margin:0;font-weight:400">모의면접 <input type="text" id="lmInterview" inputmode="numeric" style="width:46px;margin:0;padding:5px 6px;text-align:center"> <span id="tdInterview" style="color:var(--muted);font-size:12px"></span></label>
+          <label style="display:flex;align-items:center;gap:4px;margin:0;font-weight:400">세트 <input type="text" id="lmSet" inputmode="numeric" style="width:46px;margin:0;padding:5px 6px;text-align:center"> <span id="tdSet" style="color:var(--muted);font-size:12px"></span></label>
+          <button class="btn-secondary" id="lmSave" style="font-size:12.5px;padding:5px 10px">저장</button>
+        </div>
+      </div>
       <div class="rb-add" id="shAdd" style="display:none">
         <div class="grid">
           <div><label>링크 이름</label><input type="text" id="shLabel" placeholder="예) 세트 상품 (11월)"></div>
@@ -1054,14 +1063,16 @@ function initClientManager(box, masterPw) {
     const left = Math.ceil((d.expiresAt - Date.now()) / 86400000);
     const items = (d.maxItems && d.maxItems < allItems.length) ? `문항 ${d.maxItems}개` : d.items.length === allItems.length ? '전 문항' : d.items.map(k => CLIENT_ITEM_LABELS[k]).join('·');
     return `<div class="rb-row"${d.refundedAt ? ' style="background:#FAFBFD"' : ''}>
-      <div class="rb-top"><div class="rb-name">${d.auto ? '🤖 ' + escapeHtml(d.name || '') + ' · 예약 ' + escapeHtml(d.bookingNo || '') : escapeHtml(d.memo || '(메모 없음)')}<span class="rb-code">${d.code}</span></div><span>${d.refundedAt ? '<span class="rb-badge b-end" style="margin-right:4px">↩ 환불</span>' : ''}<span class="rb-badge ${cls}">${label}</span></span></div>
+      <div class="rb-top"><div class="rb-name">${d.auto ? '🤖 ' + escapeHtml(d.name || '') + ' · 예약 ' + escapeHtml(d.bookingNo || '') : escapeHtml(d.memo || '(메모 없음)')}<span class="rb-code">${d.code}</span></div><span>${d.hold ? '<span class="rb-badge" style="margin-right:4px;background:#FFF4DC;color:#9A6200">🟠 예약번호 대조 필요</span>' : ''}${d.refundedAt ? '<span class="rb-badge b-end" style="margin-right:4px">↩ 환불</span>' : ''}<span class="rb-badge ${cls}">${label}</span></span></div>
       <div class="rb-sub">${escapeHtml(CLIENT_PRODUCT_NAMES[d.product])} · ${escapeHtml(items)}${d.job ? ' · ' + escapeHtml(d.job) : ''}${d.company ? ' · ' + escapeHtml(d.company) : ''}<br>
-        ${left > 0 ? `${moaDate(d.expiresAt - 1, 'short')}까지 (D-${left})` : '이용 기간 끝남'} · ${d.price ? won(d.price) : '<b style="color:#B42318">금액 없음</b>'} · 이메일 ${d.email ? '있음' : '<b style="color:#B42318">없음</b>'}${d.used && d.used.resume ? ' · 자소서 확인코드 ' + escapeHtml(d.used.resume.reviewCode || '-') : ''}</div>
+        ${left > 0 ? `${moaDate(d.expiresAt - 1, 'short')}까지 (D-${left})` : '이용 기간 끝남'} · ${d.price ? won(d.price) : '<b style="color:#B42318">금액 없음</b>'} · 이메일 ${d.email ? '있음' : '<b style="color:#B42318">없음</b>'}${d.used && d.used.resume ? ' · 자소서 확인코드 ' + escapeHtml(d.used.resume.reviewCode || '-') : ''}${d.hold ? `<br><b style="color:#9A6200">⏳ 제출 보류 중</b> — ${escapeHtml(d.hold.reason || '')}. 네이버 예약 내역에서 예약번호를 찾아 확인되면 아래 버튼을 눌러 주세요. (작성은 지금도 할 수 있고, 확인 전에는 AI 첨삭이 돌지 않아요)` : ''}</div>
       <div class="rb-btns">
+        ${d.hold ? `<button class="btn-primary" data-cl="holdOff" data-code="${d.code}">✅ 예약 확인 완료</button>` : ''}
         <button class="btn-secondary" data-cl="copy" data-code="${d.code}">${SHARE_LABEL}</button>
         <button class="btn-secondary" data-cl="extend" data-code="${d.code}">⏳ +7일</button>
         <details class="rb-more"><summary>⋯</summary><div class="rb-menu">
           <button data-cl="price" data-code="${d.code}">판매 금액 바꾸기</button>
+          ${d.hold ? '' : `<button data-cl="holdOn" data-code="${d.code}">⏳ 제출 보류로 표시</button>`}
           <button data-cl="refund" data-code="${d.code}">${d.refundedAt ? '환불 표시 취소' : '↩ 환불로 표시'}</button>
           ${d.used && d.used.resume ? `<button data-cl="reopen" data-part="resume" data-code="${d.code}">자소서 제출 다시 열기</button>` : ''}
           ${d.used && d.used.interview ? `<button data-cl="reopen" data-part="interview" data-code="${d.code}">면접 제출 다시 열기</button>` : ''}
@@ -1116,6 +1127,7 @@ function initClientManager(box, masterPw) {
           '경로': d.auto ? '네이버 자동' : '직접 발급',
           '이름': d.name || '',
           '네이버 예약번호': d.bookingNo || '',
+          '예약번호 대조': d.hold ? '대조 필요 (제출 보류 중)' : d.checkedAt ? '확인 완료 (' + f(d.checkedAt, 'day') + ')' : (d.auto ? '상한 이내 · 월말 대조' : '-'),
           '메모': d.auto ? (d.shopLabel || '') : (d.memo || ''),
           '상품': CLIENT_PRODUCT_NAMES[d.product] || d.product,
           '자소서 문항': d.product === 'interview' ? '' : ((d.maxItems && d.maxItems < allItems.length) ? d.maxItems + '개' : '전 문항'),
@@ -1196,6 +1208,8 @@ function initClientManager(box, masterPw) {
     try {
       if (act === 'copy') { const r = await moaShare(msgOf(d)); if (r !== 'cancel') { b.textContent = r === 'shared' ? '✅ 보냈어요' : '✅ 복사됨'; setTimeout(() => b.textContent = SHARE_LABEL, 2000); } return; }
       if (act === 'extend') { await post({ action: 'extend', code: d.code, days: 7 }); }
+      if (act === 'holdOff') { if (!confirm(`예약번호 ${d.bookingNo || ''}가 네이버 예약 내역에 있는 걸 확인하셨나요?\n\n확인 완료를 누르면 고객이 최종 제출할 수 있고, 고객에게 "이제 제출할 수 있어요" 메일이 가요.\n(내역에 없으면 누르지 말고 ⋯ → 코드 삭제)`)) return; await post({ action: 'setHold', code: d.code, hold: false }); }
+      if (act === 'holdOn') { const m = b.closest('details'); if (m) m.open = false; if (!confirm('이 고객의 최종 제출을 보류할까요?\n작성은 계속할 수 있고, 원장님이 "예약 확인 완료"를 누를 때까지 제출(AI 첨삭)이 막혀요.')) return; await post({ action: 'setHold', code: d.code, hold: true }); }
       if (act === 'price') { const v = prompt('판매 금액(원)을 입력해 주세요.', d.price || ''); if (v === null) return; await post({ action: 'setPrice', code: d.code, price: v }); }
       if (act === 'refund') { if (!d.refundedAt && !confirm('환불로 표시할까요?\n엑셀 정산 요약에서 매출에서 빠지고 환불 건수로 따로 세어져요.\n(고객 링크는 그대로예요. 막으려면 코드 삭제)')) return; await post({ action: 'refund', code: d.code, refunded: !d.refundedAt }); }
       if (act === 'reopen') { if (!confirm('이 고객이 한 번 더 제출할 수 있게 열어줄까요?\n(이미 받은 제출물은 그대로 남아요)')) return; await post({ action: 'reopen', code: d.code, part: b.dataset.part }); }
@@ -1256,6 +1270,23 @@ function initClientManager(box, masterPw) {
       await loadShops();
     } catch (e) { alert(e.message); }
   });
+  // ── 하루 자동 등록 상한 ──
+  async function loadLimits(data) {
+    if (!data) { const r = await fetch('/api/client-code?limits=1&master=' + encodeURIComponent(masterPw)); data = await r.json().catch(() => ({})); }
+    if (!data.limits) return;
+    [['resume', 'Resume'], ['interview', 'Interview'], ['set', 'Set']].forEach(([k, K]) => {
+      $('lm' + K).value = data.limits[k];
+      const n = (data.today || {})[k] || 0;
+      $('td' + K).innerHTML = `오늘 ${n}건${data.limits[k] > 0 && n > data.limits[k] ? ' <b style="color:#9A6200">· 초과</b>' : ''}`;
+    });
+  }
+  $('lmSave').addEventListener('click', async () => {
+    const b = $('lmSave'); b.disabled = true;
+    try { const d = await post({ action: 'setLimits', limits: { resume: $('lmResume').value, interview: $('lmInterview').value, set: $('lmSet').value } }); await loadLimits(d); b.textContent = '✅ 저장됨'; setTimeout(() => b.textContent = '저장', 1500); }
+    catch (e) { alert(e.message); }
+    b.disabled = false;
+  });
+  loadLimits();
   loadShops();
   load();
 }
@@ -1386,7 +1417,22 @@ function clientBannerHtml() {
         ${left !== null ? `<span class="badge" style="background:#fff;color:var(--navy)">이용 기간 ${moaDate(CLIENT.expiresAt - 1, 'short')}까지 · D-${left}</span>` : ''}
       </div>
       ${CLIENT.product === 'set' ? `<div style="font-size:13px;color:var(--muted);margin-top:6px;line-height:1.7">① 자기소개서 첨삭 → ② 모의면접 순서로 진행돼요. 지금은 <b>① 자기소개서</b> 단계예요.</div>` : ''}
+      ${CLIENT.hold ? clientHoldHtml() : ''}
     </div>`;
+}
+// 예약 확인 중(하루 등록 상한 초과 등) — 작성·자동 저장은 되고, 최종 제출만 원장님 확인 후 (2026-10-02)
+const CLIENT_HOLD_MSG = '예약 확인이 끝나면 제출할 수 있어요. 작성한 내용은 자동 저장되니 그대로 두시면 돼요. (보통 하루 안에 확인돼요)';
+function clientHoldHtml() {
+  return `<div style="margin-top:10px;padding:10px 12px;background:#FFF4DC;color:#7A4D00;border-radius:8px;font-size:13px;line-height:1.7">⏳ <b>예약 확인 중이에요.</b> 지금 바로 작성을 시작하셔도 돼요. 확인이 끝나면 이메일로 알려드리고, 그때부터 <b>최종 제출</b>할 수 있어요.</div>`;
+}
+// 제출 직전에 서버에서 보류가 풀렸는지 다시 확인 (풀렸으면 true)
+async function clientHoldCleared() {
+  try {
+    const r = await fetch('/api/client-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'verify', code: CLIENT.code }) });
+    const d = await r.json();
+    if (d && d.client) CLIENT.hold = !!d.client.hold;
+  } catch (e) {}
+  return !CLIENT.hold;
 }
 
 // 제출 전 작성 내용 자동 저장·불러오기 (서버 저장 → 다른 기기에서도 이어서)
@@ -2068,6 +2114,12 @@ async function renderStudentSubmitForm() {
       return;
     }
 
+    if (CLIENT && CLIENT.hold && !(await clientHoldCleared())) {
+      statusMsg.textContent = '⏳ ' + CLIENT_HOLD_MSG;
+      statusMsg.className = 'status-msg error';
+      statusMsg.style.display = 'block';
+      return;
+    }
     if (CLIENT && !confirm(`문항 ${rawItems.length}개를 제출할까요?\n\n⚠️ 제출은 한 번만 가능하고, 제출 후에는 수정할 수 없어요.\n빠진 문항이나 고칠 곳이 없는지 한 번 더 확인해 주세요.`)) return;
 
     submitBtn.disabled = true;
