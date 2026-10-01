@@ -980,6 +980,7 @@ const CLIENT_ITEM_LABELS = { 성장과정: '성장과정', 성격장단점: '성
 
 function initClientManager(box, masterPw) {
   let LIST = [], PRESETS = [];
+  const won = n => (parseInt(n, 10) || 0).toLocaleString('ko-KR') + '원';
   const allItems = Object.keys(CLIENT_ITEM_LABELS);
   box.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
@@ -998,6 +999,7 @@ function initClientManager(box, masterPw) {
         <div><label>지원 기업 <span style="font-weight:400;color:var(--muted)">(선택)</span></label><input type="text" id="clCompany" placeholder="예) ○○병원"></div>
         <div><label>첨삭 기준 (프리셋)</label><select id="clPreset"><option value="">불러오는 중...</option></select></div>
         <div><label>이용 기간 <span style="font-weight:400;color:var(--muted)">(일)</span></label><input type="text" id="clDays" inputmode="numeric" value="14"></div>
+        <div><label>판매 금액 <span style="font-weight:400;color:var(--muted)">(원 · 정산용)</span></label><input type="text" id="clPrice" inputmode="numeric" placeholder="예) 59000"></div>
       </div>
       <label>고객 이메일 <span style="font-weight:400;color:var(--muted)">(예약 확정 메시지 답장으로 받은 주소 · 선택)</span></label>
       <input type="text" id="clEmail" placeholder="결과 안내 메일을 받을 주소">
@@ -1021,6 +1023,7 @@ function initClientManager(box, masterPw) {
           <div><label>상품</label><select id="shProduct"><option value="set">세트 (자소서 → 모의면접)</option><option value="resume">자소서 첨삭</option><option value="interview">모의면접</option></select></div>
           <div><label>자소서 문항 수</label><select id="shMax"><option value="8">전 문항 (최대 8개)</option><option value="2">2개 (기본 상품)</option><option value="1">1개</option><option value="3">3개</option><option value="4">4개</option></select></div>
           <div><label>이용 기간 (일)</label><input type="text" id="shDays" inputmode="numeric" value="14"></div>
+          <div><label>판매 가격 <span style="font-weight:400;color:var(--muted)">(원 · 네이버 판매가)</span></label><input type="text" id="shPrice" inputmode="numeric" placeholder="예) 59000"></div>
         </div>
         <div class="btn-row"><button class="btn-primary" id="shAddBtn">링크 만들기</button></div>
       </div>
@@ -1050,14 +1053,16 @@ function initClientManager(box, masterPw) {
     const [label, cls] = stateOf(d);
     const left = Math.ceil((d.expiresAt - Date.now()) / 86400000);
     const items = (d.maxItems && d.maxItems < allItems.length) ? `문항 ${d.maxItems}개` : d.items.length === allItems.length ? '전 문항' : d.items.map(k => CLIENT_ITEM_LABELS[k]).join('·');
-    return `<div class="rb-row">
-      <div class="rb-top"><div class="rb-name">${d.auto ? '🤖 ' + escapeHtml(d.name || '') + ' · 예약 ' + escapeHtml(d.bookingNo || '') : escapeHtml(d.memo || '(메모 없음)')}<span class="rb-code">${d.code}</span></div><span class="rb-badge ${cls}">${label}</span></div>
+    return `<div class="rb-row"${d.refundedAt ? ' style="background:#FAFBFD"' : ''}>
+      <div class="rb-top"><div class="rb-name">${d.auto ? '🤖 ' + escapeHtml(d.name || '') + ' · 예약 ' + escapeHtml(d.bookingNo || '') : escapeHtml(d.memo || '(메모 없음)')}<span class="rb-code">${d.code}</span></div><span>${d.refundedAt ? '<span class="rb-badge b-end" style="margin-right:4px">↩ 환불</span>' : ''}<span class="rb-badge ${cls}">${label}</span></span></div>
       <div class="rb-sub">${escapeHtml(CLIENT_PRODUCT_NAMES[d.product])} · ${escapeHtml(items)}${d.job ? ' · ' + escapeHtml(d.job) : ''}${d.company ? ' · ' + escapeHtml(d.company) : ''}<br>
-        ${left > 0 ? `${moaDate(d.expiresAt - 1, 'short')}까지 (D-${left})` : '이용 기간 끝남'} · 이메일 ${d.email ? '있음' : '<b style="color:#B42318">없음</b>'}${d.used && d.used.resume ? ' · 자소서 확인코드 ' + escapeHtml(d.used.resume.reviewCode || '-') : ''}</div>
+        ${left > 0 ? `${moaDate(d.expiresAt - 1, 'short')}까지 (D-${left})` : '이용 기간 끝남'} · ${d.price ? won(d.price) : '<b style="color:#B42318">금액 없음</b>'} · 이메일 ${d.email ? '있음' : '<b style="color:#B42318">없음</b>'}${d.used && d.used.resume ? ' · 자소서 확인코드 ' + escapeHtml(d.used.resume.reviewCode || '-') : ''}</div>
       <div class="rb-btns">
         <button class="btn-secondary" data-cl="copy" data-code="${d.code}">${SHARE_LABEL}</button>
         <button class="btn-secondary" data-cl="extend" data-code="${d.code}">⏳ +7일</button>
         <details class="rb-more"><summary>⋯</summary><div class="rb-menu">
+          <button data-cl="price" data-code="${d.code}">판매 금액 바꾸기</button>
+          <button data-cl="refund" data-code="${d.code}">${d.refundedAt ? '환불 표시 취소' : '↩ 환불로 표시'}</button>
           ${d.used && d.used.resume ? `<button data-cl="reopen" data-part="resume" data-code="${d.code}">자소서 제출 다시 열기</button>` : ''}
           ${d.used && d.used.interview ? `<button data-cl="reopen" data-part="interview" data-code="${d.code}">면접 제출 다시 열기</button>` : ''}
           <button class="danger" data-cl="delete" data-code="${d.code}">코드 삭제</button>
@@ -1117,6 +1122,8 @@ function initClientManager(box, masterPw) {
           '지원 직무': d.job || '',
           '지원 기업': d.company || '',
           '이메일': d.email || '',
+          '판매 금액': d.price || 0,
+          '환불': d.refundedAt ? '환불 (' + f(d.refundedAt, 'day') + ')' : '',
           '상태': stateOf(d)[0],
           '자소서 제출': parts.includes('resume') ? (u.resume ? f(u.resume.at) : '미제출') : '-',
           '자소서 확인코드': u.resume ? (u.resume.reviewCode || '') : '',
@@ -1132,6 +1139,32 @@ function initClientManager(box, masterPw) {
       ws['!autofilter'] = { ref: ws['!ref'] };
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, '개인 고객');
+      // ── 2번째 시트: 월별 정산 요약 (등록한 달 기준, 환불 건은 매출에서 제외) ──
+      const sum = {};
+      LIST.forEach(d => {
+        const dt = new Date(d.createdAt);
+        const ym = dt.getFullYear() + '.' + ('0' + (dt.getMonth() + 1)).slice(-2);
+        const prod = CLIENT_PRODUCT_NAMES[d.product] || d.product;
+        const k = ym + '|' + prod;
+        sum[k] = sum[k] || { '월': ym, '상품': prod, '판매 건수': 0, '예상 매출': 0, '환불 건수': 0, '환불 금액': 0, '금액 미입력': 0 };
+        if (d.refundedAt) { sum[k]['환불 건수']++; sum[k]['환불 금액'] += d.price || 0; }
+        else { sum[k]['판매 건수']++; sum[k]['예상 매출'] += d.price || 0; if (!d.price) sum[k]['금액 미입력']++; }
+      });
+      const keys = Object.keys(sum).sort().reverse();
+      const srows = [];
+      let lastYm = null, tot = null;
+      const pushTot = () => { if (tot) srows.push(tot, {}); };
+      keys.forEach(k => {
+        const r = sum[k];
+        if (r['월'] !== lastYm) { pushTot(); lastYm = r['월']; tot = { '월': r['월'], '상품': '▶ 월 합계', '판매 건수': 0, '예상 매출': 0, '환불 건수': 0, '환불 금액': 0, '금액 미입력': 0 }; }
+        srows.push(r);
+        ['판매 건수', '예상 매출', '환불 건수', '환불 금액', '금액 미입력'].forEach(c => tot[c] += r[c]);
+      });
+      pushTot();
+      srows.push({ '월': '※ 예상 매출 = 판매 금액 합계 (네이버 수수료 빼기 전). 실제 입금액은 네이버 스마트플레이스 정산 내역과 비교해 주세요.' });
+      const ws2 = XLSX.utils.json_to_sheet(srows, { header: ['월', '상품', '판매 건수', '예상 매출', '환불 건수', '환불 금액', '금액 미입력'] });
+      ws2['!cols'] = [{ wch: 10 }, { wch: 26 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 12 }];
+      XLSX.utils.book_append_sheet(wb, ws2, '월별 정산 요약');
       const t = new Date(); const ymd = String(t.getFullYear()).slice(2) + ('0' + (t.getMonth() + 1)).slice(-2) + ('0' + t.getDate()).slice(-2);
       XLSX.writeFile(wb, `진로모아_개인고객_${ymd}.xlsx`);
     } catch (e) { alert(e.message); }
@@ -1145,7 +1178,7 @@ function initClientManager(box, masterPw) {
     if (!items.length) { err.textContent = '문항을 하나 이상 체크해 주세요.'; err.style.display = 'block'; return; }
     $('clAddBtn').disabled = true;
     try {
-      const { item } = await post({ action: 'create', memo: $('clMemo').value, product: $('clProduct').value, days: $('clDays').value, job: $('clJob').value, company: $('clCompany').value, presetId: $('clPreset').value, email: $('clEmail').value, items });
+      const { item } = await post({ action: 'create', memo: $('clMemo').value, product: $('clProduct').value, days: $('clDays').value, job: $('clJob').value, company: $('clCompany').value, presetId: $('clPreset').value, email: $('clEmail').value, price: $('clPrice').value, items });
       $('clDone').innerHTML = `<div class="rb-done">✅ 코드 <b>${item.code}</b> 를 만들었어요.
         <div class="rb-btns" style="margin-top:8px"><button class="btn-primary" data-cl="copy" data-code="${item.code}">${SHARE_LABEL}</button></div>
         <span style="color:var(--muted);font-size:12px">${escapeHtml((item.product === 'interview' ? INTERVIEW_APP_URL : location.origin + location.pathname) + '?c=' + item.code)}</span></div>`;
@@ -1163,6 +1196,8 @@ function initClientManager(box, masterPw) {
     try {
       if (act === 'copy') { const r = await moaShare(msgOf(d)); if (r !== 'cancel') { b.textContent = r === 'shared' ? '✅ 보냈어요' : '✅ 복사됨'; setTimeout(() => b.textContent = SHARE_LABEL, 2000); } return; }
       if (act === 'extend') { await post({ action: 'extend', code: d.code, days: 7 }); }
+      if (act === 'price') { const v = prompt('판매 금액(원)을 입력해 주세요.', d.price || ''); if (v === null) return; await post({ action: 'setPrice', code: d.code, price: v }); }
+      if (act === 'refund') { if (!d.refundedAt && !confirm('환불로 표시할까요?\n엑셀 정산 요약에서 매출에서 빠지고 환불 건수로 따로 세어져요.\n(고객 링크는 그대로예요. 막으려면 코드 삭제)')) return; await post({ action: 'refund', code: d.code, refunded: !d.refundedAt }); }
       if (act === 'reopen') { if (!confirm('이 고객이 한 번 더 제출할 수 있게 열어줄까요?\n(이미 받은 제출물은 그대로 남아요)')) return; await post({ action: 'reopen', code: d.code, part: b.dataset.part }); }
       if (act === 'delete') { if (!confirm(`코드 ${d.code}를 삭제할까요?\n고객 링크가 바로 막혀요. (이미 받은 제출물·결과는 남아요)`)) return; await post({ action: 'delete', code: d.code }); }
       await load();
@@ -1178,11 +1213,12 @@ function initClientManager(box, masterPw) {
   function shopRow(sh) {
     return `<div class="rb-row" style="${sh.active ? '' : 'opacity:.6'}">
       <div class="rb-top"><div class="rb-name">${escapeHtml(sh.label)}</div><span class="rb-badge ${sh.active ? 'b-active' : 'b-inv'}">${sh.active ? '🟢 사용 중' : '⏸ 꺼짐'}</span></div>
-      <div class="rb-sub">${escapeHtml(CLIENT_PRODUCT_NAMES[sh.product])} · ${sh.product === 'interview' ? '' : (sh.maxItems >= allItems.length ? '전 문항 · ' : '자소서 ' + sh.maxItems + '문항 · ')}${sh.days}일<br><span style="word-break:break-all">${escapeHtml(shopLink(sh))}</span></div>
+      <div class="rb-sub">${escapeHtml(CLIENT_PRODUCT_NAMES[sh.product])} · ${sh.product === 'interview' ? '' : (sh.maxItems >= allItems.length ? '전 문항 · ' : '자소서 ' + sh.maxItems + '문항 · ')}${sh.days}일 · <b>${sh.price ? won(sh.price) : '<span style="color:#B42318">가격 미입력</span>'}</b><br><span style="word-break:break-all">${escapeHtml(shopLink(sh))}</span></div>
       <div class="rb-btns">
         <button class="btn-primary" data-sh="notice" data-id="${sh.id}">📋 안내 문구 복사</button>
         <button class="btn-secondary" data-sh="link" data-id="${sh.id}">🔗 링크만 복사</button>
         <details class="rb-more"><summary>⋯</summary><div class="rb-menu">
+          <button data-sh="price" data-id="${sh.id}">판매 가격 바꾸기</button>
           <button data-sh="rotate" data-id="${sh.id}">링크 새로 바꾸기</button>
           <button data-sh="toggle" data-id="${sh.id}">${sh.active ? '잠시 끄기' : '다시 켜기'}</button>
           <button class="danger" data-sh="delete" data-id="${sh.id}">링크 삭제</button>
@@ -1197,7 +1233,7 @@ function initClientManager(box, masterPw) {
   }
   $('shAddToggle').addEventListener('click', () => { const a = $('shAdd'); a.style.display = a.style.display === 'none' ? 'block' : 'none'; });
   $('shAddBtn').addEventListener('click', async () => {
-    try { await post({ action: 'shopCreate', label: $('shLabel').value, product: $('shProduct').value, maxItems: $('shMax').value, days: $('shDays').value }); $('shLabel').value = ''; $('shAdd').style.display = 'none'; await loadShops(); }
+    try { await post({ action: 'shopCreate', label: $('shLabel').value, product: $('shProduct').value, maxItems: $('shMax').value, days: $('shDays').value, price: $('shPrice').value }); $('shLabel').value = ''; $('shPrice').value = ''; $('shAdd').style.display = 'none'; await loadShops(); }
     catch (e) { alert(e.message); }
   });
   $('shList').addEventListener('click', async ev => {
@@ -1208,6 +1244,11 @@ function initClientManager(box, masterPw) {
       if (b.dataset.sh === 'notice' || b.dataset.sh === 'link') {
         await copy(b.dataset.sh === 'notice' ? shopNotice(sh) : shopLink(sh));
         const t = b.textContent; b.textContent = '✅ 복사됨'; setTimeout(() => b.textContent = t, 1500); return;
+      }
+      if (b.dataset.sh === 'price') {
+        const v = prompt(`${sh.label} 판매 가격(원)을 입력해 주세요.\n앞으로 이 링크로 등록하는 고객부터 적용돼요. (이미 등록한 고객은 고객 카드의 ⋯에서 바꿔요)`, sh.price || '');
+        if (v === null) return;
+        await post({ action: 'shopPrice', id: sh.id, price: v }); await loadShops(); return;
       }
       if (b.dataset.sh === 'rotate' && !confirm('링크를 새로 바꿀까요?\n\n예전 링크는 바로 막혀요 (링크가 퍼졌을 때 사용). 이미 등록한 고객은 그대로 이용할 수 있어요.\n바꾼 뒤 네이버 예약 안내 문구도 새 링크로 바꿔 주세요.')) return;
       if (b.dataset.sh === 'delete' && !confirm('이 링크를 삭제할까요? 링크가 바로 막혀요.')) return;

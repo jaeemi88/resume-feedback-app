@@ -26,7 +26,8 @@
 //   POST { action:'shopInfo', key }                       → 링크 정보 (누구나)
 //   POST { action:'shopJoin', key, name, email, bookingNo, job, company } → 코드 발급 + 입장 링크 메일 (누구나)
 //   GET  ?shops=1&master=비밀번호                          → 링크 목록 (원장님)
-//   POST { action:'shopCreate'|'shopRotate'|'shopToggle'|'shopDelete', master, ... } (원장님)
+//   POST { action:'shopCreate'|'shopRotate'|'shopToggle'|'shopDelete'|'shopPrice', master, ... } (원장님)
+//   POST { action:'setPrice', master, code, price } / { action:'refund', master, code, refunded } → 정산용 (원장님)
 //
 // [다른 서버 파일에서 사용] useClientPart(client, code, part) → 제출 1회 사용 처리 (reviews.js)
 // ※ 자소서 앱·모의면접 앱에 같은 파일이 들어 있어요. 고칠 때는 두 앱 모두 똑같이 바꿔 주세요.
@@ -145,6 +146,10 @@ async function mailEntryLink(d) {
     return r.ok;
   } catch (e) { console.error('입장 링크 메일 실패:', e); return false; }
 }
+function cleanPrice(v) {
+  const n = parseInt(String(v == null ? '' : v).replace(/[^0-9]/g, ''), 10);
+  return n >= 0 && n <= 10000000 ? n : 0;
+}
 function genShopKey() {
   return crypto.randomBytes(9).toString('base64url'); // 12자리
 }
@@ -260,7 +265,7 @@ export default async function handler(req, res) {
       const job = clean(body.job, 60);
       const base = {
         product: shop.product, items: RESUME_ITEMS.slice(), maxItems: shop.maxItems || RESUME_ITEMS.length, interviewCats: [],
-        memo: `예약 ${bookingNo}`, name, bookingNo, shopId: shop.id, shopLabel: shop.label, auto: true,
+        memo: `예약 ${bookingNo}`, name, bookingNo, shopId: shop.id, shopLabel: shop.label, auto: true, price: shop.price || 0,
         job, company: clean(body.company, 40), presetId: await matchPreset(client, job), email,
         createdAt: now, expiresAt: now + days * 24 * 3600 * 1000
       };
@@ -287,17 +292,18 @@ export default async function handler(req, res) {
       let days = parseInt(body.days, 10); if (!(days >= 1 && days <= 180)) days = 14;
       let maxItems = parseInt(body.maxItems, 10); if (!(maxItems >= 1 && maxItems <= RESUME_ITEMS.length)) maxItems = RESUME_ITEMS.length;
       const id = 'shop_' + Date.now().toString(36);
-      const shop = { id, key: genShopKey(), label: clean(body.label, 30) || PRODUCTS[product], product, days, maxItems, active: true, createdAt: Date.now() };
+      const shop = { id, key: genShopKey(), label: clean(body.label, 30) || PRODUCTS[product], product, days, maxItems, price: cleanPrice(body.price), active: true, createdAt: Date.now() };
       await client.hset(SHOPS, id, JSON.stringify(shop));
       return res.status(200).json({ ok: true, item: shop });
     }
-    if (req.method === 'POST' && ['shopRotate', 'shopToggle', 'shopDelete'].includes(body.action)) {
+    if (req.method === 'POST' && ['shopRotate', 'shopToggle', 'shopDelete', 'shopPrice'].includes(body.action)) {
       const raw = await client.hget(SHOPS, String(body.id || ''));
       if (!raw) return res.status(404).json({ ok: false, error: '링크를 찾을 수 없어요.' });
       const shop = JSON.parse(raw);
       if (body.action === 'shopDelete') { await client.hdel(SHOPS, shop.id); return res.status(200).json({ ok: true }); }
       if (body.action === 'shopRotate') shop.key = genShopKey();   // 옛 링크는 바로 막힘 (이미 받은 고객 코드는 그대로)
       if (body.action === 'shopToggle') shop.active = !shop.active;
+      if (body.action === 'shopPrice') shop.price = cleanPrice(body.price); // 앞으로 등록하는 고객부터 적용
       await client.hset(SHOPS, shop.id, JSON.stringify(shop));
       return res.status(200).json({ ok: true, item: shop });
     }
@@ -325,7 +331,7 @@ export default async function handler(req, res) {
       const base = {
         product, items, interviewCats,
         memo: clean(body.memo, 40), job: clean(body.job, 60), company: clean(body.company, 40),
-        presetId: clean(body.presetId, 60), email: clean(body.email, 120),
+        presetId: clean(body.presetId, 60), email: clean(body.email, 120), price: cleanPrice(body.price),
         createdAt: now, expiresAt: now + days * 24 * 3600 * 1000
       };
       const made = await createClient(client, base, days);
@@ -340,6 +346,18 @@ export default async function handler(req, res) {
       let days = parseInt(body.days, 10);
       if (!(days >= 1 && days <= 180)) days = 7;
       d.expiresAt = Math.max(d.expiresAt, Date.now()) + days * 24 * 3600 * 1000;
+      await save(client, d);
+      return res.status(200).json({ ok: true, item: await withUsed(client, d) });
+    }
+
+    // 정산용: 판매 금액 바꾸기 / 환불 표시 (2026-10-02)
+    if (req.method === 'POST' && body.action === 'setPrice') {
+      d.price = cleanPrice(body.price);
+      await save(client, d);
+      return res.status(200).json({ ok: true, item: await withUsed(client, d) });
+    }
+    if (req.method === 'POST' && body.action === 'refund') {
+      d.refundedAt = body.refunded ? Date.now() : null;
       await save(client, d);
       return res.status(200).json({ ok: true, item: await withUsed(client, d) });
     }
