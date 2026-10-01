@@ -1199,6 +1199,7 @@ function aspirationExtra(questionType, company) {
 // - 열어준 문항 유형만 고를 수 있고, 모아서 "한 번" 제출 (서버 api/client-code.js가 1회로 잠금)
 // - 제출물은 원장님(jinromoa) 검수 대기함으로 들어가고, 강사 승인 후에만 결과가 보여요
 let CLIENT = null;
+let CLIENT_DRAFT = null;
 const CLIENT_PRODUCT_NAMES = { resume: '자소서 첨삭', interview: '모의면접', set: '세트 (자소서 → 모의면접)' };
 const INTERVIEW_APP_URL = 'https://moa-interview-app.vercel.app/';
 
@@ -1220,6 +1221,63 @@ function clientBannerHtml() {
     </div>`;
 }
 
+// 제출 전 작성 내용 자동 저장·불러오기 (서버 저장 → 다른 기기에서도 이어서)
+function clientCollectResume() {
+  const v = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+  const hire = document.querySelector('input[name="hiringType"]:checked');
+  return {
+    name: v('studentNameInput'), email: v('studentEmailInput'), hiring: hire ? hire.value : 'general',
+    presetId: v('presetSelect'), jobPosting: v('jobPostingInput'), company: v('targetCompanyInput'),
+    items: Array.from(document.querySelectorAll('.item-block')).map(b => ({
+      type: b.querySelector('.item-questionType').value,
+      question: b.querySelector('.item-question').value,
+      answer: b.querySelector('.item-answer').value,
+      selfIntent: b.querySelector('.item-selfIntent').value,
+      prevAnswer: b.querySelector('.item-prevAnswer').value
+    }))
+  };
+}
+function clientWireDraft(presetSelect, docTypeSelect) {
+  const d = CLIENT_DRAFT;
+  const state = document.getElementById('clientSaveState');
+  if (d) {
+    const set = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.value = val; };
+    set('studentNameInput', d.name); set('studentEmailInput', d.email);
+    set('jobPostingInput', d.jobPosting); set('targetCompanyInput', d.company);
+    if (d.presetId && Array.from(presetSelect.options).some(o => o.value === d.presetId)) presetSelect.value = d.presetId;
+    const hr = document.querySelector(`input[name="hiringType"][value="${d.hiring === 'blind' ? 'blind' : 'general'}"]`);
+    if (hr) hr.checked = true;
+    const items = (d.items || []).slice(0, CLIENT.items.length);
+    for (let i = 1; i < items.length; i++) document.getElementById('addItemBtn').click();
+    const blocks = document.querySelectorAll('.item-block');
+    items.forEach((it, i) => {
+      const b = blocks[i]; if (!b) return;
+      const sel = b.querySelector('.item-questionType');
+      if (CLIENT.items.includes(it.type) && sel.value !== it.type) { sel.value = it.type; sel.dispatchEvent(new Event('change', { bubbles: true })); }
+      const put = (cls, val) => { const el = b.querySelector(cls); el.value = val || ''; el.dispatchEvent(new Event('input', { bubbles: true })); };
+      put('.item-question', it.question); put('.item-answer', it.answer);
+      put('.item-selfIntent', it.selfIntent); put('.item-prevAnswer', it.prevAnswer);
+    });
+    if (state) state.textContent = '✅ 저장해 둔 내용을 불러왔어요.';
+  }
+  let timer = null, saving = false;
+  const save = () => {
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      if (saving) return; saving = true;
+      try {
+        const r = await fetch('/api/client-code', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'saveDraft', code: CLIENT.code, part: 'resume', data: clientCollectResume() }) });
+        if (state) state.textContent = r.ok ? '💾 자동 저장됨 ' + moaDate(Date.now(), 'stime') : '⚠️ 저장하지 못했어요. 인터넷 연결을 확인해 주세요.';
+      } catch (e) { if (state) state.textContent = '⚠️ 저장하지 못했어요. 인터넷 연결을 확인해 주세요.'; }
+      saving = false;
+    }, 1200);
+  };
+  app.addEventListener('input', save);
+  app.addEventListener('change', save);
+  app.addEventListener('click', e => { if (e.target.closest('.item-remove-btn, #addItemBtn')) save(); });
+}
+
 async function renderClientEntry(rawCode) {
   document.body.classList.remove('role-teacher');
   document.body.classList.add('role-student');
@@ -1229,11 +1287,12 @@ async function renderClientEntry(rawCode) {
   try {
     const res = await fetch('/api/client-code', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'verify', code: rawCode })
+      body: JSON.stringify({ action: 'verify', code: rawCode, part: 'resume' })
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.ok) throw new Error(data.error || '입장 코드를 확인하지 못했어요.');
     CLIENT = data.client;
+    CLIENT_DRAFT = data.draft && data.draft.data;
     TEACHER_ID = CLIENT.t;
   } catch (e) {
     app.innerHTML = `<div class="card"><h2>입장할 수 없어요</h2><p style="font-size:14px;color:var(--muted);line-height:1.7">${escapeHtml(e.message)}<br>문의: 진로모아커리어센터</p></div>`;
@@ -1689,8 +1748,13 @@ async function renderStudentSubmitForm() {
       <div id="itemsContainer" style="margin-top:18px"></div>
       <button type="button" class="btn-add-preset" id="addItemBtn" style="margin-bottom:14px">+ 문항 추가</button>
 
+      ${CLIENT ? `<div style="background:var(--navy-light);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.7;margin:4px 0 10px">
+        ${CLIENT.product === 'set' ? '📌 <b>제출하면 끝이 아니에요!</b> 자기소개서를 제출하면 바로 <b>② 모의면접</b>으로 이어서 진행할 수 있어요. 모의면접도 같은 링크(코드)로 들어가요.<br>' : ''}
+        💾 쓰는 내용은 <b>자동 저장</b>돼요. 이용 기간 안에는 <b>나갔다가 다시 들어와도 이어서</b> 쓸 수 있어요 (다른 기기도 OK).
+        <div id="clientSaveState" style="color:var(--muted);font-size:12px;margin-top:4px"></div>
+      </div>` : ''}
       <div class="btn-row">
-        <button class="btn-primary" id="submitBtn">전체 제출하기</button>
+        <button class="btn-primary" id="submitBtn">${CLIENT ? (CLIENT.product === 'set' ? '자기소개서 제출하고 ② 모의면접으로' : '최종 제출하기') : '전체 제출하기'}</button>
       </div>
       <div class="status-msg" id="statusMsg"></div>
     </div>
@@ -1782,7 +1846,9 @@ async function renderStudentSubmitForm() {
     if (CLIENT && !confirm(`문항 ${rawItems.length}개를 제출할까요?\n\n⚠️ 제출은 한 번만 가능하고, 제출 후에는 수정할 수 없어요.\n빠진 문항이나 고칠 곳이 없는지 한 번 더 확인해 주세요.`)) return;
 
     submitBtn.disabled = true;
-    submitBtn.textContent = `첨삭 초안 생성 중... (문항 ${rawItems.length}개, 최대 ${rawItems.length}분)`;
+    submitBtn.textContent = CLIENT
+      ? `제출하는 중이에요... (1~${Math.max(2, rawItems.length)}분 · 화면을 닫지 마세요)`
+      : `첨삭 초안 생성 중... (문항 ${rawItems.length}개, 최대 ${rawItems.length}분)`;
     statusMsg.style.display = 'none';
 
     try {
@@ -1825,9 +1891,10 @@ async function renderStudentSubmitForm() {
       statusMsg.className = 'status-msg error';
       statusMsg.style.display = 'block';
       submitBtn.disabled = false;
-      submitBtn.textContent = '전체 제출하기';
+      submitBtn.textContent = CLIENT ? (CLIENT.product === 'set' ? '자기소개서 제출하고 ② 모의면접으로' : '최종 제출하기') : '전체 제출하기';
     }
   });
+  if (CLIENT) clientWireDraft(presetSelect, docTypeSelect);
 }
 
 // ---------- 추천 프리셋 라이브러리 (v2 · 2026.09) ----------

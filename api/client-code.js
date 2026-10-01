@@ -16,6 +16,9 @@
 // [누구나 — 고객 입장]
 //   POST { action:'verify', code }  → 고객 화면에 필요한 정보만 (이메일·메모는 돌려주지 않음)
 //        같은 IP에서 20번 틀리면 15분 차단
+//   POST { action:'verify', code, part }        → 위 정보 + 그 단계의 임시 저장 내용(draft)
+//   POST { action:'saveDraft', code, part, data } → 제출 전 작성 중인 내용 자동 저장 (2026-10-01)
+//        기간 안·제출 전에는 몇 번이든 나갔다 들어와도 이어서 쓸 수 있어요 (다른 기기에서도)
 //
 // [다른 서버 파일에서 사용] useClientPart(client, code, part) → 제출 1회 사용 처리 (reviews.js)
 // ※ 자소서 앱·모의면접 앱에 같은 파일이 들어 있어요. 고칠 때는 두 앱 모두 똑같이 바꿔 주세요.
@@ -32,6 +35,8 @@ export const CLIENT_T = 'jinromoa';            // 고객 제출물은 원장님 
 const PREFIX = 'moa_client:';                  // moa_client:ABC234 → JSON
 const INDEX = 'moa_clients';                   // 해시: 코드 → 만든 시각 (목록용)
 const USED = (code, part) => `moa_client_used:${code}:${part}`; // 제출 1회 잠금 (있으면 이미 제출)
+const DRAFT = (code, part) => `moa_client_draft:${code}:${part}`; // 제출 전 임시 저장
+const DRAFT_MAX = 300 * 1024;                  // 임시 저장 최대 300KB
 const KEEP_AFTER_END = 60 * 24 * 3600;         // 기간 끝난 뒤 60일 지나면 Redis에서 자동 삭제
 
 export const RESUME_ITEMS = ['성장과정', '성격장단점', '지원동기', '협업갈등', '도전경험', '실패경험', '경력활동', '입사후포부'];
@@ -99,6 +104,7 @@ export async function useClientPart(client, code, part, reviewCode) {
   if (!partsOf(d.product).includes(part)) return { error: '이 상품에 포함되지 않은 항목이에요.', status: 403 };
   const ok = await client.set(USED(d.code, part), JSON.stringify({ at: Date.now(), reviewCode: reviewCode || '' }), 'NX');
   if (!ok) return { error: '이미 제출을 마친 코드예요. 제출 후에는 수정할 수 없어요.', status: 409 };
+  try { await client.del(DRAFT(d.code, part)); } catch (e) {} // 제출했으니 임시 저장은 지움
   await client.expire(USED(d.code, part), Math.max(3600, Math.ceil((d.expiresAt - Date.now()) / 1000) + KEEP_AFTER_END));
   return { data: d };
 }
@@ -139,7 +145,26 @@ export default async function handler(req, res) {
         return res.status(404).json({ ok: false, error: '입장 코드가 맞지 않아요. 받으신 링크를 다시 눌러 주세요.' });
       }
       if (Date.now() > d.expiresAt) return res.status(410).json({ ok: false, expired: true, error: '이용 기간이 끝났어요. 진로모아로 문의해 주세요.' });
-      return res.status(200).json({ ok: true, client: publicView(await withUsed(client, d)) });
+      const out = { ok: true, client: publicView(await withUsed(client, d)) };
+      if (body.part === 'resume' || body.part === 'interview') {
+        const raw = await client.get(DRAFT(d.code, body.part));
+        if (raw) { try { out.draft = JSON.parse(raw); } catch (e) {} }
+      }
+      return res.status(200).json(out);
+    }
+
+    // ── 작성 중 자동 저장 (코드를 가진 고객) ──
+    if (req.method === 'POST' && body.action === 'saveDraft') {
+      const part = body.part === 'interview' ? 'interview' : body.part === 'resume' ? 'resume' : '';
+      const d = await getClient(client, body.code);
+      if (!d || !part) return res.status(404).json({ ok: false, error: '코드를 찾을 수 없어요.' });
+      if (Date.now() > d.expiresAt) return res.status(410).json({ ok: false, error: '이용 기간이 끝났어요.' });
+      if (await client.get(USED(d.code, part))) return res.status(409).json({ ok: false, error: '이미 제출을 마쳤어요.' });
+      const json = JSON.stringify({ data: body.data || null, savedAt: Date.now() });
+      if (json.length > DRAFT_MAX) return res.status(413).json({ ok: false, error: '내용이 너무 길어 저장하지 못했어요.' });
+      const ttl = Math.max(3600, Math.ceil((d.expiresAt - Date.now()) / 1000) + 7 * 24 * 3600);
+      await client.set(DRAFT(d.code, part), json, 'EX', ttl);
+      return res.status(200).json({ ok: true, savedAt: Date.now() });
     }
 
     // ── 여기부터 원장님만 ──
@@ -202,7 +227,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST' && body.action === 'delete') {
-      await client.del(PREFIX + d.code, USED(d.code, 'resume'), USED(d.code, 'interview'));
+      await client.del(PREFIX + d.code, USED(d.code, 'resume'), USED(d.code, 'interview'), DRAFT(d.code, 'resume'), DRAFT(d.code, 'interview'));
       await client.hdel(INDEX, d.code);
       return res.status(200).json({ ok: true });
     }
