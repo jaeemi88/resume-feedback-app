@@ -2,6 +2,10 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<script>
+// 네이버 예약 안내 문구는 = 기호를 못 써서, 자동 입장 링크를 /go/키 모양으로 씀 → 앱 안에서는 ?shop=키 로 바꿔 처리
+(function(){var m=location.pathname.match(/^\/go\/([A-Za-z0-9_-]{6,40})\/?$/);if(m)history.replaceState(null,'','/?shop='+m[1]);})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>자소서·이력서 첨삭 — 진로모아커리어센터</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1113,8 +1117,9 @@ function initClientManager(box, masterPw) {
 
   // ── 네이버 예약 자동 입장 링크 ──
   let SHOPS = [];
-  const shopLink = sh => location.origin + location.pathname + '?shop=' + sh.key;
-  const shopNotice = sh => `[${CLIENT_PRODUCT_NAMES[sh.product]} 시작 안내]\n결제 후 아래 링크에서 이름·이메일·네이버 예약번호를 넣으면 바로 시작할 수 있어요.\n${shopLink(sh)}\n\n· 이용 기간: 시작한 날부터 ${sh.days}일\n· 작성 내용은 자동 저장돼요. 다 마치면 "최종 제출"을 눌러 주세요.\n· 제출 후 영업일 기준 2일 이내에 강사가 직접 검토한 결과를 이메일로 보내드려요.`;
+  const shopLink = sh => location.origin + '/go/' + sh.key; // 네이버 입력칸에서 = 기호를 못 써서 /go/키 모양
+  // 네이버 유의사항 칸은 · " = 같은 기호를 못 써서, 허용되는 기호(- , : ())만 사용
+  const shopNotice = sh => `결제 후 아래 링크에서 이름, 이메일, 네이버 예약번호를 넣으면 바로 시작할 수 있어요.\n${shopLink(sh)}\n\n- 이용 기간: 시작한 날부터 ${sh.days}일\n- 작성 내용은 자동 저장돼요. 기간 안에는 나갔다가 다시 들어와도 이어서 쓸 수 있어요.\n- 다 마치면 최종 제출을 눌러 주세요. 제출은 한 번만 가능해요.\n- 제출 후 영업일 기준 2일 이내에 강사가 직접 검토한 결과를 이메일로 보내드려요.\n- 예약번호는 네이버 앱 예약 내역에서 확인할 수 있어요.`;
   function shopRow(sh) {
     return `<div class="rb-row" style="${sh.active ? '' : 'opacity:.6'}">
       <div class="rb-top"><div class="rb-name">${escapeHtml(sh.label)}</div><span class="rb-badge ${sh.active ? 'b-active' : 'b-inv'}">${sh.active ? '🟢 사용 중' : '⏸ 꺼짐'}</span></div>

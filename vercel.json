@@ -1,5 +1,14 @@
 {
   "crons": [
-    { "path": "/api/cleanup", "schedule": "0 18 * * *" }
+    {
+      "path": "/api/cleanup",
+      "schedule": "0 18 * * *"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/go/:key",
+      "destination": "/index.html"
+    }
   ]
 }
