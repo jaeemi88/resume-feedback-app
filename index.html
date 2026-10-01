@@ -607,6 +607,24 @@ function renderMissingTeacherNotice() {
 }
 
 // ---------- 원장님 전용 관리 화면 ----------
+// ---------- 카톡으로 보내기 (2026-10-01) ----------
+// 휴대폰: 공유 창이 열려서 "카카오톡" → 받을 사람만 고르면 끝 (복사·붙여넣기 없음)
+// PC: 공유 창에 카톡이 없어서 내용을 복사 → PC 카톡 대화창에 Ctrl+V
+// ※ 공유 창은 버튼을 누른 "그 순간"에만 열 수 있어서, 서버 응답을 기다린 뒤에는 버튼을 한 번 더 누르게 함
+const IS_MOBILE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+async function moaShare(text) {
+  if (IS_MOBILE && navigator.share) {
+    try { await navigator.share({ text }); return 'shared'; }
+    catch (e) { if (e && e.name === 'AbortError') return 'cancel'; }
+  }
+  try { await navigator.clipboard.writeText(text); return 'copied'; }
+  catch (e) { prompt('아래 내용을 길게 눌러 복사해 주세요', text); return 'copied'; }
+}
+const SHARE_LABEL = IS_MOBILE ? '💬 카톡으로 보내기' : '💬 카톡용 복사';
+function shareResultMsg(r) {
+  return r === 'shared' ? '✅ 보냈어요.' : r === 'cancel' ? '보내기를 취소했어요.' : '✅ 복사했어요. PC 카톡 대화창에 Ctrl+V로 붙여넣어 보내 주세요.';
+}
+
 function renderMasterTeacherList() {
   // ── 강사 명부 (2026-09-28) — 초대코드·강사·중지 목록을 한 명부로 ──
   const PW_KEY = 'moa_master_pw_session';
@@ -657,11 +675,11 @@ function renderMasterTeacherList() {
       <div class="rb-add" id="rbAdd" style="display:none">
         <div class="grid">
           <div><label>강사 이름</label><input type="text" id="rbAddName" placeholder="예: 김민지"></div>
-          <div><label>강사 코드 <span style="font-weight:400;color:var(--muted)">(영문·숫자)</span></label><input type="text" id="rbAddCode" placeholder="예: kim01" autocapitalize="none"></div>
+          <div><label>강사 코드 <span style="font-weight:400;color:var(--muted)">(비워두면 자동)</span></label><input type="text" id="rbAddCode" placeholder="자동으로 만들어져요" autocapitalize="none"></div>
         </div>
         <label>사용 기간 <span style="font-weight:400;color:var(--muted)">(일 · 비워두면 영구)</span></label>
         <input type="text" id="rbAddDays" inputmode="numeric" placeholder="예) 7 — 단기 캠프·일회성 강의라면">
-        <div class="btn-row"><button class="btn-primary" id="rbAddBtn">추가하고 링크 복사</button></div>
+        <div class="btn-row"><button class="btn-primary" id="rbAddBtn">추가하기</button></div>
         <div id="rbAddErr" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
       </div>
       <div id="rbDone"></div>
@@ -721,13 +739,24 @@ function renderMasterTeacherList() {
     $('rbDone').scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
-  async function sendLink(t) {
+  let PENDING_MSG = '';
+  // 링크가 이미 있으면 버튼을 누른 순간 바로 카톡 공유 창, 없으면 만든 뒤 "카톡으로 보내기" 버튼을 한 번 더
+  async function sendLink(t, isNew) {
     let key = t.hubKey;
+    if (key && !isNew) {
+      const { msg } = hubMsg(t.name, key);
+      const r = await moaShare(msg);
+      if (r !== 'cancel') registryPost({ action: 'markLinkSent', code: t.code }).catch(() => {});
+      showDone(`${shareResultMsg(r)} <b>${escapeHtml(t.name)}</b> 강사님 승인 링크`);
+      if (r !== 'cancel') await load();
+      return;
+    }
     if (!key) key = (await registryPost({ action: 'makeHubLink', code: t.code })).hubKey;
     const { link, msg } = hubMsg(t.name, key);
-    await copyText(msg);
-    registryPost({ action: 'markLinkSent', code: t.code }).catch(() => {});
-    showDone(`✅ <b>${escapeHtml(t.name)}</b> 강사님 승인 링크를 복사했어요. 카톡에 붙여넣어 보내주세요.<br><span style="color:var(--muted)">${escapeHtml(link)}</span>`);
+    PENDING_MSG = msg;
+    showDone(`✅ <b>${escapeHtml(t.name)}</b> 강사님 승인 링크가 준비됐어요.
+      <div class="rb-btns" style="margin-top:8px"><button class="btn-primary" id="rbShareNow" data-code="${escapeHtml(t.code)}">${SHARE_LABEL}</button></div>
+      <span style="color:var(--muted);font-size:12px">${escapeHtml(link)}</span>`);
     await load();
   }
 
@@ -747,7 +776,7 @@ function renderMasterTeacherList() {
         </div>
         <div class="rb-sub">${bits.map(escapeHtml).join(' · ')}</div>
         <div class="rb-btns">
-          <button class="btn-primary" data-act="send" data-code="${escapeHtml(t.code)}">📤 ${t.linkSentAt || t.lastSeen ? '링크 다시 보내기' : '링크 보내기'}</button>
+          <button class="btn-primary" data-act="send" data-code="${escapeHtml(t.code)}">${t.linkSentAt || t.lastSeen ? '💬 링크 다시 보내기' : SHARE_LABEL}</button>
           <button class="btn-secondary" data-act="expiry" data-code="${escapeHtml(t.code)}">${t.expired ? '⏳ 기간 연장' : t.expiresAt ? '⏳ 기간 변경' : '⏳ 기간 정하기'}</button>
           <details class="rb-more"><summary>⋯</summary><div class="rb-menu">
             ${t.expiresAt ? `<button data-act="perm" data-code="${escapeHtml(t.code)}">♾️ 영구로 바꾸기</button>` : ''}
@@ -848,7 +877,7 @@ function renderMasterTeacherList() {
     const busy = txt => { btn.disabled = true; btn.dataset.orig = btn.textContent; btn.textContent = txt; };
     const done = () => { btn.disabled = false; if (btn.dataset.orig) btn.textContent = btn.dataset.orig; };
     try {
-      if (act === 'send') { busy('복사 중...'); await sendLink(t); }
+      if (act === 'send') { await sendLink(t); }
       else if (act === 'expiry') {
         const v = prompt(`${t.name} 강사님 사용 기간을 며칠로 할까요?\n\n· 오늘부터 며칠인지 숫자만 (예: 7)\n· 비워두면 영구\n· 기간이 끝나면 승인 링크와 학생 링크가 자동으로 막혀요`, '');
         if (v === null) return;
@@ -905,24 +934,35 @@ function renderMasterTeacherList() {
     const err = $('rbAddErr'), btn = $('rbAddBtn');
     err.style.display = 'none';
     const name = $('rbAddName').value.trim();
-    const code = $('rbAddCode').value.trim().toLowerCase().replace(/[^a-z0-9가-힣_-]/g, '');
+    const typed = $('rbAddCode').value.trim().toLowerCase().replace(/[^a-z0-9가-힣_-]/g, '');
     const days = parseInt($('rbAddDays').value, 10) || 0;
-    if (!name || !code) { err.textContent = '이름과 강사 코드를 모두 넣어 주세요.'; err.style.display = 'block'; return; }
+    if (!name) { err.textContent = '강사 이름을 넣어 주세요.'; err.style.display = 'block'; return; }
+    // 강사 코드는 강사님이 알 필요 없는 내부 번호 → 비워두면 자동 (예: t4k9xq)
+    const autoCode = () => 't' + Array.from(crypto.getRandomValues(new Uint8Array(5)), n => 'abcdefghjkmnpqrstuvwxyz23456789'[n % 31]).join('');
     btn.disabled = true; btn.textContent = '추가 중...';
     try {
-      const d = await registryPost({ action: 'addTeacher', name, code, expiryDays: days });
+      let d = null;
+      for (let i = 0; i < (typed ? 1 : 3) && !d; i++) {
+        try { d = await registryPost({ action: 'addTeacher', name, code: typed || autoCode(), expiryDays: days }); }
+        catch (e2) { if (typed || i === 2 || !/이미/.test(e2.message)) throw e2; }
+      }
       ['rbAddName', 'rbAddCode', 'rbAddDays'].forEach(id => { $(id).value = ''; });
       $('rbAdd').style.display = 'none';
       FILTER = 'all';
-      await sendLink({ code: d.code, name: d.name, hubKey: d.hubKey });
+      await sendLink({ code: d.code, name: d.name, hubKey: d.hubKey }, true);
     } catch (e) {
       err.textContent = e.message; err.style.display = 'block';
     }
-    btn.disabled = false; btn.textContent = '추가하고 링크 복사';
+    btn.disabled = false; btn.textContent = '추가하기';
   });
   $('rbChips').addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (!b) return; FILTER = b.dataset.f; render(); });
   $('rbSearch').addEventListener('input', e => { QUERY = e.target.value.trim(); render(); });
   $('rbBook').addEventListener('click', e => { const b = e.target.closest('button[data-act]'); if (b) onAct(b); });
+  $('rbDone').addEventListener('click', async e => {
+    const b = e.target.closest('#rbShareNow'); if (!b || !PENDING_MSG) return;
+    const r = await moaShare(PENDING_MSG);
+    if (r !== 'cancel') { registryPost({ action: 'markLinkSent', code: b.dataset.code }).catch(() => {}); b.textContent = r === 'shared' ? '✅ 보냈어요' : '✅ 복사됨 — 카톡에 Ctrl+V'; load(); }
+  });
 
   // 같은 창에서 다시 들어오면 비밀번호를 다시 묻지 않음 (창을 닫으면 지워짐)
   const saved = ssGet();
@@ -958,7 +998,7 @@ function initClientManager(box, masterPw) {
       <div id="clItems" style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;margin:4px 0 6px">
         ${allItems.map(k => `<label style="display:flex;align-items:center;gap:5px;font-weight:400;margin:0;cursor:pointer"><input type="checkbox" value="${k}" checked style="width:auto;margin:0"> ${CLIENT_ITEM_LABELS[k]}</label>`).join('')}
       </div>
-      <div class="btn-row"><button class="btn-primary" id="clAddBtn">만들고 링크 복사</button></div>
+      <div class="btn-row"><button class="btn-primary" id="clAddBtn">만들기</button></div>
       <div id="clAddErr" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
     </div>
     <div id="clDone"></div>
@@ -991,7 +1031,7 @@ function initClientManager(box, masterPw) {
       <div class="rb-sub">${escapeHtml(CLIENT_PRODUCT_NAMES[d.product])} · ${escapeHtml(items)}${d.job ? ' · ' + escapeHtml(d.job) : ''}${d.company ? ' · ' + escapeHtml(d.company) : ''}<br>
         ${left > 0 ? `${moaDate(d.expiresAt - 1, 'short')}까지 (D-${left})` : '이용 기간 끝남'} · 이메일 ${d.email ? '있음' : '<b style="color:#B42318">없음</b>'}${d.used && d.used.resume ? ' · 자소서 확인코드 ' + escapeHtml(d.used.resume.reviewCode || '-') : ''}</div>
       <div class="rb-btns">
-        <button class="btn-secondary" data-cl="copy" data-code="${d.code}">📤 안내 메시지 복사</button>
+        <button class="btn-secondary" data-cl="copy" data-code="${d.code}">${SHARE_LABEL}</button>
         <button class="btn-secondary" data-cl="extend" data-code="${d.code}">⏳ +7일</button>
         <details class="rb-more"><summary>⋯</summary><div class="rb-menu">
           ${d.used && d.used.resume ? `<button data-cl="reopen" data-part="resume" data-code="${d.code}">자소서 제출 다시 열기</button>` : ''}
@@ -1031,20 +1071,22 @@ function initClientManager(box, masterPw) {
     $('clAddBtn').disabled = true;
     try {
       const { item } = await post({ action: 'create', memo: $('clMemo').value, product: $('clProduct').value, days: $('clDays').value, job: $('clJob').value, company: $('clCompany').value, presetId: $('clPreset').value, email: $('clEmail').value, items });
-      const copied = await copy(msgOf(item));
-      $('clDone').innerHTML = `<div class="rb-done">✅ 코드 <b>${item.code}</b> 를 만들었어요. ${copied ? '안내 메시지가 복사됐으니 네이버 톡톡·문자에 붙여넣어 보내 주세요.' : ''}<br>${escapeHtml(linkOf(item.code))}</div>`;
+      $('clDone').innerHTML = `<div class="rb-done">✅ 코드 <b>${item.code}</b> 를 만들었어요.
+        <div class="rb-btns" style="margin-top:8px"><button class="btn-primary" data-cl="copy" data-code="${item.code}">${SHARE_LABEL}</button></div>
+        <span style="color:var(--muted);font-size:12px">${escapeHtml(linkOf(item.code))}</span></div>`;
       ['clMemo', 'clJob', 'clCompany', 'clEmail'].forEach(id => $(id).value = '');
       $('clAdd').style.display = 'none';
       await load();
     } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
     $('clAddBtn').disabled = false;
   });
+  $('clDone').addEventListener('click', ev => { const b = ev.target.closest('[data-cl="copy"]'); if (!b) return; const d = LIST.find(x => x.code === b.dataset.code); if (d) moaShare(msgOf(d)).then(r => { if (r !== 'cancel') b.textContent = r === 'shared' ? '✅ 보냈어요' : '✅ 복사됨'; }); });
   $('clList').addEventListener('click', async ev => {
     const b = ev.target.closest('[data-cl]'); if (!b) return;
     const d = LIST.find(x => x.code === b.dataset.code); if (!d) return;
     const act = b.dataset.cl;
     try {
-      if (act === 'copy') { if (await copy(msgOf(d))) { b.textContent = '✅ 복사됨'; setTimeout(() => b.textContent = '📤 안내 메시지 복사', 1500); } return; }
+      if (act === 'copy') { const r = await moaShare(msgOf(d)); if (r !== 'cancel') { b.textContent = r === 'shared' ? '✅ 보냈어요' : '✅ 복사됨'; setTimeout(() => b.textContent = SHARE_LABEL, 2000); } return; }
       if (act === 'extend') { await post({ action: 'extend', code: d.code, days: 7 }); }
       if (act === 'reopen') { if (!confirm('이 고객이 한 번 더 제출할 수 있게 열어줄까요?\n(이미 받은 제출물은 그대로 남아요)')) return; await post({ action: 'reopen', code: d.code, part: b.dataset.part }); }
       if (act === 'delete') { if (!confirm(`코드 ${d.code}를 삭제할까요?\n고객 링크가 바로 막혀요. (이미 받은 제출물·결과는 남아요)`)) return; await post({ action: 'delete', code: d.code }); }
