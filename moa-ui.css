@@ -1,0 +1,188 @@
+/* ─────────────────────────────────────────────
+   MOA FORMULA 디자인 키트 v1 (2026-10-03, B+C+D 통합안)
+   · 6개 앱이 같은 파일을 씁니다. 이 파일을 고치면 같은 파일을 모든 앱에 복사하세요.
+   · 색 규칙: 남색 #141A2E + 라임 #C0D904 하나로 통일. 앱별 대표색은 오른쪽 위 작은 점에만.
+   · 학생 화면에만 적용(body.moa-ui). 강사 화면은 다음 단계에서 적용.
+   ───────────────────────────────────────────── */
+:root{
+  --moa-ink:#141A2E;
+  --moa-ink-2:#3B4256;
+  --moa-muted:#5F6678;
+  --moa-faint:#9AA0B0;
+  --moa-line:#E6E8EE;
+  --moa-line-2:#D7DAE2;
+  --moa-surface:#F4F5F7;
+  --moa-lime:#C0D904;
+  --moa-lime-soft:#EEF4C2;
+  --moa-olive:#3D4500;
+  --moa-stage:#0E1533;
+  --moa-stage-2:#1A2247;
+  --moa-stage-text:#C8CEE0;
+  --moa-mark:#FFF1A8;
+  --moa-danger:#B42318;
+  --moa-danger-soft:#FDECEA;
+  --moa-r-sm:10px; --moa-r-md:14px; --moa-r-lg:18px; --moa-r-xl:22px;
+  --moa-app:#141A2E; /* 앱마다 moa-ui.js가 덮어씀 (자소서 #643DF2, 모의면접 #295BF2) */
+}
+
+/* ===== 바탕·글꼴 ===== */
+body.moa-ui{background:#FFFFFF !important;color:var(--moa-ink);font-family:'Noto Sans KR','맑은 고딕','Malgun Gothic',-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+body.moa-ui .moa-hubbar{display:none !important}
+
+/* ===== 상단 바: 흰 바탕 + 라임 사각 + MOA FORMULA, 오른쪽에 앱 점 + 화면 이름 ===== */
+body.moa-ui header{background:#FFFFFF !important;color:var(--moa-ink) !important;min-height:56px;padding:0 20px !important;display:flex !important;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0 12px;border-bottom:1px solid #EEF0F4;position:sticky;top:0;z-index:40}
+body.moa-ui header .header-sub,
+body.moa-ui header .brand,
+body.moa-ui header .badge,
+body.moa-ui header .role-badge,
+body.moa-ui header .gear-btn{display:none !important}
+body.moa-ui header > div:not(.moa-wordmark):not(.progress-track):not(.swipe-hint),
+body.moa-ui header .title-row{display:flex;align-items:center;gap:8px;order:2;min-width:0}
+.moa-wordmark{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:900;letter-spacing:-0.01em;color:var(--moa-ink);order:1;height:56px}
+.moa-wordmark i{width:18px;height:18px;border-radius:5px;background:var(--moa-lime);display:block;flex-shrink:0}
+body.moa-ui header h1{font-size:13px !important;font-weight:700 !important;color:var(--moa-ink-2) !important;margin:0 !important;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60vw}
+body.moa-ui header h1::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--moa-app);flex-shrink:0}
+body.moa-ui header .progress-track{order:3;flex-basis:100%;margin:0 0 12px !important;gap:4px !important}
+body.moa-ui header .swipe-hint{display:none !important}
+body.moa-ui .progress-seg{height:4px !important;border-radius:2px;background:#E6E8EE !important}
+body.moa-ui .progress-seg.done{background:var(--moa-ink) !important}
+body.moa-ui .progress-seg.active{background:var(--moa-lime) !important}
+
+/* ===== 본문 폭 ===== */
+body.moa-ui main{max-width:560px !important;padding:24px 20px 120px !important}
+
+/* ===== 큰 제목 / 안내 ===== */
+.moa-h1{margin:0 0 6px;font-size:24px;line-height:1.4;font-weight:900;letter-spacing:-0.025em;color:var(--moa-ink)}
+.moa-sub{margin:0 0 20px;font-size:14px;line-height:1.6;color:var(--moa-muted)}
+
+/* ===== 카드 ===== */
+body.moa-ui .card{border:1px solid var(--moa-line) !important;border-radius:var(--moa-r-lg) !important;box-shadow:none !important;padding:20px !important}
+body.moa-ui .card.moa-flat{border:0 !important;padding:0 !important}
+body.moa-ui .card h2{border:0 !important;padding:0 !important;color:var(--moa-ink) !important;font-size:20px !important;font-weight:900 !important;letter-spacing:-0.02em}
+
+/* ===== 입력칸: 테두리 없는 회색 칸 ===== */
+body.moa-ui label{color:var(--moa-ink) !important;font-size:13px;font-weight:700}
+body.moa-ui input[type=text],body.moa-ui input[type=email],body.moa-ui input:not([type]),
+body.moa-ui select,body.moa-ui textarea,body.moa-ui .st-inp{background:var(--moa-surface) !important;border:1.5px solid transparent !important;border-radius:12px !important;min-height:48px;padding:12px 14px !important;font-size:15px !important;color:var(--moa-ink) !important;font-family:inherit;transition:border-color .15s, box-shadow .15s}
+body.moa-ui textarea{line-height:1.7}
+body.moa-ui input:focus,body.moa-ui select:focus,body.moa-ui textarea:focus{outline:none !important;border-color:var(--moa-ink) !important;background:#FFFFFF !important;box-shadow:0 0 0 4px var(--moa-lime-soft) !important}
+body.moa-ui select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235F6678' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") !important;background-repeat:no-repeat !important;background-position:right 14px center !important;padding-right:40px !important}
+body.moa-ui ::placeholder{color:var(--moa-faint)}
+
+/* ===== 버튼: 학생용 = 남색 채움 / 보조 = 흰 바탕 테두리 ===== */
+body.moa-ui .btn-primary{background:var(--moa-ink) !important;color:#FFFFFF !important;border:0 !important;border-radius:var(--moa-r-md) !important;min-height:52px;padding:0 22px !important;font-size:16px !important;font-weight:700 !important}
+body.moa-ui .btn-primary:disabled{background:#B9BDC8 !important}
+body.moa-ui .btn-secondary,body.moa-ui .btn-outline,body.moa-ui .redo-btn{background:#FFFFFF !important;color:var(--moa-ink) !important;border:1px solid var(--moa-line-2) !important;border-radius:12px !important;min-height:44px;padding:0 16px !important;font-weight:700 !important;font-size:14px !important}
+body.moa-ui .btn-add-preset{background:#FFFFFF !important;border:1px dashed var(--moa-line-2) !important;color:var(--moa-ink) !important;border-radius:12px !important;min-height:48px;width:100%;font-size:14px !important;font-weight:700 !important}
+body.moa-ui .btn-row{gap:8px}
+body.moa-ui .btn-row .btn-primary{flex:1}
+
+/* ===== 탭: 회색 바탕 위 흰 알약 ===== */
+body.moa-ui .tabs{display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr));background:var(--moa-surface);border-radius:12px;padding:4px;gap:4px !important;margin-bottom:20px !important}
+body.moa-ui .tab{background:transparent !important;color:var(--moa-muted) !important;border-radius:9px !important;text-align:center;padding:10px 8px !important;font-size:14px !important;font-weight:500 !important}
+body.moa-ui .tab.active{background:#FFFFFF !important;color:var(--moa-ink) !important;font-weight:700 !important;box-shadow:0 1px 3px rgba(20,26,46,.12)}
+
+/* ===== 선택 칩 (moa-ui.js가 select·라디오를 칩으로 바꿈) ===== */
+.moa-chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
+.moa-chip{min-height:40px;padding:0 15px;border-radius:999px;border:1.5px solid var(--moa-line-2);background:#FFFFFF;color:var(--moa-ink-2);font:500 14px 'Noto Sans KR',sans-serif;cursor:pointer}
+.moa-chip:hover{border-color:var(--moa-ink-2)}
+.moa-chip[aria-pressed="true"]{border-color:var(--moa-ink);background:var(--moa-ink);color:#FFFFFF;font-weight:700}
+.moa-chip:focus-visible,.moa-seg button:focus-visible{outline:3px solid var(--moa-lime);outline-offset:2px}
+.moa-seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));background:var(--moa-surface);border-radius:12px;padding:4px;gap:4px;margin:8px 0 4px}
+.moa-seg button{min-height:42px;border:0;border-radius:9px;background:transparent;font:500 14px 'Noto Sans KR',sans-serif;color:var(--moa-muted);cursor:pointer}
+.moa-seg button[aria-pressed="true"]{background:#FFFFFF;color:var(--moa-ink);font-weight:700;box-shadow:0 1px 3px rgba(20,26,46,.12)}
+
+/* ===== 분량 막대 (라임 구간 = 제한의 80~90%) ===== */
+.moa-meter{margin-top:8px}
+.moa-meter-bar{position:relative;height:5px;border-radius:3px;background:#EEF0F4}
+.moa-meter-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--moa-ink);transition:width .2s}
+.moa-meter-bar b{position:absolute;top:0;bottom:0;left:80%;width:10%;border-radius:3px;background:var(--moa-lime);opacity:.55}
+.moa-meter.over .moa-meter-bar i{background:var(--moa-danger)}
+.moa-meter-txt{display:flex;justify-content:space-between;margin-top:6px;font-size:12px;color:var(--moa-muted)}
+.moa-meter-txt strong{color:var(--moa-ink);font-variant-numeric:tabular-nums}
+
+/* ===== 코치 대화 (자소서 시작) ===== */
+.moa-coach{display:flex;flex-direction:column;gap:16px;min-height:52vh}
+.moa-coach-who{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--moa-ink-2)}
+.moa-coach-who span{width:28px;height:28px;border-radius:50%;background:var(--moa-app);display:flex;align-items:center;justify-content:center}
+.moa-say{margin:0;font-size:21px;line-height:1.45;font-weight:700;letter-spacing:-0.02em;color:var(--moa-ink);animation:moaIn .35s ease-out}
+.moa-say.past{color:#A3A8B6;font-size:17px;animation:none}
+.moa-me{align-self:flex-end;max-width:80%;padding:10px 14px;border-radius:16px 16px 4px 16px;background:var(--moa-surface);font-size:14px;line-height:1.5;color:var(--moa-ink)}
+.moa-tip{margin:0;font-size:13px;line-height:1.6;color:var(--moa-muted)}
+.moa-ask{display:flex;flex-direction:column;gap:10px}
+.moa-ask-row{display:flex;gap:8px}
+.moa-ask-row input,.moa-ask-row textarea{flex:1}
+.moa-go{min-width:52px;min-height:48px;border:0;border-radius:12px;background:var(--moa-ink);color:#FFFFFF;font:700 15px 'Noto Sans KR',sans-serif;padding:0 16px;cursor:pointer}
+.moa-skip{align-self:flex-start;background:none;border:0;padding:6px 0;font:500 13px 'Noto Sans KR',sans-serif;color:var(--moa-muted);text-decoration:underline;cursor:pointer}
+.moa-steps{display:flex;gap:4px}
+.moa-steps i{width:18px;height:4px;border-radius:2px;background:#E6E8EE}
+.moa-steps i.on{background:var(--moa-ink)}
+.moa-summary{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--moa-r-md);background:var(--moa-surface);margin-bottom:18px}
+.moa-summary p{margin:0;flex:1;font-size:13px;line-height:1.55;color:var(--moa-ink-2)}
+.moa-summary button{background:#FFFFFF;border:1px solid var(--moa-line-2);border-radius:10px;min-height:36px;padding:0 12px;font:700 13px 'Noto Sans KR',sans-serif;color:var(--moa-ink);cursor:pointer;flex-shrink:0}
+@keyframes moaIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.moa-say{animation:none}}
+
+/* ===== 하단 고정 버튼 줄 ===== */
+.moa-dock{position:sticky;bottom:0;margin:20px -20px -120px;padding:14px 20px calc(18px + env(safe-area-inset-bottom));background:linear-gradient(rgba(255,255,255,0),#FFFFFF 28%);z-index:20}
+
+/* ===== 면접실 모드 (모의면접: 답하는 동안 어두운 화면) ===== */
+body.moa-ui.moa-stage{background:var(--moa-stage) !important}
+body.moa-ui.moa-stage header{background:var(--moa-stage) !important;border-bottom-color:rgba(255,255,255,.08)}
+body.moa-ui.moa-stage .moa-wordmark{color:#FFFFFF}
+body.moa-ui.moa-stage header h1{color:var(--moa-stage-text) !important}
+body.moa-ui.moa-stage .progress-seg{background:rgba(255,255,255,.14) !important}
+body.moa-ui.moa-stage .progress-seg.done{background:#FFFFFF !important}
+body.moa-ui.moa-stage .chat-body{background:var(--moa-stage)}
+body.moa-ui.moa-stage .bubble.q{background:transparent !important;color:#FFFFFF !important;max-width:100% !important;padding:8px 4px 0 !important;font-size:25px !important;line-height:1.45 !important;font-weight:900;letter-spacing:-0.025em;border-radius:0 !important}
+body.moa-ui.moa-stage .char-count-row,body.moa-ui.moa-stage .input-bar,body.moa-ui.moa-stage .footer-row{background:var(--moa-stage) !important;border-color:rgba(255,255,255,.08) !important}
+body.moa-ui.moa-stage .char-count-row{color:var(--moa-stage-text) !important}
+body.moa-ui.moa-stage .input-bar textarea{background:rgba(255,255,255,.07) !important;color:#FFFFFF !important;border-color:transparent !important}
+body.moa-ui.moa-stage .input-bar textarea::placeholder{color:#7E879F}
+body.moa-ui.moa-stage .input-bar textarea:focus{border-color:rgba(255,255,255,.5) !important;box-shadow:0 0 0 4px rgba(192,217,4,.18) !important}
+body.moa-ui.moa-stage .btn-primary{background:var(--moa-lime) !important;color:var(--moa-ink) !important}
+body.moa-ui.moa-stage .footer-row .back,body.moa-ui.moa-stage .qnav-label{color:var(--moa-stage-text) !important}
+body.moa-ui.moa-stage .qnav-btn{background:transparent !important;border-color:rgba(255,255,255,.22) !important;color:#FFFFFF !important}
+body.moa-ui.moa-stage .sc-toggle{background:rgba(255,255,255,.06) !important;color:#FFFFFF !important;border-color:rgba(255,255,255,.2) !important}
+body.moa-ui.moa-stage .link-cta{display:none !important}
+
+.moa-timer{align-self:center;position:relative;width:168px;height:168px;margin:6px 0 4px}
+.moa-timer svg{position:absolute;inset:0}
+.moa-timer .t{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#FFFFFF}
+.moa-timer .t b{font-size:40px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-0.02em}
+.moa-timer .t span{font-size:12px;color:var(--moa-stage-text)}
+.moa-timer.over .t b{color:#FFB4A8}
+.moa-mic{flex-shrink:0;width:44px;height:44px;border-radius:50%;border:0;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;cursor:pointer}
+body.moa-ui:not(.moa-stage) .moa-mic{background:var(--moa-surface)}
+.moa-mic svg{stroke:#FFFFFF}
+body.moa-ui:not(.moa-stage) .moa-mic svg{stroke:var(--moa-ink)}
+.moa-mic.on{background:#FF5A5F !important;box-shadow:0 0 0 6px rgba(255,90,95,.25)}
+.moa-mic.on svg{stroke:#FFFFFF !important}
+.moa-mic:focus-visible{outline:3px solid var(--moa-lime);outline-offset:2px}
+
+/* ===== 모의면접: 답한 뒤 (밝은 화면) ===== */
+body.moa-ui .chat-body{background:#FFFFFF}
+body.moa-ui:not(.moa-stage) .bubble.q{background:var(--moa-stage) !important;color:#FFFFFF !important;border-radius:16px !important;max-width:100% !important;align-self:stretch !important;padding:16px 18px !important;font-size:16px !important;font-weight:700;line-height:1.55 !important}
+body.moa-ui .bubble.a{background:var(--moa-surface) !important;border:0 !important;border-radius:16px 16px 4px 16px !important}
+body.moa-ui .bubble.f{background:#FFFFFF !important;border:1px solid var(--moa-line) !important;border-radius:16px !important;max-width:100% !important;align-self:stretch !important}
+body.moa-ui .fb-h{color:var(--moa-ink) !important}
+body.moa-ui .fb-row.good .fb-num{border-color:var(--moa-lime) !important;color:var(--moa-olive) !important;background:var(--moa-lime-soft) !important}
+body.moa-ui .fb-row.good h5{color:var(--moa-olive) !important}
+body.moa-ui .fb-row.fix .fb-num{border-color:var(--moa-ink) !important;color:var(--moa-ink) !important}
+body.moa-ui .fb-row.fix h5{color:var(--moa-ink) !important}
+body.moa-ui .input-bar,body.moa-ui .footer-row,body.moa-ui .char-count-row{background:#FFFFFF !important}
+
+/* ===== 모의면접: 유형 고르기 ===== */
+body.moa-ui #screen-select{padding:24px 20px 100px !important;max-width:560px;margin:0 auto;width:100%;box-sizing:border-box}
+body.moa-ui .cat-card{border:1px solid var(--moa-line) !important;border-radius:var(--moa-r-lg) !important;padding:16px 18px !important;min-height:72px;background:#FFFFFF !important;color:var(--moa-ink) !important}
+body.moa-ui .cat-card:hover{border-color:var(--moa-line-2) !important;background:#FAFBFC !important}
+body.moa-ui .cat-card .num{display:none !important}
+body.moa-ui .cat-card .cat-title{font-size:16px !important;font-weight:700 !important}
+body.moa-ui .cat-card .cat-desc{color:var(--moa-muted) !important;font-size:13px !important}
+body.moa-ui .cat-card .cat-count{color:var(--moa-muted) !important}
+body.moa-ui .cat-card .arrow{color:var(--moa-faint) !important;font-size:20px !important}
+body.moa-ui .cat-card[style*="background"]{background:var(--moa-ink) !important;color:#FFFFFF !important;border-color:var(--moa-ink) !important;opacity:1 !important}
+body.moa-ui .cat-card[style*="background"] .cat-desc{color:#C8CEE0 !important}
+body.moa-ui .cat-card[style*="opacity"]:not([style*="background"]){background:var(--moa-surface) !important;border-color:transparent !important}
+.moa-panel{border:0 !important;background:var(--moa-surface) !important;border-radius:var(--moa-r-lg) !important;padding:16px !important;margin-bottom:10px !important}
+.moa-panel input{background:#FFFFFF !important}
