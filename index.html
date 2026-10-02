@@ -3164,7 +3164,7 @@ async function renderResultsTab(content) {
 function proofCleanQuote(q) {
   return String(q || '').trim().replace(/^["'“”‘’「『]+|["'“”‘’」』]+$/g, '').trim();
 }
-function proofSheetHtml(item) {
+function proofSheetHtml(item, asParts) {
   const text = String(item.answer || '');
   const notes = [];
   (Array.isArray(item.aiTracePhrases) ? item.aiTracePhrases : []).forEach(p => {
@@ -3205,6 +3205,7 @@ function proofSheetHtml(item) {
         ${n.fix ? `<div class="fix">✏️ 이렇게: ${escapeHtml(n.fix)}</div>` : ''}
       </div>`).join('')
     : `<div class="proof-note ok">✅ 따로 표시할 문장이 없어요. 아래 개선 방향과 다듬은 문장을 확인해 보세요.</div>`;
+  if (asParts) return { html, notes: placed.concat(unplaced), lenInfo };
   return `<div class="proof-wrap">
     <div class="proof-paper">
       <div class="proof-paper-head"><span>${escapeHtml(item.questionType === '이력서항목' ? '경력·활동 항목' : '제출한 답변')}</span><span>${lenInfo}</span></div>
@@ -3433,11 +3434,13 @@ function resultItemBlockHtml(item, idx, total) {
 }
 
 function resultContentHtml(record) {
+  CURRENT_RESULT = record;
   const items = record.items || [];
   return `
     <div class="card">
       <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
         <button class="btn-secondary" onclick="downloadResultAsWord('${escapeHtml(record.studentName || '첨삭결과').replace(/'/g, "")}')">📄 워드로 저장</button>
+        <button class="btn-secondary" style="margin-left:8px" onclick="downloadResultAsPdf('${escapeHtml(record.studentName || '첨삭결과').replace(/'/g, "")}')">🖨️ PDF로 저장</button>
       </div>
       <div id="resultExportArea">
       <div class="proof-kicker">교정지 · 첨삭 결과${record.studentName ? ` · ${escapeHtml(record.studentName)}님` : ''}</div>
@@ -3468,36 +3471,175 @@ function resolveCssVarsForExport(html) {
   });
 }
 
-function downloadResultAsWord(studentName) {
-  const exportArea = document.getElementById('resultExportArea');
-  if (!exportArea) {
-    alert('저장할 내용을 찾지 못했어요. 잠시 후 다시 시도해 주세요.');
-    return;
+// ---------- 워드·PDF 저장 (2026-10-02 개편) ----------
+// 워드는 웹 디자인(2단·둥근 박스·아이콘)을 못 읽어서, 워드가 잘 읽는 '표' 구조로 따로 만들어 저장함.
+// PDF는 결과지 화면을 그대로 인쇄 창으로 보내 저장(디자인 100% 동일).
+let CURRENT_RESULT = null;
+const W = { purple: '#643DF2', navy: '#3A1F9E', light: '#EFEAFE', light2: '#F1EDFE', text: '#1a2130', muted: '#6b7280', line: '#E2E5EA', green: '#1F7A4D', greenBg: '#E8F5EE', warn: '#B45309', warnBg: '#FEF3E2', yellow: '#FFF1A8', font: "'맑은 고딕','Malgun Gothic',sans-serif" };
+function wEsc(t) { return escapeHtml(String(t || '')).replace(/\n/g, '<br>'); }
+function wBox(label, body, bg, bar) {
+  return `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 8pt"><tr>
+    <td width="4" style="background:${bar};width:4pt">&nbsp;</td>
+    <td style="background:${bg};padding:8pt 10pt;font-family:${W.font}">
+      ${label ? `<p style="margin:0 0 4pt;font-size:9.5pt;font-weight:bold;color:${bar}">${label}</p>` : ''}
+      <p style="margin:0;font-size:10.5pt;line-height:170%;color:${W.text}">${body}</p>
+    </td></tr></table>`;
+}
+function wTitle(t) { return `<p style="margin:14pt 0 6pt;font-size:12pt;font-weight:bold;color:${W.navy};font-family:${W.font};border-bottom:1pt solid ${W.line};padding-bottom:3pt">${t}</p>`; }
+function wFinalText(item) {
+  const text = String(item.polishedText || '');
+  if (!/\{\{[^{}]+\}\}/.test(text)) return { html: wEsc(text), plainLen: text.length, left: 0 };
+  const st = exInit(item);
+  const src = st.finalText || st.parts.map(p => !p.slot ? p.s : (st.slots[p.k].value || '{{' + st.slots[p.k].example + '}}')).join('');
+  let left = 0;
+  const html = exParts(src).map(p => {
+    if (!p.slot) return wEsc(p.s);
+    left++;
+    return `<span style="background:${W.yellow}">${wEsc(p.s)}</span><span style="font-size:7.5pt;color:#8A6D00;font-weight:bold">(예시)</span>`;
+  }).join('');
+  return { html, plainLen: exPlain(src).length, left };
+}
+function wItemHtml(item, idx, total) {
+  const isCv = item.questionType === '이력서항목';
+  const typeLabel = isCv ? '경력·활동 항목' : ((CLIENT_ITEM_LABELS && CLIENT_ITEM_LABELS[item.questionType]) || item.questionType || '');
+  const fin = wFinalText(item);
+  const lim = item.charLimit;
+  // 교정지 2단 표
+  const ps = proofSheetHtml(item, true);
+  const markedAnswer = ps.html
+    .replace(/<span class="mk-p">/g, `<span style="background:#F3EFFE;border-bottom:1.5pt solid ${W.purple}">`)
+    .replace(/<span class="mk-y">/g, `<span style="background:${W.warnBg};border-bottom:1.5pt solid #D97706">`)
+    .replace(/<span class="mk-n (p|y)">(\d+)<\/span>/g, (m, k, n) => `<sup style="font-size:7.5pt;font-weight:bold;color:${k === 'p' ? W.purple : '#D97706'}">${n}</sup>`)
+    .replace(/\n/g, '<br>');
+  const notesHtml = ps.notes.length ? ps.notes.map(n => `
+    <p style="margin:0 0 2pt;font-size:9.5pt;font-weight:bold;color:${n.kind === 'p' ? W.purple : '#D97706'}">${n.num}. ${escapeHtml(n.label)}</p>
+    ${n.pos < 0 && n.quote ? `<p style="margin:0 0 2pt;font-size:9pt;color:${W.muted}">"${escapeHtml(n.quote)}"</p>` : ''}
+    ${n.body ? `<p style="margin:0 0 2pt;font-size:9.5pt;line-height:150%">${escapeHtml(n.body)}</p>` : ''}
+    ${n.fix ? `<p style="margin:0 0 8pt;font-size:9.5pt;color:${W.green}">✏️ 이렇게: ${escapeHtml(n.fix)}</p>` : '<p style="margin:0 0 6pt"></p>'}`).join('')
+    : `<p style="margin:0;font-size:9.5pt;color:${W.green}">✅ 따로 표시할 문장이 없어요.</p>`;
+  // 점검표
+  const rows = [];
+  const labels = FRAMEWORK_LABELS[item.frameworkUsed || 'STAR'] || FRAMEWORK_LABELS.STAR;
+  Object.keys(labels).forEach(k => { const ok = item.structure && item.structure[k]; rows.push([ok, labels[k] + (ok ? '' : ' — 보완')]); });
+  if (item.concreteness) {
+    const cl = { hasNumber: '숫자 포함', hasProperNoun: '고유명사 포함', hasJobKeyword: '직무 키워드 포함' };
+    Object.keys(cl).forEach(k => { const ok = item.concreteness[k]; rows.push([ok, cl[k] + (ok ? '' : ' — 보완')]); });
   }
+  if (Array.isArray(item.redFlags)) { const c = item.redFlags.filter(f => f && (f.quote || f.why)).length; rows.push([c === 0, c === 0 ? '결격 신호 없음' : `결격 신호 ${c}개 — 메모 확인`]); }
+  let checkRows = '';
+  for (let i = 0; i < rows.length; i += 2) {
+    checkRows += '<tr>' + [rows[i], rows[i + 1]].map(r => r
+      ? `<td width="50%" style="padding:4pt 8pt;border:0.75pt solid ${W.line};font-size:10pt;font-family:${W.font}"><b style="color:${r[0] ? W.green : W.warn}">${r[0] ? '✓' : '⚠'}</b> ${escapeHtml(r[1])}</td>`
+      : `<td width="50%" style="border:0.75pt solid ${W.line}">&nbsp;</td>`).join('') + '</tr>';
+  }
+  const fu = item.followUpQuestions || {};
+  const fuLabels = { reasonType: '이유형', alternativeType: '대안형', quantifyType: '수치형' };
+  const fuRows = Object.keys(fuLabels).filter(k => fu[k]).map(k => `<tr>
+    <td width="70" style="padding:5pt 8pt;background:${W.light2};border:0.75pt solid ${W.line};font-size:9.5pt;font-weight:bold;color:${W.navy};font-family:${W.font}">${fuLabels[k]}</td>
+    <td style="padding:5pt 8pt;border:0.75pt solid ${W.line};font-size:10pt;font-family:${W.font}">${escapeHtml(fu[k])}</td></tr>`).join('');
+  const defs = (Array.isArray(item.defenseQuestions) ? item.defenseQuestions : []).filter(d => d && d.sentence && d.question);
+  return `
+    ${idx > 0 ? '<br clear="all" style="page-break-before:always">' : ''}
+    <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 6pt"><tr>
+      <td style="background:${W.light};padding:5pt 10pt;font-family:${W.font};font-size:10pt;font-weight:bold;color:${W.purple}">문항 ${idx + 1}${total > 1 ? ' / ' + total : ''} · ${escapeHtml(typeLabel)}</td></tr></table>
+    <p style="margin:0 0 10pt;font-size:11pt;font-weight:bold;line-height:160%;font-family:${W.font}">${wEsc(item.question)}</p>
+
+    ${wTitle('✅ 완성된 내 글')}
+    <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse"><tr>
+      <td style="border:1.5pt solid ${W.green};padding:10pt 12pt;font-family:${W.font}">
+        <p style="margin:0;font-size:11pt;line-height:185%">${fin.html}</p>
+        <p style="margin:6pt 0 0;font-size:8.5pt;color:${W.muted};text-align:right">${fin.plainLen}자${lim ? ` / ${lim}자` : ''}</p>
+      </td></tr></table>
+    ${fin.left ? `<p style="margin:4pt 0 0;font-size:9pt;color:#8A6D00;font-family:${W.font}">🟨 노란 부분(예시 ${fin.left}곳)은 AI가 넣은 예시예요. 내 실제 경험으로 바꿔 써야 면접에서 흔들리지 않아요.</p>` : ''}
+
+    ${wTitle('📝 교정지 — 제출한 답변과 선생님 메모')}
+    <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse"><tr>
+      <td width="60%" valign="top" style="border:0.75pt solid ${W.line};padding:8pt 10pt;font-family:${W.font}">
+        <p style="margin:0 0 4pt;font-size:9pt;font-weight:bold;color:${W.muted}">${isCv ? '경력·활동 항목' : '제출한 답변'} · ${escapeHtml(ps.lenInfo)}</p>
+        <p style="margin:0;font-size:10.5pt;line-height:185%">${markedAnswer}</p></td>
+      <td width="40%" valign="top" style="background:#FAFAFC;border:0.75pt solid ${W.line};padding:8pt 10pt;font-family:${W.font}">
+        <p style="margin:0 0 6pt;font-size:9pt;font-weight:bold;color:${W.muted}">여백 메모</p>${notesHtml}</td>
+    </tr></table>
+
+    ${wTitle(`☑️ 제출 전 점검표 · ${escapeHtml(item.frameworkUsed || 'STAR')} 구조`)}
+    <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">${checkRows}</table>
+
+    ${wTitle('💬 선생님 코멘트')}
+    ${wBox('면접관 시점 — 이 답변으로 추론되는 평소 모습', wEsc(item.interviewerInference), W.light2, W.navy)}
+    ${wBox('잘된 점', wEsc(item.strengths), W.greenBg, W.green)}
+    ${wBox('개선 방향', wEsc(item.improvements), W.warnBg, W.warn)}
+    ${item.charLimitNote ? wBox(`⚠ 글자수 초과 (제한 ${item.charLimit}자)`, wEsc(item.charLimitNote), W.warnBg, W.warn) : ''}
+    ${item.intentGapComment ? wBox('내가 밝힌 의도 vs 실제 답변', wEsc(item.intentGapComment), W.warnBg, W.warn) : ''}
+
+    ${fuRows ? wTitle('🎤 예상 꼬리질문 (면접 대비)') + `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">${fuRows}</table>` : ''}
+    ${defs.length ? wTitle('🛡️ 이 문장, 면접에서 말할 수 있나요?') + defs.map(d => wBox('📌 "' + escapeHtml(exPlain(d.sentence)) + '"', '면접관: ' + escapeHtml(d.question), '#FFFFFF', W.purple)).join('') : ''}`;
+}
+function buildWordHtml(record) {
+  const items = record.items || [];
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
+  return `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head><meta charset="utf-8"><title>첨삭 결과</title>
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
+<style>
+  @page WordSection1 { size:595.3pt 841.9pt; margin:50pt 50pt 50pt 50pt; }
+  div.WordSection1 { page:WordSection1; }
+  body { font-family:${W.font}; font-size:10.5pt; color:${W.text}; }
+  p { margin:0; }
+</style></head><body><div class="WordSection1">
+  <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 12pt"><tr>
+    <td style="background:${W.purple};padding:12pt 14pt;font-family:${W.font}">
+      <p style="margin:0;font-size:8.5pt;font-weight:bold;color:#D9CFFF;letter-spacing:1pt">MOA FORMULA · 진로모아커리어센터</p>
+      <p style="margin:3pt 0 0;font-size:17pt;font-weight:bold;color:#FFFFFF">${record.docType === 'cv' ? '이력서' : '자기소개서'} 첨삭 결과</p>
+      <p style="margin:4pt 0 0;font-size:9.5pt;color:#EDE7FF">${record.studentName ? escapeHtml(record.studentName) + '님 · ' : ''}${dateStr}${items.length > 1 ? ` · 총 ${items.length}문항` : ''}</p>
+    </td></tr></table>
+  ${record.jobPosting ? wBox('지원 채용공고 핵심 내용', wEsc(record.jobPosting), W.light2, W.navy) : ''}
+  ${items.map((it, i) => wItemHtml(it, i, items.length)).join('')}
+  <p style="margin:18pt 0 0;font-size:8.5pt;color:${W.muted};text-align:center;font-family:${W.font}">진로모아커리어센터 · MOA FORMULA 취업의 공식</p>
+</div></body></html>`;
+}
+function resultFileBase(studentName) { return (studentName || '첨삭결과').replace(/[\\/:*?"<>|']/g, '') + '_첨삭결과'; }
+function downloadResultAsWord(studentName) {
+  if (!CURRENT_RESULT) { alert('저장할 내용을 찾지 못했어요. 잠시 후 다시 시도해 주세요.'); return; }
   const exLeftCount = Object.values(EX_STATE).reduce((n, st) => n + exLeft(st), 0);
   if (exLeftCount && !exLeftWarn(exLeftCount)) return;
-  const exportClone = exportArea.cloneNode(true);
-  exportClone.querySelectorAll('.ex-interactive').forEach(el => el.remove()); // 예시 바꾸기 버튼·진행바는 워드에서 제외
-  exportClone.querySelectorAll('.def-interactive').forEach(el => el.remove()); // 방어 테스트 입력칸·버튼은 워드에서 제외
-  const innerHtml = resolveCssVarsForExport(exportClone.innerHTML);
-  // 외부 라이브러리 없이도 워드에서 바로 열리도록, HTML을 .doc 형식으로 감싸서 저장 (모바일에서도 안정적으로 동작)
-  const fullHtml = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-<head><meta charset="utf-8"><title>첨삭 결과</title><style>
-    body{font-family:'맑은 고딕','Malgun Gothic',sans-serif;font-size:11pt;line-height:1.6;color:#1a2130}
-    h2{font-size:16pt;color:#11308C} h3{font-size:13pt;color:#11308C}
-    .star-tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:9pt;font-weight:bold;margin:2px}
-    .ex-slot{background:#FFF1A8} .ex-slot.mine{background:#DDF5E6} .ex-tag{font-size:7pt;font-weight:bold;color:#8A6D00} .ex-final{border:1.5pt solid #1F7A4D;padding:6pt}
-    .mk-p{background:#F3EFFE;border-bottom:1.5pt solid #643DF2} .mk-y{background:#FFF4E5;border-bottom:1.5pt solid #D97706} .mk-n{font-size:8pt;font-weight:bold;color:#643DF2} .proof-note{border:1px solid #e2e5ea;padding:6pt;margin:4pt 0} .proof-paper-head{font-weight:bold;border-bottom:1px solid #e2e5ea} .pc-item{margin:2pt 0}
-  </style></head><body>${innerHtml}</body></html>`;
-  const blob = new Blob(['\ufeff', fullHtml], { type: 'application/msword' });
+  const blob = new Blob(['﻿', buildWordHtml(CURRENT_RESULT)], { type: 'application/msword' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${studentName}_첨삭결과.doc`;
+  a.download = resultFileBase(studentName) + '.doc';
   document.body.appendChild(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+function downloadResultAsPdf(studentName) {
+  const area = document.getElementById('resultExportArea');
+  if (!area) { alert('저장할 내용을 찾지 못했어요. 잠시 후 다시 시도해 주세요.'); return; }
+  const exLeftCount = Object.values(EX_STATE).reduce((n, st) => n + exLeft(st), 0);
+  if (exLeftCount && !exLeftWarn(exLeftCount)) return;
+  const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]')).map(el => el.outerHTML).join('');
+  const frame = document.createElement('iframe');
+  frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+  document.body.appendChild(frame);
+  const doc = frame.contentWindow.document;
+  doc.open();
+  doc.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${escapeHtml(resultFileBase(studentName))}</title>${styles}
+  <style>
+    @page { size:A4; margin:14mm; }
+    html,body{background:#fff !important}
+    body{padding:0 !important;margin:0 !important}
+    *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}
+    .ex-interactive,.def-interactive,button{display:none !important}
+    .result-block,.proof-note,.ex-final,.pc-item{break-inside:avoid;page-break-inside:avoid}
+    .ex-slot{cursor:default}
+  </style></head><body><div class="card" style="border:none;box-shadow:none;max-width:none;padding:0">
+    <div style="font-size:11px;font-weight:800;color:#643DF2;letter-spacing:1px;margin-bottom:6px">MOA FORMULA · 진로모아커리어센터</div>
+    ${area.innerHTML}</div></body></html>`);
+  doc.close();
+  const go = () => { try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch (e) { window.print(); } setTimeout(() => frame.remove(), 60000); };
+  // 글꼴이 다 불러와진 뒤 인쇄
+  if (doc.fonts && doc.fonts.ready) doc.fonts.ready.then(() => setTimeout(go, 300)); else setTimeout(go, 800);
 }
 
 async function renderResultView(id) {
