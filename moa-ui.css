@@ -2,7 +2,8 @@
    MOA FORMULA 디자인 키트 v1 (2026-10-03, B+C+D 통합안)
    · 6개 앱이 같은 파일을 씁니다. 이 파일을 고치면 같은 파일을 모든 앱에 복사하세요.
    · 색 규칙: 남색 #141A2E + 라임 #C0D904 하나로 통일. 앱별 대표색은 오른쪽 위 작은 점에만.
-   · 학생 화면에만 적용(body.moa-ui). 강사 화면은 다음 단계에서 적용.
+   · 학생·강사 화면 모두 적용(body.moa-ui). 강사 화면에는 body.moa-teacher가 함께 붙음.
+   · 버튼 규칙: 화면 안 주요 동작 = 남색 채움 / 강사용 입구(설정·QR·허브) = 테두리 + 자물쇠
    ───────────────────────────────────────────── */
 :root{
   --moa-ink:#141A2E;
@@ -28,6 +29,8 @@
 /* ===== 바탕·글꼴 ===== */
 body.moa-ui{background:#FFFFFF !important;color:var(--moa-ink);font-family:'Noto Sans KR','맑은 고딕','Malgun Gothic',-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
 body.moa-ui .moa-hubbar{display:none !important}
+body.moa-ui #moaHelp{background:var(--moa-ink) !important;box-shadow:0 6px 18px rgba(20,26,46,.22) !important}
+body.moa-ui #moaHelp .mark{background:var(--moa-lime) !important;color:var(--moa-ink) !important}
 
 /* ===== 상단 바: 흰 바탕 + 라임 사각 + MOA FORMULA, 오른쪽에 앱 점 + 화면 이름 ===== */
 body.moa-ui header{background:#FFFFFF !important;color:var(--moa-ink) !important;min-height:56px;padding:0 20px !important;display:flex !important;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0 12px;border-bottom:1px solid #EEF0F4;position:sticky;top:0;z-index:40}
@@ -62,7 +65,7 @@ body.moa-ui .card h2{border:0 !important;padding:0 !important;color:var(--moa-in
 
 /* ===== 입력칸: 테두리 없는 회색 칸 ===== */
 body.moa-ui label{color:var(--moa-ink) !important;font-size:13px;font-weight:700}
-body.moa-ui input[type=text],body.moa-ui input[type=email],body.moa-ui input:not([type]),
+body.moa-ui input[type=text],body.moa-ui input[type=email],body.moa-ui input[type=password],body.moa-ui input[type=number],body.moa-ui input[type=tel],body.moa-ui input[type=search],body.moa-ui input[type=date],body.moa-ui input[type=url],body.moa-ui input:not([type]),
 body.moa-ui select,body.moa-ui textarea,body.moa-ui .st-inp{background:var(--moa-surface) !important;border:1.5px solid transparent !important;border-radius:12px !important;min-height:48px;padding:12px 14px !important;font-size:15px !important;color:var(--moa-ink) !important;font-family:inherit;transition:border-color .15s, box-shadow .15s}
 body.moa-ui textarea{line-height:1.7}
 body.moa-ui input:focus,body.moa-ui select:focus,body.moa-ui textarea:focus{outline:none !important;border-color:var(--moa-ink) !important;background:#FFFFFF !important;box-shadow:0 0 0 4px var(--moa-lime-soft) !important}
@@ -186,3 +189,47 @@ body.moa-ui .cat-card[style*="background"] .cat-desc{color:#C8CEE0 !important}
 body.moa-ui .cat-card[style*="opacity"]:not([style*="background"]){background:var(--moa-surface) !important;border-color:transparent !important}
 .moa-panel{border:0 !important;background:var(--moa-surface) !important;border-radius:var(--moa-r-lg) !important;padding:16px !important;margin-bottom:10px !important}
 .moa-panel input{background:#FFFFFF !important}
+
+
+/* ===== 강사 화면 (body.moa-teacher) ===== */
+.moa-lock{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 12px;border:1.5px solid var(--moa-ink);border-radius:999px;background:#FFFFFF;color:var(--moa-ink);font:700 13px 'Noto Sans KR',sans-serif;text-decoration:none;cursor:pointer;white-space:nowrap}
+.moa-lock::before{content:'';width:12px;height:12px;flex-shrink:0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23141A2E' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='11' width='14' height='10' rx='2'/%3E%3Cpath d='M8 11V8a4 4 0 0 1 8 0v3'/%3E%3C/svg%3E") center/contain no-repeat}
+.moa-lock:hover{background:var(--moa-surface)}
+.moa-lock:focus-visible{outline:3px solid var(--moa-lime);outline-offset:2px}
+.moa-head-right{display:flex;align-items:center;gap:8px;order:2;margin-left:auto}
+body.moa-teacher header > div:not(.moa-wordmark):not(.progress-track):not(.swipe-hint):not(.moa-head-right){order:2}
+body.moa-teacher header h1::before{display:block}
+body.moa-teacher header .gear-btn{display:none !important}
+body.moa-teacher main{max-width:880px !important}
+body.moa-teacher .tabs{display:flex !important;flex-wrap:nowrap !important;overflow-x:auto;scrollbar-width:none;grid-template-columns:none}
+body.moa-teacher .tabs::-webkit-scrollbar{display:none}
+body.moa-teacher .tab{flex-shrink:0;padding:10px 16px !important}
+body.moa-teacher .review-item,body.moa-teacher .preset-item{border:1px solid var(--moa-line) !important;border-radius:var(--moa-r-md) !important;background:#FFFFFF}
+body.moa-teacher .review-item summary{min-height:44px}
+.moa-qr{display:flex;align-items:center;gap:14px}
+.moa-qr img{width:84px !important;height:84px !important;border-radius:12px !important;border:1px solid var(--moa-line) !important}
+.moa-count{font-variant-numeric:tabular-nums}
+
+/* 모의면접 강사 설정 */
+body.moa-ui #screen-settings{background:#FFFFFF}
+body.moa-ui .st-tools{background:#FFFFFF !important;padding:14px 20px !important}
+body.moa-ui .st-tabs{background:#FFFFFF !important;border-bottom:1px solid var(--moa-line) !important;padding:0 12px !important;top:56px !important}
+body.moa-ui .st-tab{color:var(--moa-muted) !important;border-bottom-width:3px !important}
+body.moa-ui .st-tab.on{color:var(--moa-ink) !important;border-bottom-color:var(--moa-lime) !important}
+body.moa-ui .st-body{padding:20px !important;max-width:880px;margin:0 auto;width:100%;box-sizing:border-box}
+body.moa-ui .st-card{border:1px solid var(--moa-line) !important;border-radius:var(--moa-r-lg) !important;padding:20px !important}
+body.moa-ui .st-card h3{color:var(--moa-ink) !important;font-size:17px !important;font-weight:900 !important}
+body.moa-ui .st-step{background:var(--moa-ink) !important}
+body.moa-ui .st-banner{background:var(--moa-lime-soft) !important;color:var(--moa-olive) !important;border-radius:12px !important}
+body.moa-ui .st-chk input{accent-color:var(--moa-ink)}
+body.moa-ui .st-ok{color:var(--moa-olive) !important}
+body.moa-ui .btn-outline{border:1.5px solid var(--moa-ink) !important}
+body.moa-teacher{--navy:#141A2E}
+.moa-qr .link-box{flex-wrap:wrap}
+.moa-qr .link-box button{white-space:nowrap}
+body.moa-ui #st-live-btn{width:calc(100% - 40px) !important;margin:4px 20px 0 !important}
+@media (max-width:480px){
+  body.moa-teacher header h1{display:none !important}
+  .moa-qr{align-items:flex-start}
+  .moa-qr img{width:72px !important;height:72px !important}
+}

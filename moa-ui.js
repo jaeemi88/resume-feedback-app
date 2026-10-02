@@ -57,18 +57,44 @@
   function hasDraft() { try { return typeof CLIENT_DRAFT !== 'undefined' && !!CLIENT_DRAFT; } catch (e) { return false; } }
 
   /* ── 상단 바 ── */
+  function isTeacher() { return document.body.classList.contains('role-teacher'); }
   function applyShell() {
-    if (!isStudent()) { document.body.classList.remove('moa-ui'); return; }
-    document.body.classList.add('moa-ui');
+    var b = document.body;
+    if (!b.classList.contains('role-student') && !b.classList.contains('role-teacher')) { b.classList.remove('moa-ui', 'moa-teacher'); return; }
+    b.classList.add('moa-ui');
+    b.classList.toggle('moa-teacher', isTeacher());
     document.documentElement.style.setProperty('--moa-app', APP_COLOR);
     var header = document.querySelector('header');
     if (header && !header.querySelector('.moa-wordmark')) {
       header.insertBefore(el('div', { class: 'moa-wordmark', 'aria-label': 'MOA FORMULA' }, '<i></i>MOA FORMULA'), header.firstChild);
     }
+    // 강사 화면: 오른쪽에 테두리+자물쇠 '허브' 버튼 (허브 링크가 살아 있을 때만)
+    if (header && isTeacher() && !header.querySelector('.moa-head-right')) {
+      var hub = document.querySelector('.moa-hubbar a');
+      var right = el('div', { class: 'moa-head-right' });
+      if (hub && hub.style.display !== 'none') right.appendChild(el('a', { class: 'moa-lock', href: hub.getAttribute('href') }, '허브'));
+      header.appendChild(right);
+    }
     var h1 = document.getElementById('header-title');
     if (h1 && /자소서·이력서 첨삭/.test(h1.textContent)) h1.textContent = APP_NAME;
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', '#FFFFFF');
+  }
+
+  /* ── 강사 화면 보강 ── */
+  function enhanceTeacher() {
+    var qr = document.getElementById('qrImage');
+    if (qr) { var qc = qr.closest('.card'); if (qc && !qc.classList.contains('moa-qr')) qc.classList.add('moa-qr'); }
+    var list = document.getElementById('reviewsList');
+    if (list) {
+      var h2 = list.closest('.card') && list.closest('.card').querySelector('h2');
+      var loading = /불러오는 중|불러오기 실패/.test(list.textContent) && !list.querySelector('.review-item');
+      if (h2 && !loading) {
+        var n = list.querySelectorAll(':scope > .review-item').length;
+        var txt = n ? '검토할 첨삭이 ' + n + '건 있어요' : '검토할 첨삭이 없어요';
+        if (h2.textContent !== txt) h2.textContent = txt;
+      }
+    }
   }
 
   /* ── select → 칩 ── */
@@ -410,6 +436,7 @@
   function scan() {
     applyShell();
     if (!document.body.classList.contains('moa-ui')) return;
+    if (isTeacher()) { enhanceTeacher(); return; }
     var nameInput = document.getElementById('studentNameInput');
     if (nameInput) {
       var card = nameInput.closest('.card');
