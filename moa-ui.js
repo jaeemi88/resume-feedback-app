@@ -330,6 +330,32 @@
       }, 80);
     })();
 
+    // 시작 전 '전체 흐름' 안내 (2026-10-03) — 몇 단계·몇 분인지, 완성되면 어떤 모습인지 먼저 보여 줌
+    function showIntro(total, C, go) {
+      var OFF = 'moa_intro_cv_off';
+      try { if (localStorage.getItem(OFF) === '1') { go(); return; } } catch (e) {}
+      var mins = 10 + Math.ceil(total / 2);
+      coach.innerHTML = '';
+      var box = el('div', { class: 'moa-intro', role: 'region', 'aria-label': '전체 흐름 안내' },
+        '<span class="k">시작 전 1분 · 전체 흐름</span>' +
+        '<h2>3단계면<br>내 자소서가 완성돼요</h2>' +
+        '<p class="s">약 ' + mins + '분이면 끝나요. 지금 어디쯤인지 위에 계속 표시해 드려요.</p>' +
+        '<ol>' +
+        '<li><b>1</b><div><h3>코치 질문에 답하기</h3><p>이름·지원처·채용 방식 등 짧은 질문 ' + total + '개</p></div><em>1분</em></li>' +
+        '<li><b>2</b><div><h3>문항과 내 답 붙여 넣기</h3><p>막막하면 ‘재료 꺼내기’가 도와줘요</p></div><em>10분</em></li>' +
+        '<li><b>3</b><div><h3>제출 → 완성된 글 받기</h3><p>' + (C ? '선생님 검토 후 이메일로 결과가 와요' : '선생님 검토 후 결과 링크가 와요') + '</p></div><em>제출 1~3분</em></li>' +
+        '</ol>' +
+        '<div class="pv" aria-label="완성 예시"><p class="pv-l"><span>이렇게 완성돼요</span><span>예시</span></p>' +
+        '<div class="pv-h"><small>✓ 첨삭 완료 · 지원동기</small><p>예시 1곳만 내 경험으로 바꾸면 완성이에요</p><div class="pv-bar"><i></i></div></div>' +
+        '<p class="pv-t">저는 <mark class="me">재활병원 실습 4주</mark> 동안 환자분의 작은 변화를 매일 기록했습니다. 그 기록으로 <mark>보행 속도가 빨라지는 변화</mark>를 먼저 말씀드려…</p>' +
+        '<div class="pv-c"><span>구조 점검</span><span>예상 꼬리질문</span><span>워드·PDF 저장</span></div></div>' +
+        '<div class="go-row"><button type="button" class="go">좋아요, 시작할게요 →</button><button type="button" class="skip">다음부터 바로 시작하기</button></div>');
+      coach.appendChild(box);
+      box.querySelector('.go').addEventListener('click', go);
+      box.querySelector('.skip').addEventListener('click', function () { try { localStorage.setItem(OFF, '1'); } catch (e) {} go(); });
+      setTimeout(function () { var g = box.querySelector('.go'); if (g) g.focus({ preventScroll: true }); }, 30);
+    }
+
     function startCoach() {
       var C = clientObj();
       var docSel = document.getElementById('docTypeSelect');
@@ -397,7 +423,10 @@
         top.appendChild(el('div', { class: 'moa-coach-who' }, '<span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9.4l-4.7 1.8L12 16l-1.8-4.8L5.5 9.4l4.7-1.8z"/></svg></span>자소서 코치'));
         var dots = el('div', { class: 'moa-steps', 'aria-label': total + '단계 중 ' + Math.min(idx + 1, total) + '단계' });
         for (var i = 0; i < total; i++) dots.appendChild(el('i', i <= idx ? { class: 'on' } : null));
-        top.appendChild(dots);
+        var posWrap = el('div', { style: 'display:flex;align-items:center' });
+        posWrap.appendChild(dots);
+        posWrap.appendChild(el('span', { class: 'moa-coach-pos', 'aria-hidden': 'true' }, idx >= total ? '끝!' : (idx === total - 1 ? '마지막 질문' : '질문 ' + (idx + 1) + ' / ' + total)));
+        top.appendChild(posWrap);
         coach.appendChild(top);
         history.slice(-2).forEach(function (h) {
           coach.appendChild(el('p', { class: 'moa-say past' }, esc(h.say)));
@@ -461,7 +490,7 @@
       }
 
       if (!total) { finish(true); return; }
-      draw();
+      showIntro(total, C, draw);
     }
   }
 
