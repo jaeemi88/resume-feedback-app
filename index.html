@@ -2293,9 +2293,8 @@ async function renderStudentSubmitForm() {
     if (CLIENT && !(await refundSubmitConfirm({ color: '#643DF2', title: `문항 ${rawItems.length}개를 최종 제출할까요?`, body: '제출은 <b>한 번만</b> 가능하고, 제출 후에는 수정할 수 없어요. 빠진 문항이나 고칠 곳이 없는지 한 번 더 확인해 주세요.', setNote: CLIENT.product === 'set' ? '■ 세트 상품: 자소서 제출 후 모의면접 제출 전 취소 시 40,000원 환불 / 두 항목 모두 제출 후 환불 불가' : '' }))) return;
 
     submitBtn.disabled = true;
-    submitBtn.textContent = CLIENT
-      ? `제출하는 중이에요... (1~${Math.max(2, rawItems.length)}분 · 화면을 닫지 마세요)`
-      : `첨삭 초안 생성 중... (문항 ${rawItems.length}개, 최대 ${rawItems.length}분)`;
+    // 개인 고객·수강생 모두 같은 안내 (2026-10-02, 긴 문항은 최대 3분 걸릴 수 있음)
+    submitBtn.textContent = `제출하는 중이에요... (1~3분 · 화면을 닫지 마세요)`;
     statusMsg.style.display = 'none';
 
     try {
