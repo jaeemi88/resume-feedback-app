@@ -307,6 +307,55 @@
   .ex-modal h3{margin:0 0 4px;color:var(--navy)}
   .ex-modal .iv-item{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
   .ex-modal .iv-q{font-weight:700;font-size:14px;margin-top:8px}
+
+  /* ---------- 학생 결과 화면 (2026-10-03 B+C+D 통합안) ---------- */
+  .rs-card{padding-bottom:0 !important}
+  .rs-kicker{margin:0 0 4px;font-size:13px;font-weight:700;color:#5F6678}
+  .rs-title{margin:0 0 6px;font-size:24px;line-height:1.4;font-weight:900;letter-spacing:-0.025em;color:#141A2E;border:0;padding:0}
+  .rs-sub{margin:0 0 16px;font-size:14px;line-height:1.6;color:#5F6678}
+  .rs-jump{display:flex;gap:8px;overflow-x:auto;margin:0 -2px 16px;padding:2px;scrollbar-width:none}
+  .rs-jump::-webkit-scrollbar{display:none}
+  .rs-jump a{flex-shrink:0;display:inline-flex;align-items:center;min-height:38px;padding:0 14px;border-radius:999px;background:#F4F5F7;color:#141A2E;font-size:13px;font-weight:700;text-decoration:none}
+  .rs-anchor{position:relative;top:-72px}
+  .rs-item.rs-next{margin-top:28px;padding-top:28px;border-top:1px solid #E6E8EE}
+  .rs-hero{background:#141A2E;color:#FFFFFF;border-radius:20px;padding:18px 18px 16px;margin-bottom:14px}
+  .rs-hero-top{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12px;color:#AEB4C6}
+  .rs-ok{display:inline-flex;align-items:center;gap:5px;font-weight:700;color:#C0D904}
+  .rs-hero-head{margin:12px 0 14px;font-size:20px;line-height:1.45;font-weight:900;letter-spacing:-0.02em}
+  .rs-bar{height:6px;border-radius:3px;background:rgba(255,255,255,.14);overflow:hidden}
+  .rs-bar i{display:block;height:100%;border-radius:3px;background:#C0D904;transition:width .3s}
+  .rs-hero-sub{margin:7px 0 0;font-size:12px;color:#AEB4C6;font-variant-numeric:tabular-nums}
+  .rs-q{background:#F4F5F7;border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.6;color:#2B3040;margin-bottom:18px;white-space:pre-wrap}
+  .rs-q b{display:block;font-size:11px;color:#5F6678;margin-bottom:2px}
+  .rs-item .result-block{margin-bottom:22px}
+  .rs-item .result-block > h3{font-size:16px !important;font-weight:900 !important;color:#141A2E !important;margin:0 0 10px !important}
+  .rs-comments{display:flex;flex-direction:column;gap:8px;background:#F4F5F7;border-radius:14px;padding:14px 16px}
+  .rs-c{display:grid;grid-template-columns:52px minmax(0,1fr);gap:10px;font-size:14px;line-height:1.65}
+  .rs-c b{font-weight:900;white-space:nowrap}
+  .rs-c.good b{color:#3D4500}
+  .rs-c.fix b{color:#141A2E}
+  .rs-c p{margin:0;white-space:pre-wrap;color:#2B3040}
+  .rs-soft{white-space:pre-wrap;background:#F4F5F7;padding:12px 14px;border-radius:12px;margin:0}
+  .rs-warn{white-space:pre-wrap;background:#FFF4E5;padding:12px 14px;border-radius:12px;margin:0;color:#7A3E00}
+  .rs-more{border:1px solid #E6E8EE;border-radius:14px;padding:0 16px;margin-top:6px}
+  .rs-more > summary{min-height:48px;display:flex;align-items:center;font-size:14px;font-weight:700;color:#141A2E;cursor:pointer}
+  .rs-more[open]{padding-bottom:12px}
+  .rs-survey{margin:24px 0 0;padding:16px;border-radius:16px;background:#EEF4C2;text-align:center}
+  .rs-survey p{margin:0 0 10px;font-size:14px;color:#3D4500}
+  .rs-survey-btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 20px;border-radius:12px;background:#141A2E;color:#FFFFFF;font-weight:700;font-size:14px;text-decoration:none}
+  .rs-dock{position:sticky;bottom:0;display:grid;grid-template-columns:56px 56px minmax(0,1fr);gap:8px;margin:20px -20px 0;padding:14px 20px calc(16px + env(safe-area-inset-bottom));background:linear-gradient(rgba(255,255,255,0),#FFFFFF 26%);z-index:20}
+  .rs-dock-btn{min-height:54px;border:1px solid #D7DAE2 !important;border-radius:14px !important;background:#FFFFFF !important;color:#141A2E !important;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px !important;font-weight:700;padding:0 !important}
+  .rs-dock-main{min-height:54px;border:0;border-radius:14px !important;background:#141A2E !important;color:#FFFFFF !important;font-size:16px !important;font-weight:700}
+  .ex-wrap{background:#FFFFFF !important;border:1px solid #E6E8EE;border-radius:16px !important}
+  .ex-guide{color:#3B4256 !important}
+  .ex-bar i{background:#141A2E !important}
+  .ex-editor{border-color:#141A2E !important;border-radius:14px !important}
+  .ex-opt{background:#F4F5F7 !important;border-radius:12px !important;min-height:44px}
+  .ex-opt:hover,.ex-opt.on{border-color:#141A2E !important}
+  .ex-slot.open{outline-color:#141A2E !important}
+  .ex-final{border-color:#3D4500 !important;border-radius:14px !important}
+  .ex-final h4{color:#3D4500 !important}
+  @media print{ .rs-dock,.rs-jump{display:none !important} }
 </style>
 <link rel="stylesheet" href="/moa-ui.css"><!-- 2026-10-03 MOA 디자인 키트 (학생 화면) -->
 </head>
@@ -3398,6 +3447,7 @@ function exampleBlockHtml(item) {
 }
 function exRefresh(st) {
   document.querySelectorAll(`.ex-wrap[data-exkey="${st.key}"]`).forEach(w => { w.innerHTML = exInnerHtml(st); });
+  if (typeof rsRefreshHero === 'function') rsRefreshHero(st.key);
 }
 // 예시가 남은 채로 복사·저장할 때 경고 (⑨)
 function exLeftWarn(count) {
@@ -3453,77 +3503,129 @@ document.addEventListener('keydown', (e) => {
   if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('ex-slot') && !e.target.classList.contains('static')) { e.preventDefault(); e.target.click(); }
 });
 
-function resultItemBlockHtml(item, idx, total) {
+// ---------- 학생 결과 화면 (2026-10-03 B+C+D 통합안) ----------
+// 순서: 요약 카드 → 완성된 내 글 → 점검표 → 선생님 코멘트 → 교정지 → 꼬리질문 → 방어 테스트 → 자세히 보기(접기)
+// 워드 파일은 별도 함수(wItemHtml)로 만들어서 이 순서와 무관. PDF는 접힌 칸까지 펼쳐서 인쇄.
+const RS_ITEMS = {}; // 예시 상태 키 → 있음 표시 (형광펜 바꾸러 가기 버튼용)
+const RS_LIST = []; // 문항 순서 → { item, idx, total } (요약 카드 새로고침용)
+function rsChecklistCounts(item) {
+  const fw = item.frameworkUsed || 'STAR';
+  const labels = FRAMEWORK_LABELS[fw] || FRAMEWORK_LABELS.STAR;
+  let ok = 0, warn = 0;
+  Object.keys(labels).forEach(k => { (item.structure && item.structure[k]) ? ok++ : warn++; });
+  if (item.concreteness) ['hasNumber', 'hasProperNoun', 'hasJobKeyword'].forEach(k => { item.concreteness[k] ? ok++ : warn++; });
+  const flags = Array.isArray(item.redFlags) ? item.redFlags.filter(f => f && (f.quote || f.why)).length : 0;
+  return { ok, warn, flags };
+}
+function rsHeroInner(item, idx, total) {
+  const text = String(item.polishedText || '');
+  EX_RE.lastIndex = 0;
+  const hasEx = EX_RE.test(text); EX_RE.lastIndex = 0;
+  const st = hasEx ? exInit(item) : null;
+  const n = st ? st.slots.length : 0;
+  const left = st ? exLeft(st) : 0;
+  const pct = n ? Math.round((n - left) / n * 100) : 100;
+  const c = rsChecklistCounts(item);
+  let head;
+  if (c.flags) head = `면접관이 멈칫할 표현 ${c.flags}곳을<br>먼저 확인해 주세요`;
+  else if (left) head = `예시 ${left}곳만 내 경험으로 바꾸면<br>완성이에요`;
+  else if (c.warn) head = `점검표에서 ${c.warn}가지만 보완하면<br>더 좋아져요`;
+  else head = `점검표를 모두 통과했어요.<br>이제 소리 내어 읽어 보세요`;
+  const chars = st ? exCompose(st, false).length : text.length;
+  const lim = item.charLimit;
+  const type = item.questionType === '이력서항목' ? '경력·활동 항목' : (item.questionType || '자소서 문항');
   return `
-    <div class="result-block" style="${idx > 0 ? 'border-top:2px solid var(--line);padding-top:18px;margin-top:18px' : ''}">
-      ${total > 1 ? `<div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:8px">문항 ${idx + 1} / ${total} · ${escapeHtml(item.questionType || '')}</div>` : ''}
-      <h3>${escapeHtml(item.questionType === '이력서항목' ? '경력·활동 항목' : '자소서 문항')}</h3>
-      <p style="white-space:pre-wrap">${escapeHtml(item.question)}</p>
-    </div>
+    <div class="rs-hero-top"><span class="rs-ok"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>첨삭 완료</span><span>${escapeHtml(type)}${total > 1 ? ` · ${idx + 1}/${total}` : ''}</span></div>
+    <p class="rs-hero-head">${head}</p>
+    <div class="rs-bar" role="img" aria-label="완성도 ${pct}%"><i style="width:${pct}%"></i></div>
+    <p class="rs-hero-sub">완성도 ${pct}% · ${chars}${lim ? ` / ${lim}` : ''}자 · 점검 ${c.ok}/${c.ok + c.warn}</p>`;
+}
+function rsRefreshHero(key) {
+  document.querySelectorAll(`.rs-hero[data-exkey="${key}"]`).forEach(h => {
+    const ref = RS_LIST[+h.dataset.rsidx]; if (ref) h.innerHTML = rsHeroInner(ref.item, ref.idx, ref.total);
+  });
+}
+function resultItemBlockHtml(item, idx, total) {
+  const text = String(item.polishedText || '');
+  EX_RE.lastIndex = 0;
+  const key = EX_RE.test(text) ? exInit(item).key : ''; EX_RE.lastIndex = 0;
+  if (key) RS_ITEMS[key] = true;
+  RS_LIST[idx] = { item, idx, total };
+  const more = [
+    item.jobMatch ? `<div class="result-block"><h3>채용공고 매칭도</h3>${jobMatchHtml(item.jobMatch)}</div>` : '',
+    item.interviewerInference ? `<div class="result-block"><h3>면접관 시점 — 이 답변으로 추론되는 평소 모습</h3><p class="rs-soft">${escapeHtml(item.interviewerInference)}</p></div>` : '',
+    item.intentGapComment ? `<div class="result-block"><h3>내가 밝힌 의도 vs 실제 답변</h3><p class="rs-soft">${escapeHtml(item.intentGapComment)}</p></div>` : '',
+    item.previousAnswer ? `<div class="result-block"><h3>Before → After 비교</h3><p class="rs-soft" style="line-height:1.9">${diffHtml(item.previousAnswer, item.answer)}</p>${item.revisionComment ? `<p style="margin-top:8px">${escapeHtml(item.revisionComment)}</p>` : ''}</div>` : ''
+  ].join('');
+  return `
+  <section class="rs-item${idx > 0 ? ' rs-next' : ''}">
+    <div class="rs-hero" data-rsidx="${idx}"${key ? ` data-exkey="${key}"` : ''}>${rsHeroInner(item, idx, total)}</div>
+    <div class="rs-q"><b>${escapeHtml(item.questionType === '이력서항목' ? '경력·활동 항목' : '기업 문항')}</b>${escapeHtml(item.question)}</div>
     <div class="result-block">
-      <h3>교정지 — 제출한 답변과 선생님 메모</h3>
-      ${proofSheetHtml(item)}
+      <h3>완성된 내 글</h3>
+      ${exampleBlockHtml(item)}
     </div>
+    ${item.charLimitNote ? `<div class="result-block"><h3>글자수 초과 (제한 ${item.charLimit}자)</h3><p class="rs-warn">${escapeHtml(item.charLimitNote)}</p></div>` : ''}
     <div class="result-block">
-      <h3>제출 전 점검표 · ${(item.frameworkUsed || 'STAR')} 구조</h3>
+      <h3>점검표 · ${(item.frameworkUsed || 'STAR')} 구조</h3>
       ${proofChecklistHtml(item)}
       ${riskFlagsHtml(item.riskFlags)}
     </div>
-    ${item.jobMatch ? `<div class="result-block"><h3>채용공고 매칭도</h3>${jobMatchHtml(item.jobMatch)}</div>` : ''}
-    ${item.intentGapComment ? `<div class="result-block"><h3>내가 밝힌 의도 vs 실제 답변</h3><p style="white-space:pre-wrap;background:var(--warn-bg);padding:12px;border-radius:8px">${escapeHtml(item.intentGapComment)}</p></div>` : ''}
-    ${item.previousAnswer ? `<div class="result-block"><h3>Before → After 비교</h3><p style="white-space:pre-wrap;line-height:1.9;background:var(--green-light);padding:12px;border-radius:8px">${diffHtml(item.previousAnswer, item.answer)}</p>${item.revisionComment ? `<p style="margin-top:8px">${escapeHtml(item.revisionComment)}</p>` : ''}</div>` : ''}
-    ${item.charLimitNote ? `<div class="result-block"><h3>⚠ 글자수 초과 (제한 ${item.charLimit}자)</h3><p style="white-space:pre-wrap;background:var(--warn-bg);padding:12px;border-radius:8px">${escapeHtml(item.charLimitNote)}</p></div>` : ''}
     <div class="result-block">
-      <h3>면접관 시점 — 이 답변으로 추론되는 평소 모습</h3>
-      <p style="white-space:pre-wrap;background:var(--navy-light);padding:12px;border-radius:8px">${escapeHtml(item.interviewerInference)}</p>
+      <h3>선생님 코멘트</h3>
+      <div class="rs-comments">
+        ${item.strengths ? `<div class="rs-c good"><b>좋은 점</b><p>${escapeHtml(item.strengths)}</p></div>` : ''}
+        ${item.improvements ? `<div class="rs-c fix"><b>고칠 점</b><p>${escapeHtml(item.improvements)}</p></div>` : ''}
+      </div>
     </div>
     <div class="result-block">
-      <h3>잘된 점</h3>
-      <p style="white-space:pre-wrap">${escapeHtml(item.strengths)}</p>
-    </div>
-    <div class="result-block">
-      <h3>개선 방향</h3>
-      <p style="white-space:pre-wrap">${escapeHtml(item.improvements)}</p>
-    </div>
-    <div class="result-block">
-      <h3>다듬은 문장 제안</h3>
-      ${exampleBlockHtml(item)}
+      <h3>교정지 — 제출한 답변과 메모</h3>
+      <div class="proof-legend">
+        <span class="proof-chip p"><i></i>다듬을 표현</span>
+        <span class="proof-chip y"><i></i>면접관이 멈칫할 표현</span>
+      </div>
+      ${proofSheetHtml(item)}
     </div>
     <div class="result-block">
       <h3>예상 꼬리질문 (면접 대비)</h3>
       ${followUpHtml(item.followUpQuestions)}
     </div>
     ${defenseHtml(item)}
-  `;
+    ${more ? `<details class="rs-more"><summary>자세히 보기 · 면접관 시점${item.jobMatch ? '·공고 매칭' : ''}${item.previousAnswer ? '·Before/After' : ''}</summary>${more}</details>` : ''}
+  </section>`;
 }
 
 function resultContentHtml(record) {
   CURRENT_RESULT = record;
   const items = record.items || [];
+  const nm = escapeHtml(record.studentName || '첨삭결과').replace(/'/g, "");
   return `
-    <div class="card">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-        <button class="btn-secondary" onclick="downloadResultAsWord('${escapeHtml(record.studentName || '첨삭결과').replace(/'/g, "")}')">📄 워드로 저장</button>
-        <button class="btn-secondary" style="margin-left:8px" onclick="downloadResultAsPdf('${escapeHtml(record.studentName || '첨삭결과').replace(/'/g, "")}')">🖨️ PDF로 저장</button>
-      </div>
+    <div class="card rs-card">
       <div id="resultExportArea">
-      <div class="proof-kicker">교정지 · 첨삭 결과${record.studentName ? ` · ${escapeHtml(record.studentName)}님` : ''}</div>
-      <h2 class="proof-title">선생님의 첨삭이 도착했어요</h2>
-      <p class="proof-sub">표시된 번호 순서대로 원고와 옆 메모를 함께 확인해 보세요.${items.length > 1 ? ` 총 ${items.length}개 문항이에요.` : ''}</p>
-      <div class="proof-legend">
-        <span class="proof-chip p"><i></i>다듬을 표현</span>
-        <span class="proof-chip y"><i></i>면접관이 멈칫할 표현</span>
-      </div>
-      ${record.jobPosting ? `<div class="result-block"><h3>지원 채용공고 핵심 내용</h3><p style="white-space:pre-wrap">${escapeHtml(record.jobPosting)}</p></div>` : ''}
-      ${items.map((it, idx) => resultItemBlockHtml(it, idx, items.length)).join('')}
+      <p class="rs-kicker">첨삭 결과${record.studentName ? ` · ${escapeHtml(record.studentName)}님` : ''}</p>
+      <h2 class="rs-title">선생님의 첨삭이 도착했어요</h2>
+      <p class="rs-sub">노란 형광펜(예시)을 내 경험으로 바꾸면 내 글이 완성돼요.${items.length > 1 ? ` 문항 ${items.length}개를 차례로 보여 드려요.` : ''}</p>
+      ${items.length > 1 ? `<nav class="rs-jump" aria-label="문항 바로가기">${items.map((it, i) => `<a href="#rs-${i}">${i + 1}. ${escapeHtml(it.questionType === '이력서항목' ? '경력·활동' : (it.questionType || '문항'))}</a>`).join('')}</nav>` : ''}
+      ${record.jobPosting ? `<details class="rs-more" style="margin-bottom:14px"><summary>지원 채용공고 핵심 내용</summary><p style="white-space:pre-wrap;margin:8px 0 0">${escapeHtml(record.jobPosting)}</p></details>` : ''}
+      ${items.map((it, idx) => `<div id="rs-${idx}" class="rs-anchor"></div>` + resultItemBlockHtml(it, idx, items.length)).join('')}
       </div>
       ${record.trackerProgramId ? `
-      <div class="result-block" style="text-align:center;background:var(--green-light);border-radius:10px;padding:16px">
-        <p style="margin:0 0 10px;font-size:13px;color:#333">첨삭 결과, 어떠셨나요? 더 나은 서비스를 위해 짧은 의견 부탁드려요 🙏</p>
-        <a href="https://moa-tracker-tau.vercel.app/?survey=1&t=${encodeURIComponent(TEACHER_ID)}&p=${encodeURIComponent(record.trackerProgramId)}" target="_blank" class="btn-primary" style="display:inline-block;text-decoration:none;padding:10px 24px;border-radius:8px">30초 만족도 남기기</a>
+      <div class="rs-survey">
+        <p>첨삭 결과, 어떠셨나요? 30초면 끝나는 의견을 남겨 주세요.</p>
+        <a href="https://moa-tracker-tau.vercel.app/?survey=1&t=${encodeURIComponent(TEACHER_ID)}&p=${encodeURIComponent(record.trackerProgramId)}" target="_blank" rel="noopener" class="rs-survey-btn">만족도 남기기</a>
       </div>` : ''}
+      <div class="rs-dock">
+        <button type="button" class="rs-dock-btn" onclick="downloadResultAsWord('${nm}')" aria-label="워드로 저장"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5M9 13l1.5 5 1.5-4 1.5 4 1.5-5"></path></svg>워드</button>
+        <button type="button" class="rs-dock-btn" onclick="downloadResultAsPdf('${nm}')" aria-label="PDF로 저장"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 17H4v-6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6h-2"></path><rect x="6" y="14" width="12" height="7" rx="1"></rect></svg>PDF</button>
+        <button type="button" class="rs-dock-main" onclick="rsGoFirstSlot()">${Object.keys(RS_ITEMS).length ? '형광펜 바꾸러 가기' : '맨 위로'}</button>
+      </div>
     </div>
   `;
+}
+function rsGoFirstSlot() {
+  const slot = document.querySelector('.ex-slot:not(.mine)');
+  if (slot) { slot.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => slot.click(), 350); }
+  else window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // CSS 변수(var(--xxx))는 워드 문서에서 인식이 안 되므로, 실제 색상값으로 치환해서 내보냄
@@ -3704,8 +3806,8 @@ function downloadResultAsPdf(studentName) {
     .result-block,.proof-note,.ex-final,.pc-item{break-inside:avoid;page-break-inside:avoid}
     .ex-slot{cursor:default}
   </style></head><body><div class="card" style="border:none;box-shadow:none;max-width:none;padding:0">
-    <div style="font-size:11px;font-weight:800;color:#643DF2;letter-spacing:1px;margin-bottom:6px">MOA FORMULA · 진로모아커리어센터</div>
-    ${area.innerHTML}</div></body></html>`);
+    <div style="font-size:11px;font-weight:800;color:#141A2E;letter-spacing:1px;margin-bottom:6px">MOA FORMULA · 진로모아커리어센터</div>
+    ${(() => { const cl = area.cloneNode(true); cl.querySelectorAll('details').forEach(d => d.setAttribute('open', '')); cl.querySelectorAll('.rs-jump').forEach(n => n.remove()); return cl.innerHTML; })()}</div></body></html>`);
   doc.close();
   const go = () => { try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch (e) { window.print(); } setTimeout(() => frame.remove(), 60000); };
   // 글꼴이 다 불러와진 뒤 인쇄

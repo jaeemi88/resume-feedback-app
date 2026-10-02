@@ -37,6 +37,38 @@
     document.head.appendChild(s);
   }
 
+  /* ── 허브 '이어서 하기'용 진행 상황 보고 (2026-10-03) ──
+     허브가 주소 끝에 붙여 준 #moa-s={이름, 숫자4자리}를 이 창(세션)에만 보관하고,
+     (강사코드|이름|숫자4자리)를 SHA-256으로 뒤섞은 열쇠만 서버에 보냄 — 이름·숫자는 보내지 않음 */
+  var PROGRESS_API = 'https://resume-feedback-app-phi.vercel.app/api/progress';
+  function moaStudent() {
+    var m = location.hash.match(/^#moa-s=(.+)$/);
+    if (m) {
+      try {
+        var o = JSON.parse(decodeURIComponent(m[1]));
+        if (o && o.n && /^\d{4}$/.test(o.p4)) sessionStorage.setItem('moa_s', JSON.stringify({ n: String(o.n).slice(0, 20), p4: o.p4 }));
+      } catch (e) {}
+      try { history.replaceState(history.state, '', location.pathname + location.search); } catch (e) {}
+    }
+    try { return JSON.parse(sessionStorage.getItem('moa_s') || 'null'); } catch (e) { return null; }
+  }
+  var MOA_S = moaStudent();
+  function moaTeacherId() { try { return typeof TEACHER_ID !== 'undefined' ? TEACHER_ID : ''; } catch (e) { return ''; } }
+  function moaKey() {
+    var t = moaTeacherId();
+    if (!MOA_S || !t || !(window.crypto && crypto.subtle)) return Promise.resolve('');
+    var data = new TextEncoder().encode(t + '|' + MOA_S.n.trim() + '|' + MOA_S.p4);
+    return crypto.subtle.digest('SHA-256', data).then(function (buf) {
+      return Array.prototype.map.call(new Uint8Array(buf), function (x) { return ('0' + x.toString(16)).slice(-2); }).join('');
+    }).catch(function () { return ''; });
+  }
+  function moaReport(app, data) {
+    moaKey().then(function (k) {
+      if (!k) return;
+      fetch(PROGRESS_API, { method: 'POST', keepalive: true, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'put', k: k, app: app, data: data }) }).catch(function () {});
+    });
+  }
+
   function isStudent() {
     var b = document.body;
     return b.classList.contains('role-student') && !b.classList.contains('role-teacher');
@@ -293,6 +325,7 @@
       setTimeout(function () {
         var anyAnswer = Array.prototype.some.call(document.querySelectorAll('.item-answer'), function (t) { return t.value.trim(); });
         if (anyAnswer || hasDraft()) { finish(true); return; }
+        if (MOA_S && MOA_S.n && !nameInput.value.trim()) { nameInput.value = MOA_S.n; fire(nameInput, 'input'); } // 허브에서 입력한 이름 이어받기
         startCoach();
       }, 80);
     })();
@@ -444,6 +477,24 @@
     }
     document.querySelectorAll('.item-block').forEach(enhanceItem);
   }
+
+  // 제출 성공(/api/reviews POST)을 지켜보다가 허브에 '검토 중' 표시
+  (function watchSubmit() {
+    if (!window.fetch || !MOA_S) return;
+    var orig = window.fetch;
+    window.fetch = function (input, init) {
+      var url = typeof input === 'string' ? input : (input && input.url) || '';
+      var p = orig.apply(this, arguments);
+      if (/\/api\/reviews/.test(url) && init && String(init.method || '').toUpperCase() === 'POST') {
+        p.then(function (r) {
+          if (!r.ok) return;
+          var n = 0; try { n = (JSON.parse(init.body).items || []).length; } catch (e) {}
+          moaReport('resume', { state: 'submitted', items: n });
+        }).catch(function () {});
+      }
+      return p;
+    };
+  })();
 
   function start() {
     addStyle();
