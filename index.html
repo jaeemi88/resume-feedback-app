@@ -668,6 +668,7 @@ function renderMasterTeacherList() {
   const ssGet = () => { try { return sessionStorage.getItem(PW_KEY) || ''; } catch (e) { return ''; } };
   const ssSet = v => { try { sessionStorage.setItem(PW_KEY, v); } catch (e) {} };
   let DATA = null, FILTER = 'all', QUERY = '';
+  const OPEN = { todo: false, active: false, off: false };
 
   app.innerHTML = `
     <style>
@@ -695,6 +696,35 @@ function renderMasterTeacherList() {
       .rb-add .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
       @media (max-width:480px){.rb-add .grid{grid-template-columns:1fr}}
       .rb-done{background:#E8F5EE;border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:13px;line-height:1.7;word-break:break-all}
+      .rb-sum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:4px 0 10px}
+      .rb-tile{border:1px solid var(--border);background:#fff;border-radius:12px;padding:10px 12px;text-align:left;cursor:pointer;font-family:inherit;min-height:64px}
+      .rb-tile b{display:block;font-size:24px;font-weight:800;line-height:1.2;color:var(--text)}
+      .rb-tile span{font-size:12px;font-weight:700;color:var(--muted)}
+      .rb-tile.hot{border:2px solid #643DF2}.rb-tile.hot b{color:#643DF2}
+      .rb-sec{margin-bottom:10px}
+      .rb-sec>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;min-height:48px;padding:0 14px;border:1px solid var(--border);border-radius:12px;background:#fff;font-size:15px;font-weight:800;color:var(--text)}
+      .rb-sec>summary::-webkit-details-marker{display:none}
+      .rb-sec>summary .t{display:flex;align-items:center;gap:8px}
+      .rb-sec>summary .t em{font-style:normal;color:#643DF2}
+      .rb-sec>summary .h{font-size:13px;font-weight:500;color:var(--muted)}
+      .rb-sec>summary .h::after{content:'펼치기'}
+      .rb-sec[open]>summary .h::after{content:'접기'}
+      .rb-sec.todo>summary{border:2px solid #643DF2}
+      .rb-sec.off>summary{border-style:dashed;font-size:13px;font-weight:700;color:var(--muted)}
+      .rb-body{margin-top:8px}
+      .rb-btns .rb-main{flex:1;min-height:44px;font-size:14px}
+      .rb-btns .rb-more summary{min-height:44px;min-width:44px;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
+      .rb-lines{border:1px solid var(--border);border-radius:12px;background:#fff}
+      .rb-line{display:flex;align-items:center;gap:10px;padding:2px 4px 2px 14px;border-bottom:1px solid #F0EDF9}
+      .rb-line:last-child{border-bottom:0}
+      .rb-dot{width:10px;height:10px;border-radius:999px;flex-shrink:0}
+      .rb-dot.g{background:#1F8A55}.rb-dot.y{background:#C77700}.rb-dot.n{border:2px solid #8A90A0;box-sizing:border-box}
+      .rb-line .nm{flex:1;min-width:0;font-size:14px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .rb-line .nm small{font-size:11px;font-weight:700;color:var(--navy);background:var(--green-light);border-radius:999px;padding:2px 7px;margin-left:6px}
+      .rb-line .ls{font-size:12px;color:var(--muted);white-space:nowrap}
+      .rb-line .rb-more summary{border:0;background:transparent;min-height:44px;min-width:44px;display:flex;align-items:center;justify-content:center}
+      .rb-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:8px 4px 0}
+      .rb-legend span{display:flex;align-items:center;gap:6px}
     </style>
     <div class="card" id="rbLogin">
       <h2>관리자 비밀번호</h2>
@@ -720,10 +750,10 @@ function renderMasterTeacherList() {
         <div id="rbAddErr" style="color:#b91c1c;font-size:13px;margin-top:8px;display:none"></div>
       </div>
       <div id="rbDone"></div>
-      <div class="rb-chips" id="rbChips"></div>
-      <input type="text" id="rbSearch" placeholder="🔍 이름·코드 검색" style="margin-bottom:10px">
+      <div class="rb-sum" id="rbChips"></div>
+      <input type="text" id="rbSearch" placeholder="🔍 이름·코드 검색" style="margin-bottom:10px" aria-label="강사 검색">
       <div id="rbList"></div>
-      <div id="rbRemoved" style="margin-top:14px"></div>
+      <div id="rbRemoved"></div>
     </div>
     <div class="card" id="clBook" style="display:none"></div>
   `;
@@ -797,6 +827,17 @@ function renderMasterTeacherList() {
     await load();
   }
 
+  function moreMenu(t, withSend) {
+    const c = escapeHtml(t.code);
+    return `<details class="rb-more"><summary aria-label="더보기">⋯</summary><div class="rb-menu">
+            ${withSend ? `<button data-act="send" data-code="${c}">💬 링크 다시 보내기</button>` : ''}
+            <button data-act="expiry" data-code="${c}">${t.expired ? '⏳ 기간 연장' : t.expiresAt ? '⏳ 기간 변경' : '⏳ 기간 정하기'}</button>
+            ${t.expiresAt ? `<button data-act="perm" data-code="${c}">♾️ 영구로 바꾸기</button>` : ''}
+            ${t.hubKey ? `<button data-act="rekey" data-code="${c}">🔄 링크 재발급 (옛 링크 막기)</button>` : ''}
+            <button class="danger" data-act="del" data-code="${c}">⛔ 사용 중지</button>
+          </div></details>`;
+  }
+  // 조치 필요 카드 — 상태에 맞는 버튼 하나 + ⋯
   function row(t) {
     const [, cls, label] = statusOf(t);
     const bits = [];
@@ -805,22 +846,30 @@ function renderMasterTeacherList() {
     if (t.expiresAt) bits.push((t.expired ? '사용 기간 끝남 ' : '사용 기간 ~') + moaDate(t.expiresAt));
     else bits.push('영구');
     bits.push('등록 ' + moaDate(t.approvedAt));
+    const c = escapeHtml(t.code);
+    const main = t.expired
+      ? `<button class="btn-primary rb-main" data-act="expiry" data-code="${c}">⏳ 기간 연장</button>`
+      : `<button class="btn-primary rb-main" data-act="send" data-code="${c}">${t.linkSentAt || t.lastSeen ? '💬 링크 다시 보내기' : SHARE_LABEL}</button>`;
     return `
       <div class="rb-row">
         <div class="rb-top">
-          <div class="rb-name">${escapeHtml(t.name)}<span class="rb-code">${escapeHtml(t.code)}</span></div>
+          <div class="rb-name">${escapeHtml(t.name)}<span class="rb-code">${c}</span></div>
           <span class="rb-badge ${cls}">${label}</span>
         </div>
         <div class="rb-sub">${bits.map(escapeHtml).join(' · ')}</div>
-        <div class="rb-btns">
-          <button class="btn-primary" data-act="send" data-code="${escapeHtml(t.code)}">${t.linkSentAt || t.lastSeen ? '💬 링크 다시 보내기' : SHARE_LABEL}</button>
-          <button class="btn-secondary" data-act="expiry" data-code="${escapeHtml(t.code)}">${t.expired ? '⏳ 기간 연장' : t.expiresAt ? '⏳ 기간 변경' : '⏳ 기간 정하기'}</button>
-          <details class="rb-more"><summary>⋯</summary><div class="rb-menu">
-            ${t.expiresAt ? `<button data-act="perm" data-code="${escapeHtml(t.code)}">♾️ 영구로 바꾸기</button>` : ''}
-            ${t.hubKey ? `<button data-act="rekey" data-code="${escapeHtml(t.code)}">🔄 링크 재발급 (옛 링크 막기)</button>` : ''}
-            <button class="danger" data-act="del" data-code="${escapeHtml(t.code)}">⛔ 사용 중지</button>
-          </div></details>
-        </div>
+        <div class="rb-btns">${main}${moreMenu(t, t.expired)}</div>
+      </div>`;
+  }
+  // 활동 중 한 줄 — 신호등 점 + 이름 + 마지막 접속 + ⋯
+  function line(t) {
+    const days = t.lastSeen ? Math.round((Date.now() - t.lastSeen) / 86400000) : 999;
+    const dot = days <= 7 ? 'g' : days <= 30 ? 'y' : 'n';
+    const tag = t.expiresAt ? `<small>${escapeHtml(statusOf(t)[2].replace('⏳ ', ''))}</small>` : '';
+    return `<div class="rb-line">
+        <span class="rb-dot ${dot}" aria-hidden="true"></span>
+        <div class="nm" title="${escapeHtml(t.code)}">${escapeHtml(t.name)}${tag}</div>
+        <div class="ls">${t.lastSeen ? escapeHtml(relDay(t.lastSeen)) : ''}</div>
+        ${moreMenu(t, true)}
       </div>`;
   }
 
@@ -842,38 +891,43 @@ function renderMasterTeacherList() {
   function render() {
     if (!DATA) return;
     const T = DATA.teachers, R = DATA.removed, I = DATA.invites;
-    const cnt = { all: T.length + I.length, active: 0, wait: I.length, temp: 0, off: R.length };
-    T.forEach(t => { cnt[statusOf(t)[0]]++; });
-    const chips = [['all', '전체'], ['active', '활동'], ['wait', '대기'], ['temp', '임시'], ['off', '중지']];
-    $('rbChips').innerHTML = chips.map(([k, n]) => `<button class="rb-chip${FILTER === k ? ' on' : ''}" data-f="${k}">${n} ${cnt[k]}</button>`).join('');
-
     const q = QUERY.toLowerCase();
     const hit = (...xs) => !q || xs.some(x => String(x || '').toLowerCase().includes(q));
-    let html = '';
-    if (FILTER !== 'off') {
-      const rows = T.filter(t => (FILTER === 'all' || statusOf(t)[0] === FILTER) && hit(t.name, t.code));
-      // 조치가 필요한 사람(링크 필요·기간 끝남·접속 전)을 위로
-      const order = { 'b-need': 0, 'b-end': 1, 'b-wait': 2, 'b-temp': 3, 'b-active': 4 };
-      rows.sort((a, b) => order[statusOf(a)[1]] - order[statusOf(b)[1]]);
-      html += rows.map(row).join('');
-      if (FILTER === 'all' || FILTER === 'wait') html += I.filter(v => hit(v.label, v.code)).map(inviteRow).join('');
-    }
-    if (FILTER === 'off') {
-      html += R.filter(r => hit(r.name, r.code)).map(r => `
-        <div class="rb-row" style="background:#FAFBFD">
-          <div class="rb-top"><div class="rb-name">${escapeHtml(r.name)}<span class="rb-code">${escapeHtml(r.code)}</span></div><span class="rb-badge b-inv">⚫ 중지</span></div>
-          <div class="rb-sub">중지 ${escapeHtml(moaDate(r.removedAt))} · 기록은 보관 중</div>
-          <div class="rb-btns"><button class="btn-secondary" data-act="restore" data-code="${escapeHtml(r.code)}">복구</button></div>
-        </div>`).join('');
-    }
-    $('rbList').innerHTML = html || '<div class="empty">해당하는 강사가 없어요.</div>';
+    const order = { 'b-need': 0, 'b-end': 1, 'b-wait': 2, 'b-temp': 3, 'b-active': 4 };
+    const todoT = T.filter(t => ['b-need', 'b-end', 'b-wait'].includes(statusOf(t)[1]));
+    const actT = T.filter(t => ['b-temp', 'b-active'].includes(statusOf(t)[1]));
+    const todoN = todoT.length + I.length;
+    $('rbChips').innerHTML = `
+      <button type="button" class="rb-tile${todoN ? ' hot' : ''}" data-open="todo"><b>${todoN}</b><span>조치 필요</span></button>
+      <button type="button" class="rb-tile" data-open="active"><b>${actT.length}</b><span>활동 중</span></button>
+      <button type="button" class="rb-tile" data-open="off"><b>${R.length}</b><span>중지</span></button>`;
 
-    // 전체 보기에서는 중지된 강사를 맨 아래 접어둠
-    $('rbRemoved').innerHTML = (FILTER === 'all' && R.length) ? `
-      <details><summary style="cursor:pointer;font-size:13px;font-weight:700;color:var(--muted)">▸ 중지된 강사 ${R.length}명</summary>
-        <div style="margin-top:8px">${R.map(r => `
+    const todoRows = todoT.filter(t => hit(t.name, t.code)).sort((a, b) => order[statusOf(a)[1]] - order[statusOf(b)[1]]);
+    const invRows = I.filter(v => hit(v.label, v.code));
+    const actRows = actT.filter(t => hit(t.name, t.code)).sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+    const offRows = R.filter(r => hit(r.name, r.code));
+    const isOpen = k => (q ? true : OPEN[k]) ? ' open' : '';
+
+    let html = `
+      <details class="rb-sec todo" data-sec="todo"${isOpen('todo')}>
+        <summary><span class="t">🔔 조치 필요 <em>${todoRows.length + invRows.length}</em></span><span class="h"></span></summary>
+        <div class="rb-body">${todoRows.map(row).join('') + invRows.map(inviteRow).join('') || '<div class="empty">지금 처리할 일이 없어요.</div>'}</div>
+      </details>
+      <details class="rb-sec" data-sec="active"${isOpen('active')}>
+        <summary><span class="t">✅ 활동 중 ${actRows.length}</span><span class="h"></span></summary>
+        <div class="rb-body">
+          ${actRows.length ? `<div class="rb-lines">${actRows.map(line).join('')}</div>
+          <div class="rb-legend"><span><i class="rb-dot g"></i>7일 이내 접속</span><span><i class="rb-dot y"></i>30일 이내</span><span><i class="rb-dot n"></i>30일 넘음</span></div>` : '<div class="empty">해당하는 강사가 없어요.</div>'}
+        </div>
+      </details>`;
+    $('rbList').innerHTML = html;
+
+    $('rbRemoved').innerHTML = R.length ? `
+      <details class="rb-sec off" data-sec="off"${isOpen('off')}>
+        <summary><span class="t">사용 중지된 강사 ${offRows.length}명</span><span class="h"></span></summary>
+        <div class="rb-body">${offRows.map(r => `
           <div class="rb-row" style="background:#FAFBFD;display:flex;justify-content:space-between;align-items:center;gap:8px">
-            <div><b>${escapeHtml(r.name)}</b><span class="rb-code">${escapeHtml(r.code)}</span><div class="rb-sub" style="margin:2px 0 0">중지 ${escapeHtml(moaDate(r.removedAt))}</div></div>
+            <div><b>${escapeHtml(r.name)}</b><span class="rb-code">${escapeHtml(r.code)}</span><div class="rb-sub" style="margin:2px 0 0">중지 ${escapeHtml(moaDate(r.removedAt))} · 기록은 보관 중</div></div>
             <button class="btn-secondary" data-act="restore" data-code="${escapeHtml(r.code)}">복구</button>
           </div>`).join('')}</div>
       </details>` : '';
@@ -992,7 +1046,16 @@ function renderMasterTeacherList() {
     }
     btn.disabled = false; btn.textContent = '추가하기';
   });
-  $('rbChips').addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (!b) return; FILTER = b.dataset.f; render(); });
+  $('rbChips').addEventListener('click', e => {
+    const b = e.target.closest('[data-open]'); if (!b) return;
+    OPEN[b.dataset.open] = true; render();
+    const sec = document.querySelector(`.rb-sec[data-sec="${b.dataset.open}"]`);
+    if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  // 접기·펼치기 상태 기억 (다시 그려도 유지)
+  $('rbBook').addEventListener('toggle', e => {
+    const d = e.target; if (d.classList && d.classList.contains('rb-sec') && !QUERY) OPEN[d.dataset.sec] = d.open;
+  }, true);
   $('rbSearch').addEventListener('input', e => { QUERY = e.target.value.trim(); render(); });
   $('rbBook').addEventListener('click', e => { const b = e.target.closest('button[data-act]'); if (b) onAct(b); });
   $('rbDone').addEventListener('click', async e => {
