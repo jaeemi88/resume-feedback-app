@@ -54,6 +54,7 @@ export default async function handler(req, res) {
 
   const body = req.body || {};
   if (body.mode === 'defend') return defend(body, res);
+  if (body.mode === 'finish') return finish(body, res);
   if (body.mode !== 'draft') {
     return res.status(400).json({ error: '지원하지 않는 요청입니다.' });
   }
@@ -160,6 +161,51 @@ ${OPENER_GUIDE}
       .slice(0, 3);
 
     return res.status(200).json({ drafts });
+  } catch (err) {
+    console.error('서버 오류:', err);
+    return res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+}
+
+// ---------- 내 글로 완성하기 (mode: 'finish', 2026-10-02) ----------
+// 학생이 결과 화면에서 예시 자리를 자기 경험으로 바꾼 뒤, 문장이 자연스럽게 이어지도록 다듬기만 함
+async function finish(body, res) {
+  const text = clip(body.text, 4000);
+  const charLimit = parseInt(body.charLimit, 10) || null;
+  if (!text || !/⟪[^⟫]+⟫/.test(text)) {
+    return res.status(400).json({ error: '내 경험으로 바꾼 곳이 한 곳 이상 있어야 해요.' });
+  }
+  const systemPrompt = `당신은 자기소개서 첨삭 코치입니다. 학생이 첨삭 완성본의 예시 자리 일부를 자기 실제 경험으로 바꿨습니다.
+- ⟪ ⟫ 안은 학생이 직접 넣은 자기 경험입니다. 그 내용(단어·숫자·이름)을 빠짐없이 살리고 ⟪ ⟫ 기호만 지웁니다. 학생이 단어만 적었으면 앞뒤 문장과 이어지는 자연스러운 구절로 풀어 씁니다.
+- {{ }} 안은 아직 바꾸지 않은 AI 예시입니다. 내용과 {{ }} 기호를 그대로 둡니다(문장 연결을 위해 조사만 바꿀 수 있음).
+- 학생이 넣은 내용과 예시가 어긋나 문장이 어색해지면, 그 주변 문장만 학생 내용에 맞게 고칩니다. 새로운 사실·숫자·이름은 만들지 않습니다.
+- 학생 1인칭 자소서 본문만 씁니다.${charLimit ? ` 기호를 뺀 분량은 공백 포함 ${charLimit}자의 80~90%(${Math.round(charLimit * 0.8)}~${Math.round(charLimit * 0.9)}자)로 맞춥니다.` : ''}
+[JSON 작성 주의] 문자열 안에 큰따옴표를 쓰지 않는다. 아래 JSON 하나만 출력한다.
+{"text": "완성된 자소서 본문"}`;
+  try {
+    let parsed = null;
+    for (let attempt = 1; attempt <= 2 && !parsed; attempt++) {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: Math.min(8000, 1500 + Math.round((charLimit || 600) * 1.6)),
+          system: systemPrompt,
+          messages: [{ role: 'user', content: text }]
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        console.error('Anthropic API 오류:', data);
+        return res.status(500).json({ error: 'AI 호출 중 오류가 발생했습니다.' });
+      }
+      const raw = (data.content || []).map((c) => c.text || '').join('').trim();
+      parsed = parseAIJson(raw);
+      if (!parsed || !parsed.text) { console.error(`완성하기 JSON 변환 실패 (${attempt}번째 시도):`, raw.slice(0, 300)); parsed = null; }
+    }
+    if (!parsed) return res.status(500).json({ error: 'AI 응답 형식이 올바르지 않습니다. 다시 눌러주세요.' });
+    return res.status(200).json({ text: String(parsed.text).replace(/[⟪⟫]/g, '').trim() });
   } catch (err) {
     console.error('서버 오류:', err);
     return res.status(500).json({ error: '서버 오류가 발생했습니다.' });

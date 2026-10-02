@@ -63,7 +63,7 @@ const DIVERSITY_RULES = `
 2. 비유·예시는 아래 [오늘의 예시 영역]에서 가져오고, 한 첨삭 안에서 같은 비유를 두 번 쓰지 않는다.
 3. improvements의 첫 포인트는 아래 [오늘의 코칭 렌즈]로 잡는다.
 4. 상투 표현 금지 — "전반적으로 잘 작성되었습니다", "~하면 더 좋을 것 같습니다", "구체적인 사례를 추가하세요", "진정성이 느껴집니다"는 쓰지 않는다. 대신 "무엇을, 어느 문장 뒤에, 어떻게" 넣을지 콕 집어 제시한다.
-5. polishedText는 아래 [오늘의 도입 방식]으로 시작하되, 학생 본인의 경험을 살려 재구성한다. 도입도 반드시 학생이 1인칭으로 쓴 자소서 문장이어야 한다. "~을 떠올려 보세요", "~였을까요?"처럼 학생에게 묻거나 안내하는 문장, 질문으로 시작하는 문장은 쓰지 않는다. 장면 묘사형인데 원문에 장면이 없으면 [그때의 장면 한 줄] 빈칸으로 시작한다.
+5. polishedText는 아래 [오늘의 도입 방식]으로 시작하되, 학생 본인의 경험을 살려 재구성한다. 도입도 반드시 학생이 1인칭으로 쓴 자소서 문장이어야 한다. "~을 떠올려 보세요", "~였을까요?"처럼 학생에게 묻거나 안내하는 문장, 질문으로 시작하는 문장은 쓰지 않는다. 장면 묘사형인데 원문에 장면이 없으면 {{ }} 예시 장면으로 시작한다.
 6. 위 원칙은 표현 방식에만 적용하며, 아래 [응답 형식]의 JSON 필드 구성은 반드시 그대로 지킨다.`;
 
 
@@ -156,8 +156,12 @@ export default async function handler(req, res) {
   const {
     question, answer, questionType, framework,
     selfIntent, previousAnswer, charLimit,
-    presetPrompt, systemPrompt, jobPosting, hiringType
+    presetPrompt, systemPrompt, jobPosting, hiringType, interviewNotes
   } = req.body || {};
+  // 재료 인터뷰에서 학생이 한 단어라도 답한 내용 (2026-10-02 추가)
+  const extraNotes = (Array.isArray(interviewNotes) ? interviewNotes : []).slice(0, 5)
+    .map((n) => ({ q: String((n && n.q) || '').slice(0, 80), a: String((n && n.a) || '').trim().slice(0, 200) }))
+    .filter((n) => n.a);
 
   if (!question) {
     return res.status(400).json({ error: '질문(문항) 내용이 없습니다.' });
@@ -191,7 +195,8 @@ export default async function handler(req, res) {
   "missingElements": ["답변에 빠진 핵심 요소"],
   "strengths": "잘된 점 1~2가지를 학생 문장을 인용하며 구체적으로 (2~3문장)",
   "improvements": "개선할 점 1~2가지를 무엇을·어디에·어떻게 형태로 (2~3문장)",
-  "polishedText": "학생 원문을 살려 다듬은 완성 문장. 없는 사실은 만들지 말고, 보완이 필요한 자리는 [여기에 ○○ 경험 한 줄]처럼 표시한다. 글자수 제한이 있으면 빈칸 안내 문구를 뺀 본문 기준으로 제한의 80~90% 분량을 반드시 채운다(예: 500자 → 400~450자, 2000자 → 1600~1800자). 학생 원문이 짧아도 이 분량을 맞추되, 없는 사실은 만들지 말고 문항 주제에 맞는 흐름(계기→행동→결과→직무 연결)으로 문장을 펼치고 부족한 사실 자리는 [여기에 ○○ 장면 한 줄]처럼 빈칸으로 둔다. 자소서 본문 문장만 쓰고, 학생에게 하는 안내·질문은 improvements로 보낸다.",
+  "polishedText": "학생 원문을 살려 끝까지 완성한 자소서 본문. [ ] 빈칸은 쓰지 않는다. 학생 원문·추가 재료에 없는 경험·장면·숫자·고유명사·한마디는 그럴듯한 예시로 채우고 그 부분만 {{ }}로 감싼다([예시 채우기] 규칙). 글자수 제한이 있으면 {{ }} 기호를 뺀 본문 기준으로 제한의 80~90% 분량을 반드시 채운다(예: 500자 → 400~450자, 2000자 → 1600~1800자). 학생 원문이 짧아도 문항 주제에 맞는 흐름(계기→행동→결과→직무 연결)으로 펼쳐 이 분량을 맞춘다. 자소서 본문 문장만 쓰고, 학생에게 하는 안내·질문은 improvements로 보낸다.",
+  "exampleSlots": [ { "example": "polishedText의 {{ }} 안 글과 똑같이", "hint": "이 자리에 학생이 넣을 것 (15자 이내)", "options": ["같은 자리에 들어갈 다른 흔한 경험 표현 1", "2", "3"] } ],
   "followUpQuestions": { "reasonType": "왜 그 선택을 했는지 묻는 면접 질문", "alternativeType": "다른 대안은 없었는지 묻는 질문", "quantifyType": "숫자로 설명하게 하는 질문" },
   "redFlags": [ { "type": "결격 신호 유형", "quote": "학생 답변 인용", "why": "면접관 시점 한 문장", "fix": "대체 문장 한 줄" } ],
   "defenseQuestions": [ { "sentence": "polishedText에서 그대로 인용한 핵심 문장", "question": "면접관이 그 문장을 파고들 때 할 질문" } ]
@@ -201,6 +206,15 @@ export default async function handler(req, res) {
 - defenseQuestions는 항상 정확히 2개: polishedText에서 면접관이 가장 파고들 문장 2개(성과·역할·고유명사·결정 이유가 담긴 문장 우선)를 고르고, 그 문장이 사실인지·본인이 한 일인지 확인하는 구체적인 꼬리질문을 만든다. followUpQuestions와 겹치지 않게 한다.
 - strengths, improvements, polishedText, interviewerInference, followUpQuestions는 어떤 경우에도 비워두지 않는다.
 - [분량 부족 답변] 글자수 제한이 있는데 학생 원문이 제한의 50%에 못 미치면, improvements 첫 문장에 "지금 ○자로 제한(○자)의 절반에 못 미쳐요."처럼 현재 글자 수를 알려 주고, 문장이 어려우면 키워드만이라도 적어 다시 제출하라고 안내한다. 이어서 이 문항에 넣으면 좋은 키워드 3~5개(장소·활동 이름, 맡은 역할, 숫자로 된 결과, 배운 점, 직무 연결 단어)를 예시로 짧게 제시한다. missingElements에도 빠진 요소를 넣는다.
+- [예시 채우기 — 빈칸 없는 완성본 (가장 중요)]
+  · polishedText에는 [ ] 대괄호 빈칸을 쓰지 않는다. 이 지침의 다른 곳에서 "대괄호 빈칸으로 남긴다", "[ ]로 표시한다"고 한 자리는 모두 이 규칙으로 바꿔 적용한다.
+  · 학생 원문·추가 재료에 없는 경험·장면·숫자·고유명사·인용 한마디가 필요한 자리는, 학생의 전공·지원 직무·신분(고등학생/대학생/경력자)에 맞는 흔하고 그럴듯한 예시로 문장을 끝까지 채우고 그 부분만 {{ }}로 감싼다. 예) 저는 {{고등학교 방송부에서 3년간 아침 방송을 맡으며}} 약속한 시간을 지키는 습관을 들였습니다.
+  · 학생 원문에서 온 사실은 {{ }}로 감싸지 않고, AI가 만든 사실은 반드시 {{ }} 안에만 둔다. {{ }} 안은 문장 전체가 아니라 구절 단위로 짧게(40자 이내) 쓰고, 앞뒤 문장과 자연스럽게 이어지게 한다.
+  · 예시 자리는 최대 6개. 원문 재료가 충분하면 0개여도 된다. {{ }} 안에 또 괄호를 넣지 않는다.
+  · 지원 회사의 제도명·사업명·수치처럼 확인이 필요한 회사 정보도 {{ }} 예시로 채우되, 실제 이름처럼 단정하지 말고 일반 표현(예: {{신입 직무교육 과정}})으로 쓴다.
+  · exampleSlots는 polishedText에 {{ }}가 나온 순서대로 하나씩 만든다. example은 {{ }} 안 글과 똑같이, hint는 학생이 그 자리에 넣을 것(예: 실제 활동 이름과 기간), options는 같은 자리에 그대로 끼워 넣어도 문장이 자연스러운 다른 흔한 경험 표현 3개(example과 겹치지 않게, 같은 전공·신분에 맞게). {{ }}가 없으면 빈 배열.
+  · improvements에는 "형광펜으로 표시된 예시 자리를 내 실제 경험으로 바꿔야 면접에서 흔들리지 않는다"는 점을 한 번 짚는다(예시 자리가 있을 때만).
+- [학생이 추가로 답한 재료] 요청에 [학생 추가 재료]가 있으면 학생 본인의 사실로 보고 polishedText에서 {{ }} 없이 살린다.
 - [입력한 문항 우선] 고른 문항 유형과 학생이 입력한 [문항]의 내용이 서로 다르면(예: 유형은 지원동기인데 문항은 존경하는 인물), 입력한 [문항]이 묻는 것을 기준으로 첨삭한다. 유형별 특화 기준은 문항 내용과 맞는 부분만 적용하고, improvements 끝에 "고른 문항 유형과 문항 내용이 달라 문항 내용을 기준으로 첨삭했어요."라고 한 줄 알린다.
 - [에세이형 긴 문항] 제한이 1000자 이상이면 polishedText를 2~4개 문단(빈 줄로 구분)으로 나누고, 문단마다 하나의 장면·생각을 담는다.
 - [학생 신분 맞추기] 원문 단서(내신, 학년, 고등학교·중학교, 담임 등이면 고등학생 / 학점, 교수, 학과 등이면 대학생 / 회사, 팀장 등이면 경력자)로 신분을 판단하고, 그 신분에 맞는 말만 쓴다. 고등학생에게 "교수님", "학점", "강의"를 쓰지 않고 "선생님", "과목", "수업"을 쓴다. 원문에 없는 인물·호칭은 만들지 않는다.`;
@@ -208,7 +222,7 @@ export default async function handler(req, res) {
   const context = `
 
 [문항 유형] ${questionType || '미지정'}
-[구조 진단 기준] ${fw}${charLimit ? `\n[글자수 제한] ${charLimit}자` : ''}${jobPosting ? `\n[지원 채용공고]\n${jobPosting}` : ''}${selfIntent ? `\n[학생이 밝힌 의도]\n${selfIntent}` : ''}${previousAnswer ? `\n[이전 버전 답변]\n${previousAnswer}` : ''}`;
+[구조 진단 기준] ${fw}${charLimit ? `\n[글자수 제한] ${charLimit}자` : ''}${jobPosting ? `\n[지원 채용공고]\n${jobPosting}` : ''}${selfIntent ? `\n[학생이 밝힌 의도]\n${selfIntent}` : ''}${previousAnswer ? `\n[이전 버전 답변]\n${previousAnswer}` : ''}${extraNotes.length ? `\n[학생 추가 재료 — 학생 본인의 사실]\n${extraNotes.map((n) => `- ${n.q} → ${n.a}`).join('\n')}` : ''}`;
 
   // 채용 방식별 고유명사 규칙 (2026-09-26 추가)
   const hiringRules = hiringType === 'blind'
@@ -222,7 +236,7 @@ export default async function handler(req, res) {
 
 [채용 방식: 일반 채용 — 고유명사로 신뢰도 높이기]
 - 과목명·프로젝트명·기관명·매장명·부서명·회사의 실제 사업명처럼 학생 답변에 있는 고유명사는 polishedText에서 반드시 살린다.
-- 경험 문항인데 고유명사가 하나도 없으면 improvements에 "어느 문장에 어떤 이름(예: 과목명, 기관명)을 넣으면 신뢰도가 올라가는지"를 한 줄로 안내하고, polishedText에는 [여기에 프로젝트 이름]처럼 빈칸으로 표시한다.
+- 경험 문항인데 고유명사가 하나도 없으면 improvements에 "어느 문장에 어떤 이름(예: 과목명, 기관명)을 넣으면 신뢰도가 올라가는지"를 한 줄로 안내하고, polishedText에는 {{ }} 예시 이름(일반적인 활동명)으로 채운다.
 - 학생 답변에 없는 고유명사를 지어내지 않는다.`;
 
   // 스토리텔링 규칙 (2026-09-30 추가) — 이력서 항목에는 적용하지 않음
@@ -233,7 +247,7 @@ export default async function handler(req, res) {
 - 이야기에 전환점(계기, 막힌 순간, 결심, 인정받은 순간)이 있고 그 자리에 누군가의 말이나 스스로의 다짐이 자연스럽게 어울릴 때만, 짧은 구어체 한마디를 「 」로 넣는다. 기계적으로 모든 답변에 넣지 않는다. 어울리지 않거나 전환점이 없으면 넣지 않는 것이 맞다.
 - 넣더라도 한 문항에 최대 2개, 한 마디는 한 줄 이내로 짧게 쓴다.
 - 학생이 실제로 들었거나 한 말이 원문에 있으면 그 표현을 그대로 살린다.
-- 원문에 그런 말이 없는데 어울리는 자리가 있으면, 말을 지어내지 말고 「[그때 들은 말 한마디]」, 「[스스로 한 다짐]」처럼 대괄호 빈칸으로만 남긴다. 누가 한 말인지(선생님, 팀원, 손님 등)는 원문에 나온 인물로만 쓴다.
+- 원문에 그런 말이 없는데 어울리는 자리가 있으면, 「{{예시 한마디}}」처럼 {{ }} 예시로만 넣는다(예시 자리 개수에 포함). 누가 한 말인지(선생님, 팀원, 손님 등)는 원문에 나온 인물로만 쓴다.
 - 답변이 사실만 나열되어 장면이 떠오르지 않으면 improvements에서 한 번 짚고, 어느 문장 앞뒤에 그때의 한마디를 넣으면 장면이 살아나는지 안내한다. 이미 생생하면 짚지 않는다.
 - polishedText에 인용문(「 」)이 있으면 defenseQuestions 중 하나는 그 문장을 골라 그 말을 누가, 어떤 상황에서 했는지 확인하는 질문으로 만든다.`;
 
@@ -291,6 +305,10 @@ export default async function handler(req, res) {
     if (!Array.isArray(feedback.redFlags)) feedback.redFlags = [];
     if (!Array.isArray(feedback.defenseQuestions)) feedback.defenseQuestions = [];
     feedback.defenseQuestions = feedback.defenseQuestions.filter((d) => d && d.sentence && d.question).slice(0, 2);
+    feedback.exampleSlots = (Array.isArray(feedback.exampleSlots) ? feedback.exampleSlots : [])
+      .filter((s) => s && s.example)
+      .map((s) => ({ example: String(s.example), hint: String(s.hint || ''), options: (Array.isArray(s.options) ? s.options : []).map(String).filter(Boolean).slice(0, 3) }))
+      .slice(0, 8);
 
     return res.status(200).json(feedback);
   } catch (err) {
