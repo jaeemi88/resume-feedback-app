@@ -8,7 +8,7 @@
 // 0. 공통 원칙 (모든 전공·모든 요청에 자동 적용)
 // ───────────────────────────────────────────
 // Vercel 함수 최대 실행 시간 60초 (AI 답변이 길어져도 중간에 끊기지 않도록)
-export const config = { maxDuration: 120 };
+export const config = { maxDuration: 300 }; // 2000자 에세이형도 끊기지 않게 (2026-10-02)
 
 const COMMON_RULES = `당신은 15년 경력의 취업 코치입니다. "MOA FORMULA" 기준으로 학생의 자기소개서·이력서 문장을 첨삭합니다.
 
@@ -191,7 +191,7 @@ export default async function handler(req, res) {
   "missingElements": ["답변에 빠진 핵심 요소"],
   "strengths": "잘된 점 1~2가지를 학생 문장을 인용하며 구체적으로 (2~3문장)",
   "improvements": "개선할 점 1~2가지를 무엇을·어디에·어떻게 형태로 (2~3문장)",
-  "polishedText": "학생 원문을 살려 다듬은 완성 문장. 없는 사실은 만들지 말고, 보완이 필요한 자리는 [여기에 ○○ 경험 한 줄]처럼 표시한다. 글자수 제한이 있으면 빈칸 안내 문구를 뺀 본문 기준으로 제한의 90% 안쪽에서 작성한다(학생이 빈칸을 채울 여유). 자소서 본문 문장만 쓰고, 학생에게 하는 안내·질문은 improvements로 보낸다.",
+  "polishedText": "학생 원문을 살려 다듬은 완성 문장. 없는 사실은 만들지 말고, 보완이 필요한 자리는 [여기에 ○○ 경험 한 줄]처럼 표시한다. 글자수 제한이 있으면 빈칸 안내 문구를 뺀 본문 기준으로 제한의 80~90% 분량을 반드시 채운다(예: 500자 → 400~450자, 2000자 → 1600~1800자). 학생 원문이 짧아도 이 분량을 맞추되, 없는 사실은 만들지 말고 문항 주제에 맞는 흐름(계기→행동→결과→직무 연결)으로 문장을 펼치고 부족한 사실 자리는 [여기에 ○○ 장면 한 줄]처럼 빈칸으로 둔다. 자소서 본문 문장만 쓰고, 학생에게 하는 안내·질문은 improvements로 보낸다.",
   "followUpQuestions": { "reasonType": "왜 그 선택을 했는지 묻는 면접 질문", "alternativeType": "다른 대안은 없었는지 묻는 질문", "quantifyType": "숫자로 설명하게 하는 질문" },
   "redFlags": [ { "type": "결격 신호 유형", "quote": "학생 답변 인용", "why": "면접관 시점 한 문장", "fix": "대체 문장 한 줄" } ],
   "defenseQuestions": [ { "sentence": "polishedText에서 그대로 인용한 핵심 문장", "question": "면접관이 그 문장을 파고들 때 할 질문" } ]
@@ -200,6 +200,8 @@ export default async function handler(req, res) {
 - aiTracePhrases, missingElements, redFlags는 해당 사항이 없으면 빈 배열로 둔다.
 - defenseQuestions는 항상 정확히 2개: polishedText에서 면접관이 가장 파고들 문장 2개(성과·역할·고유명사·결정 이유가 담긴 문장 우선)를 고르고, 그 문장이 사실인지·본인이 한 일인지 확인하는 구체적인 꼬리질문을 만든다. followUpQuestions와 겹치지 않게 한다.
 - strengths, improvements, polishedText, interviewerInference, followUpQuestions는 어떤 경우에도 비워두지 않는다.
+- [분량 부족 답변] 글자수 제한이 있는데 학생 원문이 제한의 50%에 못 미치면, improvements 첫 문장에 "지금 ○자로 제한(○자)의 절반에 못 미쳐요."처럼 현재 글자 수를 알려 주고, 문장이 어려우면 키워드만이라도 적어 다시 제출하라고 안내한다. 이어서 이 문항에 넣으면 좋은 키워드 3~5개(장소·활동 이름, 맡은 역할, 숫자로 된 결과, 배운 점, 직무 연결 단어)를 예시로 짧게 제시한다. missingElements에도 빠진 요소를 넣는다.
+- [에세이형 긴 문항] 제한이 1000자 이상이면 polishedText를 2~4개 문단(빈 줄로 구분)으로 나누고, 문단마다 하나의 장면·생각을 담는다.
 - [학생 신분 맞추기] 원문 단서(내신, 학년, 고등학교·중학교, 담임 등이면 고등학생 / 학점, 교수, 학과 등이면 대학생 / 회사, 팀장 등이면 경력자)로 신분을 판단하고, 그 신분에 맞는 말만 쓴다. 고등학생에게 "교수님", "학점", "강의"를 쓰지 않고 "선생님", "과목", "수업"을 쓴다. 원문에 없는 인물·호칭은 만들지 않는다.`;
 
   const context = `
@@ -258,7 +260,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 3000, // 결격 신호 추가로 여유 있게 (실제 쓴 만큼만 비용 발생)
+        max_tokens: Math.min(8000, 3000 + Math.round((parseInt(charLimit, 10) || 0) * 1.6)), // 글자수가 길수록 여유 있게 (실제 쓴 만큼만 비용 발생)
         system: fullSystem,
         messages: [
           { role: 'user', content: `[문항]\n${question}\n\n[학생 답변]\n${answer || ''}` }

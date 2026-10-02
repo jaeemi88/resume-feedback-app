@@ -5,7 +5,7 @@
 // - 학생 화면에서 버튼을 누를 때만 호출됨 (AI 비용 보호를 위해 입력 길이 제한)
 // - mode 'defend' (2026-09-26 2단계): "내 문장 방어 테스트" — 학생이 말로 답한 내용이 자소서와 맞는지 한 줄 판정
 
-export const config = { maxDuration: 60 };
+export const config = { maxDuration: 300 }; // 긴 문항 초안 3개도 끊기지 않게 (2026-10-02)
 
 const OPENER_GUIDE = `- 장면 묘사형: 그때의 한 장면으로 시작 (예: 마감 5일 전, 단체 대화방에는 아무도 답이 없었습니다.)
 - 결론 먼저형: 나를 한 문장으로 정의하며 시작 (예: 저는 팀이 멈췄을 때 역할표부터 만드는 사람입니다.)
@@ -104,7 +104,7 @@ ${hiringRule}
 - 단점은 "다소", "조금", "때때로", "~한 편입니다", "~할 때가 있었습니다"처럼 정도가 크지 않게 느껴지는 완곡한 표현으로 쓴다. "매우", "항상" 같은 강한 표현은 쓰지 않는다.
 - 단점은 지금 하고 있는 보완 노력 한두 문장으로 짧게 마무리한다.` : ''}
 [문항] ${question || '(문항 미입력)'}
-[분량] ${charLimit ? `공백 포함 ${charLimit}자 이내` : '400~600자'}
+[분량] ${charLimit ? `공백 포함 ${charLimit}자의 80~90%(${Math.round(charLimit*0.8)}~${Math.round(charLimit*0.9)}자)를 초안마다 반드시 채운다. 메모가 짧아도 분량을 맞추되 없는 사실은 [빈칸]으로 둔다.${charLimit >= 1000 ? ' 1000자 이상이므로 2~4개 문단(빈 줄로 구분)으로 나눈다.' : ''}` : '400~600자'}
 
 [도입 방식 — 메모에 가장 잘 맞는 3가지를 골라 하나씩 사용]
 ${OPENER_GUIDE}
@@ -128,7 +128,7 @@ ${OPENER_GUIDE}
         },
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
-          max_tokens: 2500,
+          max_tokens: Math.min(16000, 2500 + Math.round((charLimit || 0) * 4)), // 초안 3개 분량
           system: systemPrompt,
           messages: [{ role: 'user', content: `[학생 메모]\n${userMsg}` }]
         })
