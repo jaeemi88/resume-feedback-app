@@ -3540,9 +3540,18 @@ function wItemHtml(item, idx, total) {
   const fuRows = fuKeys.map((k, i) => `<tr style="page-break-inside:avoid">
     <td width="70" style="padding:5pt 8pt;background:${W.light2};border:0.75pt solid ${W.line};font-size:9.5pt;font-weight:bold;color:${W.navy};font-family:${W.font}">${keepP(i === fuKeys.length - 1)}${fuLabels[k]}</p></td>
     <td style="padding:5pt 8pt;border:0.75pt solid ${W.line};font-size:10pt;font-family:${W.font}">${keepP(i === fuKeys.length - 1)}${escapeHtml(fu[k])}</p></td></tr>`).join('');
+  const commentBody =
+    wBox('면접관 시점 — 이 답변으로 추론되는 평소 모습', wEsc(item.interviewerInference), W.light2, W.navy) +
+    wBox('잘된 점', wEsc(item.strengths), W.greenBg, W.green) +
+    wBox('개선 방향', wEsc(item.improvements), W.warnBg, W.warn) +
+    (item.charLimitNote ? wBox(`⚠ 글자수 초과 (제한 ${item.charLimit}자)`, wEsc(item.charLimitNote), W.warnBg, W.warn) : '') +
+    (item.intentGapComment ? wBox('내가 밝힌 의도 vs 실제 답변', wEsc(item.intentGapComment), W.warnBg, W.warn) : '');
+  const commentLen = [item.interviewerInference, item.strengths, item.improvements, item.charLimitNote, item.intentGapComment].map(x => String(x || '').length).reduce((a, b) => a + b, 0);
+  // 반 쪽(약 900자) 이하면 통째로 같은 쪽에, 더 길면 워드가 잘라 버리지 않게 넘김 허용
+  const commentHtml = commentLen <= 900 ? wSection(wTitle('💬 선생님 코멘트'), commentBody) : wTitle('💬 선생님 코멘트') + commentBody;
   const defs = (Array.isArray(item.defenseQuestions) ? item.defenseQuestions : []).filter(d => d && d.sentence && d.question);
   return `
-    ${idx > 0 ? '<br clear="all" style="page-break-before:always">' : ''}
+    ${idx > 0 ? `<br clear="all" style="mso-special-character:line-break;page-break-before:always">` : ''}
     <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 6pt"><tr style="page-break-inside:avoid">
       <td style="background:${W.light};padding:5pt 10pt;font-family:${W.font};font-size:10pt;font-weight:bold;color:${W.purple}"><p style="margin:0;page-break-after:avoid">문항 ${idx + 1}${total > 1 ? ' / ' + total : ''} · ${escapeHtml(typeLabel)}</p></td></tr></table>
     <p style="page-break-after:avoid;margin:0 0 10pt;font-size:11pt;font-weight:bold;line-height:160%;font-family:${W.font}">${wEsc(item.question)}</p>
@@ -3566,12 +3575,7 @@ function wItemHtml(item, idx, total) {
 
     ${wSection(wTitle(`☑️ 제출 전 점검표 · ${escapeHtml(item.frameworkUsed || 'STAR')} 구조`), `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">${checkRows}</table>`)}
 
-    ${wTitle('💬 선생님 코멘트')}
-    ${wBox('면접관 시점 — 이 답변으로 추론되는 평소 모습', wEsc(item.interviewerInference), W.light2, W.navy)}
-    ${wBox('잘된 점', wEsc(item.strengths), W.greenBg, W.green)}
-    ${wBox('개선 방향', wEsc(item.improvements), W.warnBg, W.warn)}
-    ${item.charLimitNote ? wBox(`⚠ 글자수 초과 (제한 ${item.charLimit}자)`, wEsc(item.charLimitNote), W.warnBg, W.warn) : ''}
-    ${item.intentGapComment ? wBox('내가 밝힌 의도 vs 실제 답변', wEsc(item.intentGapComment), W.warnBg, W.warn) : ''}
+    ${commentHtml}
 
     ${fuRows ? wSection(wTitle('🎤 예상 꼬리질문 (면접 대비)'), `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">${fuRows}</table>`) : ''}
     ${defs.length ? wSection(wTitle('🛡️ 이 문장, 면접에서 말할 수 있나요?'), defs.map(d => wBox('📌 "' + escapeHtml(exPlain(d.sentence)) + '"', '면접관: ' + escapeHtml(d.question), '#FFFFFF', W.purple)).join('')) : ''}`;
