@@ -3478,14 +3478,15 @@ let CURRENT_RESULT = null;
 const W = { purple: '#643DF2', navy: '#3A1F9E', light: '#EFEAFE', light2: '#F1EDFE', text: '#1a2130', muted: '#6b7280', line: '#E2E5EA', green: '#1F7A4D', greenBg: '#E8F5EE', warn: '#B45309', warnBg: '#FEF3E2', yellow: '#FFF1A8', font: "'맑은 고딕','Malgun Gothic',sans-serif" };
 function wEsc(t) { return escapeHtml(String(t || '')).replace(/\n/g, '<br>'); }
 function wBox(label, body, bg, bar) {
-  return `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 8pt"><tr>
+  return `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 8pt"><tr style="page-break-inside:avoid">
     <td width="4" style="background:${bar};width:4pt">&nbsp;</td>
     <td style="background:${bg};padding:8pt 10pt;font-family:${W.font}">
-      ${label ? `<p style="margin:0 0 4pt;font-size:9.5pt;font-weight:bold;color:${bar}">${label}</p>` : ''}
+      ${label ? `<p style="page-break-after:avoid;margin:0 0 4pt;font-size:9.5pt;font-weight:bold;color:${bar}">${label}</p>` : ''}
       <p style="margin:0;font-size:10.5pt;line-height:170%;color:${W.text}">${body}</p>
     </td></tr></table>`;
 }
-function wTitle(t) { return `<p style="margin:14pt 0 6pt;font-size:12pt;font-weight:bold;color:${W.navy};font-family:${W.font};border-bottom:1pt solid ${W.line};padding-bottom:3pt">${t}</p>`; }
+function wSection(title, body) { return `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse"><tr style="page-break-inside:avoid"><td style="padding:0">${title}${body}</td></tr></table>`; }
+function wTitle(t) { return `<p style="page-break-after:avoid;mso-pagination:widow-orphan lines-together;margin:14pt 0 6pt;font-size:12pt;font-weight:bold;color:${W.navy};font-family:${W.font};border-bottom:1pt solid ${W.line};padding-bottom:3pt">${t}</p>`; }
 function wFinalText(item) {
   const text = String(item.polishedText || '');
   if (!/\{\{[^{}]+\}\}/.test(text)) return { html: wEsc(text), plainLen: text.length, left: 0 };
@@ -3528,21 +3529,23 @@ function wItemHtml(item, idx, total) {
   if (Array.isArray(item.redFlags)) { const c = item.redFlags.filter(f => f && (f.quote || f.why)).length; rows.push([c === 0, c === 0 ? '결격 신호 없음' : `결격 신호 ${c}개 — 메모 확인`]); }
   let checkRows = '';
   for (let i = 0; i < rows.length; i += 2) {
-    checkRows += '<tr>' + [rows[i], rows[i + 1]].map(r => r
-      ? `<td width="50%" style="padding:4pt 8pt;border:0.75pt solid ${W.line};font-size:10pt;font-family:${W.font}"><b style="color:${r[0] ? W.green : W.warn}">${r[0] ? '✓' : '⚠'}</b> ${escapeHtml(r[1])}</td>`
+    checkRows += '<tr style="page-break-inside:avoid">' + [rows[i], rows[i + 1]].map(r => r
+      ? `<td width="50%" style="padding:4pt 8pt;border:0.75pt solid ${W.line};font-size:10pt;font-family:${W.font}"><p style="margin:0;${i + 2 < rows.length ? 'page-break-after:avoid' : ''}"><b style="color:${r[0] ? W.green : W.warn}">${r[0] ? '✓' : '⚠'}</b> ${escapeHtml(r[1])}</p></td>`
       : `<td width="50%" style="border:0.75pt solid ${W.line}">&nbsp;</td>`).join('') + '</tr>';
   }
   const fu = item.followUpQuestions || {};
   const fuLabels = { reasonType: '이유형', alternativeType: '대안형', quantifyType: '수치형' };
-  const fuRows = Object.keys(fuLabels).filter(k => fu[k]).map(k => `<tr>
-    <td width="70" style="padding:5pt 8pt;background:${W.light2};border:0.75pt solid ${W.line};font-size:9.5pt;font-weight:bold;color:${W.navy};font-family:${W.font}">${fuLabels[k]}</td>
-    <td style="padding:5pt 8pt;border:0.75pt solid ${W.line};font-size:10pt;font-family:${W.font}">${escapeHtml(fu[k])}</td></tr>`).join('');
+  const fuKeys = Object.keys(fuLabels).filter(k => fu[k]);
+  const keepP = last => `<p style="margin:0;${last ? '' : 'page-break-after:avoid'}">`;
+  const fuRows = fuKeys.map((k, i) => `<tr style="page-break-inside:avoid">
+    <td width="70" style="padding:5pt 8pt;background:${W.light2};border:0.75pt solid ${W.line};font-size:9.5pt;font-weight:bold;color:${W.navy};font-family:${W.font}">${keepP(i === fuKeys.length - 1)}${fuLabels[k]}</p></td>
+    <td style="padding:5pt 8pt;border:0.75pt solid ${W.line};font-size:10pt;font-family:${W.font}">${keepP(i === fuKeys.length - 1)}${escapeHtml(fu[k])}</p></td></tr>`).join('');
   const defs = (Array.isArray(item.defenseQuestions) ? item.defenseQuestions : []).filter(d => d && d.sentence && d.question);
   return `
     ${idx > 0 ? '<br clear="all" style="page-break-before:always">' : ''}
-    <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 6pt"><tr>
-      <td style="background:${W.light};padding:5pt 10pt;font-family:${W.font};font-size:10pt;font-weight:bold;color:${W.purple}">문항 ${idx + 1}${total > 1 ? ' / ' + total : ''} · ${escapeHtml(typeLabel)}</td></tr></table>
-    <p style="margin:0 0 10pt;font-size:11pt;font-weight:bold;line-height:160%;font-family:${W.font}">${wEsc(item.question)}</p>
+    <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 6pt"><tr style="page-break-inside:avoid">
+      <td style="background:${W.light};padding:5pt 10pt;font-family:${W.font};font-size:10pt;font-weight:bold;color:${W.purple}"><p style="margin:0;page-break-after:avoid">문항 ${idx + 1}${total > 1 ? ' / ' + total : ''} · ${escapeHtml(typeLabel)}</p></td></tr></table>
+    <p style="page-break-after:avoid;margin:0 0 10pt;font-size:11pt;font-weight:bold;line-height:160%;font-family:${W.font}">${wEsc(item.question)}</p>
 
     ${wTitle('✅ 완성된 내 글')}
     <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse"><tr>
@@ -3561,8 +3564,7 @@ function wItemHtml(item, idx, total) {
         <p style="margin:0 0 6pt;font-size:9pt;font-weight:bold;color:${W.muted}">여백 메모</p>${notesHtml}</td>
     </tr></table>
 
-    ${wTitle(`☑️ 제출 전 점검표 · ${escapeHtml(item.frameworkUsed || 'STAR')} 구조`)}
-    <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">${checkRows}</table>
+    ${wSection(wTitle(`☑️ 제출 전 점검표 · ${escapeHtml(item.frameworkUsed || 'STAR')} 구조`), `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">${checkRows}</table>`)}
 
     ${wTitle('💬 선생님 코멘트')}
     ${wBox('면접관 시점 — 이 답변으로 추론되는 평소 모습', wEsc(item.interviewerInference), W.light2, W.navy)}
@@ -3571,8 +3573,8 @@ function wItemHtml(item, idx, total) {
     ${item.charLimitNote ? wBox(`⚠ 글자수 초과 (제한 ${item.charLimit}자)`, wEsc(item.charLimitNote), W.warnBg, W.warn) : ''}
     ${item.intentGapComment ? wBox('내가 밝힌 의도 vs 실제 답변', wEsc(item.intentGapComment), W.warnBg, W.warn) : ''}
 
-    ${fuRows ? wTitle('🎤 예상 꼬리질문 (면접 대비)') + `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">${fuRows}</table>` : ''}
-    ${defs.length ? wTitle('🛡️ 이 문장, 면접에서 말할 수 있나요?') + defs.map(d => wBox('📌 "' + escapeHtml(exPlain(d.sentence)) + '"', '면접관: ' + escapeHtml(d.question), '#FFFFFF', W.purple)).join('') : ''}`;
+    ${fuRows ? wSection(wTitle('🎤 예상 꼬리질문 (면접 대비)'), `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">${fuRows}</table>`) : ''}
+    ${defs.length ? wSection(wTitle('🛡️ 이 문장, 면접에서 말할 수 있나요?'), defs.map(d => wBox('📌 "' + escapeHtml(exPlain(d.sentence)) + '"', '면접관: ' + escapeHtml(d.question), '#FFFFFF', W.purple)).join('')) : ''}`;
 }
 function buildWordHtml(record) {
   const items = record.items || [];
@@ -3587,7 +3589,7 @@ function buildWordHtml(record) {
   body { font-family:${W.font}; font-size:10.5pt; color:${W.text}; }
   p { margin:0; }
 </style></head><body><div class="WordSection1">
-  <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 12pt"><tr>
+  <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 12pt"><tr style="page-break-inside:avoid">
     <td style="background:${W.purple};padding:12pt 14pt;font-family:${W.font}">
       <p style="margin:0;font-size:8.5pt;font-weight:bold;color:#D9CFFF;letter-spacing:1pt">MOA FORMULA · 진로모아커리어센터</p>
       <p style="margin:3pt 0 0;font-size:17pt;font-weight:bold;color:#FFFFFF">${record.docType === 'cv' ? '이력서' : '자기소개서'} 첨삭 결과</p>
