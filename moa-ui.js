@@ -344,6 +344,21 @@
     var coach = el('div', { class: 'moa-coach' });
     card.insertBefore(coach, summary);
 
+    var phase = 'start'; // intro → coach → write
+    var coachCtl = null;  // 코치 질문을 진행했으면 되돌아가기 함수가 들어감
+    var backToCoach = el('button', { type: 'button', class: 'moa-prev' }, '← 이전 질문으로');
+    backToCoach.style.display = 'none';
+    backToCoach.addEventListener('click', function () { NAV.back && NAV.back(); });
+    head.insertBefore(backToCoach, head.firstChild);
+    NAV.back = function () { return coachCtl ? coachCtl() : false; };
+    var everAnswered = false; // 코치 질문에 한 번이라도 답했는지
+    NAV.dirty = function () {
+      if (hasClient()) return false; // 개인 고객은 서버에 자동 저장됨
+      var typed = Array.prototype.some.call(document.querySelectorAll('.item-answer, .item-question'), function (t) { return t.value.trim(); });
+      return typed || everAnswered;
+    };
+    setupNav();
+
     var presetSelect = document.getElementById('presetSelect');
     var presetChipsInBasics = null;
     function refreshPresetChips() {
@@ -365,9 +380,11 @@
     }
 
     function finish(instant) {
+      phase = 'write';
       coach.style.display = 'none';
       summary.style.display = '';
       write.style.display = '';
+      backToCoach.style.display = coachCtl ? '' : 'none';
       renderSummary();
       if (!instant) {
         var first = write.querySelector('.item-question');
@@ -391,8 +408,9 @@
     // 시작 전 '전체 흐름' 안내 (2026-10-03) — 몇 단계·몇 분인지, 완성되면 어떤 모습인지 먼저 보여 줌
     function showIntro(total, C, go) {
       var OFF = 'moa_intro_cv_off';
-      try { if (localStorage.getItem(OFF) === '1') { go(); return; } } catch (e) {}
+      try { if (localStorage.getItem(OFF) === '1') { go(); return false; } } catch (e) {}
       var mins = 10 + Math.ceil(total / 2);
+      phase = 'intro';
       coach.innerHTML = '';
       var box = el('div', { class: 'moa-intro', role: 'region', 'aria-label': '전체 흐름 안내' },
         '<span class="k">시작 전 1분 · 전체 흐름</span>' +
@@ -412,6 +430,7 @@
       box.querySelector('.go').addEventListener('click', go);
       box.querySelector('.skip').addEventListener('click', function () { try { localStorage.setItem(OFF, '1'); } catch (e) {} go(); });
       setTimeout(function () { var g = box.querySelector('.go'); if (g) g.focus({ preventScroll: true }); }, 30);
+      return true;
     }
 
     function startCoach() {
@@ -473,9 +492,13 @@
 
       var total = steps.length;
       var idx = 0;
-      var history = [];
+      var log = [];        // 지금까지 한 대답 (화면 위쪽에 두 줄 보여 줌)
+      var introShown = false;
+      var doneTimer = null;
 
       function draw() {
+        phase = 'coach';
+        coach.style.display = '';
         coach.innerHTML = '';
         var top = el('div', { style: 'display:flex;justify-content:space-between;align-items:center' });
         top.appendChild(el('div', { class: 'moa-coach-who' }, '<span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9.4l-4.7 1.8L12 16l-1.8-4.8L5.5 9.4l4.7-1.8z"/></svg></span>자소서 코치'));
@@ -486,7 +509,7 @@
         posWrap.appendChild(el('span', { class: 'moa-coach-pos', 'aria-hidden': 'true' }, idx >= total ? '끝!' : (idx === total - 1 ? '마지막 질문' : '질문 ' + (idx + 1) + ' / ' + total)));
         top.appendChild(posWrap);
         coach.appendChild(top);
-        history.slice(-2).forEach(function (h) {
+        log.slice(-2).forEach(function (h) {
           coach.appendChild(el('p', { class: 'moa-say past' }, esc(h.say)));
           if (h.me) coach.appendChild(el('div', { class: 'moa-me' }, esc(h.me)));
           if (h.reply) coach.appendChild(el('p', { class: 'moa-tip' }, esc(h.reply)));
@@ -533,10 +556,38 @@
           sk.addEventListener('click', function () { advance(s.skip, ''); });
           ask.appendChild(sk);
         }
+        if (idx > 0 || introShown) {
+          var pv = el('button', { type: 'button', class: 'moa-prev' }, idx > 0 ? '← 이전 질문' : '← 전체 흐름 다시 보기');
+          pv.addEventListener('click', function () { back(); });
+          coach.appendChild(el('div', null)).appendChild(pv);
+        }
       }
 
+      // 한 단계 뒤로: 문항 쓰기 → 마지막 질문 → 그 전 질문 → 전체 흐름 안내
+      function back() {
+        if (doneTimer) { clearTimeout(doneTimer); doneTimer = null; }
+        if (phase === 'write') {
+          summary.style.display = 'none';
+          basics.style.display = 'none';
+          summary.querySelector('button').textContent = '고치기';
+          write.style.display = 'none';
+          idx = total - 1; log.pop();
+          draw();
+          coach.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          return true;
+        }
+        if (phase === 'coach') {
+          if (idx >= total) { idx = total - 1; log.pop(); draw(); return true; }
+          if (idx > 0) { idx--; log.pop(); draw(); return true; }
+          if (introShown) { showIntro(total, C, draw); return true; }
+        }
+        return false;
+      }
+      coachCtl = back;
+
       function advance(me, reply) {
-        history.push({ say: steps[idx].say, me: me, reply: reply });
+        log.push({ say: steps[idx].say, me: me, reply: reply });
+        everAnswered = true;
         idx++;
         draw();
       }
@@ -544,12 +595,72 @@
       function done() {
         var nm = nameInput.value.trim();
         coach.appendChild(el('p', { class: 'moa-say' }, esc((nm ? nm + '님, ' : '') + '준비 끝났어요. 이제 문항을 써 볼게요.')));
-        setTimeout(function () { finish(false); }, 700);
+        doneTimer = setTimeout(function () { doneTimer = null; finish(false); }, 700);
       }
 
-      if (!total) { finish(true); return; }
-      showIntro(total, C, draw);
+      if (!total) { coachCtl = null; finish(true); return; }
+      introShown = showIntro(total, C, draw);
     }
+  }
+
+
+  /* ── 뒤로가기·나가기 확인 (2026-10-03) ── */
+  var NAV_CSS = [
+    '.moa-confirm-wrap{position:fixed;inset:0;z-index:10000;background:rgba(20,26,46,.48);display:flex;align-items:flex-end;justify-content:center;padding:16px;font-family:"Noto Sans KR",sans-serif}',
+    '@media(min-width:560px){.moa-confirm-wrap{align-items:center}}',
+    '.moa-confirm{background:#fff;border-radius:var(--moa-r-lg,18px);width:100%;max-width:380px;padding:24px 20px 16px;box-shadow:0 18px 50px rgba(20,26,46,.25)}',
+    '.moa-confirm h3{margin:0 0 8px;font-size:18px;font-weight:700;color:var(--moa-ink,#141A2E);line-height:1.4}',
+    '.moa-confirm p{margin:0 0 20px;font-size:14px;color:var(--moa-muted,#5F6678);line-height:1.6}',
+    '.moa-confirm button{display:block;width:100%;border:0;font:inherit;font-size:15px;font-weight:700;border-radius:var(--moa-r-md,14px);padding:14px;cursor:pointer}',
+    '.moa-confirm .stay{background:var(--moa-ink,#141A2E);color:#fff}',
+    '.moa-confirm .leave{background:none;color:var(--moa-muted,#5F6678);font-weight:500;margin-top:6px}',
+    '.moa-prev{display:inline-flex;align-items:center;gap:4px;background:none;border:0;padding:8px 2px;margin-top:6px;font:inherit;font-size:13px;font-weight:600;color:var(--moa-muted,#5F6678);cursor:pointer}',
+    '.moa-prev:hover{color:var(--moa-ink,#141A2E)}'
+  ].join('\n');
+  function addNavStyle() {
+    if (document.getElementById('moa-nav-css')) return;
+    var st = document.createElement('style'); st.id = 'moa-nav-css'; st.textContent = NAV_CSS; document.head.appendChild(st);
+  }
+  function moaConfirm(o) {
+    addNavStyle();
+    return new Promise(function (resolve) {
+      var wrap = el('div', { class: 'moa-confirm-wrap', role: 'dialog', 'aria-modal': 'true' },
+        '<div class="moa-confirm"><h3>' + esc(o.title) + '</h3><p>' + esc(o.body) + '</p>' +
+        '<button type="button" class="stay">' + esc(o.stay || '계속 쓰기') + '</button>' +
+        '<button type="button" class="leave">' + esc(o.leave || '나가기') + '</button></div>');
+      function close(v) { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); resolve(v); }
+      wrap.querySelector('.stay').addEventListener('click', function () { close(false); });
+      wrap.querySelector('.leave').addEventListener('click', function () { close(true); });
+      wrap.addEventListener('click', function (e) { if (e.target === wrap) close(false); });
+      document.body.appendChild(wrap);
+      setTimeout(function () { var b = wrap.querySelector('.stay'); if (b) b.focus({ preventScroll: true }); }, 30);
+    });
+  }
+  window.moaConfirm = moaConfirm;
+
+  /* 휴대폰 뒤로가기를 앱 안에서 처리: 화면 위에 '보초' 기록을 하나 올려 두고,
+     뒤로가기로 그 기록이 빠지면 앱 안에서 한 단계 뒤로 간 뒤 보초를 다시 올림 */
+  var NAV = { back: null, dirty: null, armed: false };
+  function armGuard() {
+    try { if (!(window.history.state && window.history.state.moaGuard)) window.history.pushState({ moaGuard: 1 }, ''); } catch (e) {}
+  }
+  function setupNav() {
+    if (NAV.armed) return;
+    NAV.armed = true;
+    addNavStyle();
+    armGuard();
+    window.addEventListener('popstate', function (e) {
+      if (e.state && e.state.moaGuard) return;
+      if (location.hash || isTeacher() || !document.getElementById('studentNameInput')) return;
+      if (document.querySelector('.moa-confirm-wrap')) { armGuard(); return; }
+      if (NAV.back && NAV.back()) { armGuard(); return; }
+      if (!(NAV.dirty && NAV.dirty())) { window.history.back(); return; }
+      moaConfirm({ title: '지금 나가면 쓴 내용이 사라져요', body: '아직 제출하지 않았어요. 이 화면에 계속 있으면 쓴 내용이 그대로 남아 있어요.', stay: '계속 쓰기', leave: '나가기' })
+        .then(function (leave) { if (leave) window.history.back(); else armGuard(); });
+    });
+    window.addEventListener('beforeunload', function (e) {
+      if (NAV.dirty && NAV.dirty() && document.getElementById('studentNameInput')) { e.preventDefault(); e.returnValue = ''; }
+    });
   }
 
   /* ── 화면 변화 감시 ── */
