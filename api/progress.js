@@ -8,7 +8,9 @@
 //
 //   POST { action:'put', k, app:'interview'|'resume', data:{...} }   → { ok }
 //   POST { action:'get', k }                                          → { ok, interview, resume }
+//   POST { action:'stat', ci, k, app, n, score, star }                 → 강의별 앱 기록 (2026-10-03)
 import Redis from 'ioredis';
+import { lstatAdd } from './_lstat.js';
 
 let redis;
 function getRedis() {
@@ -54,6 +56,13 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST만 가능해요' });
 
   const body = readBody(req);
+  // 강의별 앱 기록 쌓기 (2026-10-03 · _lstat.js 참고)
+  if (body.action === 'stat') {
+    try {
+      const out = await lstatAdd(getRedis(), body);
+      return out.status === 200 ? res.status(200).json({ ok: true }) : res.status(out.status).json({ error: out.error });
+    } catch (e) { return res.status(500).json({ error: '잠시 후 다시 시도해 주세요' }); }
+  }
   const k = String(body.k || '');
   if (!/^[a-f0-9]{64}$/.test(k)) return res.status(400).json({ error: '열쇠 형식이 맞지 않아요' });
 

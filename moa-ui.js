@@ -69,6 +69,64 @@
     });
   }
 
+  var MOA_APP = 'resume';
+  /* ── 강의별 앱 기록 (2026-10-03) ──
+     허브가 주소에 붙여 준 ci(입장 코드 1회분 이름표)를 이 창에만 보관하고, 제출·연습이 성공할 때마다
+     그 강의의 숫자만 하나 올림 (이름·숫자 4자리는 보내지 않음 · 열쇠 k만). 운영보드 결과보고서가 이 숫자를 불러감 */
+  var MOA_CI = (function () {
+    try {
+      var q = new URLSearchParams(location.search).get('ci') || '';
+      if (/^ci_[a-z0-9]{8,24}$/.test(q)) sessionStorage.setItem('moa_ci', q);
+      return sessionStorage.getItem('moa_ci') || '';
+    } catch (e) { return ''; }
+  })();
+  function moaStat(app, extra) {
+    if (!MOA_CI) return;
+    moaKey().then(function (k) {
+      var b = { action: 'stat', ci: MOA_CI, k: k || '', app: app };
+      Object.keys(extra || {}).forEach(function (x) { b[x] = extra[x]; });
+      fetch(PROGRESS_API, { method: 'POST', keepalive: true, headers: { 'content-type': 'application/json' }, body: JSON.stringify(b) }).catch(function () {});
+    });
+  }
+  // 자소서 점검 점수: 문항마다 경험 구조(STAR 등) 칸 + 구체성 3칸 중 채운 비율 → 100점, 구조를 모두 갖춘 문항 비율
+  function moaEssayScore(bodyText) {
+    try {
+      var o = JSON.parse(bodyText || '{}'), its = Array.isArray(o.items) ? o.items : [];
+      if (o.clientCode) return null; // 개인 고객은 강의 기록에서 뺌
+      var sc = [], full = 0, n = 0;
+      its.forEach(function (it) {
+        var d = it && it.aiDraft; if (!d || !d.structure) return;
+        var sv = Object.keys(d.structure).map(function (k) { return !!d.structure[k]; });
+        var cv = d.concreteness ? Object.keys(d.concreteness).map(function (k) { return !!d.concreteness[k]; }) : [];
+        var all = sv.concat(cv); if (!all.length) return;
+        sc.push(all.filter(Boolean).length / all.length * 100);
+        n++; if (sv.length && sv.every(Boolean)) full++;
+      });
+      if (!n) return {};
+      return { score: Math.round(sc.reduce(function (a, b) { return a + b; }, 0) / n * 10) / 10, star: Math.round(full / n * 1000) / 10 };
+    } catch (e) { return {}; }
+  }
+  if (MOA_CI && window.fetch && !window.__moaStatWrap) {
+    window.__moaStatWrap = true;
+    var moaFetch = window.fetch;
+    window.fetch = function (input, init) {
+      var p = moaFetch.apply(this, arguments);
+      try {
+        var url = typeof input === 'string' ? input : (input && input.url) || '';
+        var method = String((init && init.method) || 'GET').toUpperCase();
+        if (method === 'POST' && !document.body.classList.contains('role-teacher')) {
+          if (MOA_APP === 'resume' && /\/api\/reviews(\?|$)/.test(url)) {
+            var info = moaEssayScore(init && init.body);
+            if (info) p.then(function (r) { if (r && r.ok) moaStat('resume', info); }).catch(function () {});
+          } else if (MOA_APP === 'interview' && /\/api\/feedback(\?|$)/.test(url)) {
+            p.then(function (r) { if (r && r.ok) moaStat('interview', { n: 1 }); }).catch(function () {});
+          }
+        }
+      } catch (e) {}
+      return p;
+    };
+  }
+
   function isStudent() {
     var b = document.body;
     return b.classList.contains('role-student') && !b.classList.contains('role-teacher');
