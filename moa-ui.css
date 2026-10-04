@@ -201,9 +201,13 @@ body.moa-teacher header > div:not(.moa-wordmark):not(.progress-track):not(.swipe
 body.moa-teacher header h1::before{display:block}
 body.moa-teacher header .gear-btn{display:none !important}
 body.moa-teacher main{max-width:880px !important}
-body.moa-teacher .tabs{display:flex !important;flex-wrap:nowrap !important;overflow-x:auto;scrollbar-width:none;grid-template-columns:none}
-body.moa-teacher .tabs::-webkit-scrollbar{display:none}
-body.moa-teacher .tab{flex-shrink:0;padding:10px 16px !important}
+/* 2026-10-04 강사 탭: 옆으로 넘기지 않고 한눈에 — 넓은 화면은 한 줄, 휴대폰은 여러 줄로 펼침 */
+body.moa-teacher .tabs{display:flex !important;flex-wrap:wrap !important;overflow:visible;grid-template-columns:none}
+body.moa-teacher .tab{flex:1 1 auto;white-space:nowrap;padding:10px 14px !important}
+@media (max-width:640px){
+  body.moa-teacher .tabs{display:grid !important;grid-template-columns:repeat(3,minmax(0,1fr)) !important}
+  body.moa-teacher .tab{padding:10px 4px !important;font-size:13px !important;white-space:normal;word-break:keep-all;line-height:1.35;display:flex;align-items:center;justify-content:center}
+}
 body.moa-teacher .review-item,body.moa-teacher .preset-item{border:1px solid var(--moa-line) !important;border-radius:var(--moa-r-md) !important;background:#FFFFFF}
 body.moa-teacher .review-item summary{min-height:44px}
 .moa-qr{display:flex;align-items:center;gap:14px}
