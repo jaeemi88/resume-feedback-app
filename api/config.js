@@ -24,8 +24,35 @@ const DEFAULT_CONFIG = {
   activePresetId: 'default'
 };
 
+// AI 상투어 목록 (2026-10-05) — 원장님이 원장 화면에서 추가·삭제, 모든 강사·학생 화면이 같은 목록 사용
+//   GET  /api/config?scope=cliches                → { cliches: [{w, alt:[]}] | null }  (null = 앱 기본 목록 사용)
+//   POST /api/config?scope=cliches {master, cliches} → 원장님 비밀번호(MASTER_ADMIN_PASSWORD) 필요
+const CLICHE_KEY = 'moa_ai_cliches';
+function cleanCliches(list) {
+  return (Array.isArray(list) ? list : []).map((x) => ({
+    w: String((x && x.w) || '').trim().slice(0, 20),
+    alt: (Array.isArray(x && x.alt) ? x.alt : []).map((a) => String(a || '').trim().slice(0, 40)).filter(Boolean).slice(0, 3)
+  })).filter((x) => x.w).slice(0, 80);
+}
+
 export default async function handler(req, res) {
   const client = getRedis();
+  if (req.query.scope === 'cliches') {
+    if (req.method === 'GET') {
+      const raw = await client.get(CLICHE_KEY);
+      return res.status(200).json({ cliches: raw ? JSON.parse(raw) : null });
+    }
+    if (req.method === 'POST') {
+      const body = req.body || {};
+      const ok = !!process.env.MASTER_ADMIN_PASSWORD && body.master === process.env.MASTER_ADMIN_PASSWORD;
+      if (!ok) return res.status(401).json({ error: '원장님 비밀번호가 필요합니다.' });
+      if (body.reset) { await client.del(CLICHE_KEY); return res.status(200).json({ ok: true, cliches: null }); }
+      const list = cleanCliches(body.cliches);
+      await client.set(CLICHE_KEY, JSON.stringify(list));
+      return res.status(200).json({ ok: true, cliches: list });
+    }
+    return res.status(405).json({ error: 'GET 또는 POST만 허용됩니다.' });
+  }
   const t = safeTeacherId(req.query.t);
   if (!t) return res.status(400).json({ error: 't(강사 코드) 파라미터가 필요합니다.' });
 

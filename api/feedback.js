@@ -155,6 +155,35 @@ const RED_FLAG_RULES = `
 redFlags 형식: [{"type": "유형 이름", "quote": "학생 답변 인용", "why": "면접관 시점 한 문장", "fix": "대체 문장 한 줄"}]`;
 
 // ───────────────────────────────────────────
+// ★ 2026 채용 트렌드 반영 (2026-10-05 본부 인계)
+//   핵심 메시지: 경험의 성찰 + 직무 증거 + 자기 말투
+//   AI 사용을 막는 게 아니라 "AI 티를 빼고 내 이야기로 바꾸는" 첨삭
+// ───────────────────────────────────────────
+const DEFAULT_AI_CLICHES = ['귀사에 기여', '귀사의 발전', '시너지', '역량을 함양', '혁신성', '혁신적인', '도전 정신', '주인의식', '열정을 바탕으로', '소통 능력을 바탕으로', '긍정적인 영향', '가치를 창출', '역량을 발휘', '성장하는 인재', '글로벌 인재', '최선을 다하는', '끊임없이 노력', '한 걸음 더', '밑거름', '원동력', '다양한 경험을 통해', '이러한 경험을 바탕으로'];
+
+function trendRules(fw, extraCliches) {
+  const words = Array.from(new Set(DEFAULT_AI_CLICHES.concat(extraCliches || []))).slice(0, 60);
+  const resume = fw === 'RESUME';
+  return `
+
+[AI 상투어 — aiTracePhrases 필드 (2026 채용 트렌드)]
+- 인사담당자는 AI가 쓴 듯한 상투어가 많은 글을 「본인 이야기가 없는 글」로 읽는다. 학생 답변에서 아래 같은 상투어·추상 명사 나열을 찾아 aiTracePhrases에 넣는다: ${words.map((w) => `「${w}」`).join(', ')} 등. 목록에 없어도 어느 회사·누구에게나 쓸 수 있는 매끈한 표현이면 포함한다.
+- phrase는 학생 답변에서 그대로 인용(30자 이내), note는 왜 AI처럼 읽히는지 한 문장, alternatives는 학생 원문의 사실을 살려 「내 말투」로 바꾼 짧은 대체 표현 2개(구체적인 행동·장면 중심, 없는 사실은 만들지 않음).
+- 최대 5개. 해당 없으면 빈 배열.
+- polishedText에도 이 상투어를 쓰지 않는다.${resume ? '' : `
+
+[성찰 문장 체크 — reflection 필드]
+- 답변 속 경험(장면)마다 「그때 무엇을 느꼈고, 그 뒤로 무엇이 달라졌는지」를 말한 성찰 문장이 있는지 본다. 경험 규모보다 성찰이 중요하다.
+- 경험별로 {"experience": "경험 이름 15자 이내", "hasReflection": true/false, "quote": "성찰 문장 인용 30자 이내(없으면 빈 문자열)", "question": "성찰이 없을 때 학생이 스스로 답해 볼 보완 질문 한 문장(있으면 빈 문자열)"}를 만든다.
+- 보완 질문은 학생 경험의 단어를 넣어 구체적으로 묻는다. (예: 「편의점 마감 정산이 틀렸던 그날 이후, 정산하는 방식에서 무엇이 바뀌었나요?」)
+- 경험이 없으면 빈 배열, 최대 3개.`}
+
+[직무 증거 체크 — jobEvidence 필드]
+- 기업은 직무 관련 업무 경험을 가장 중요하게 본다. 답변에 지원 직무(전공·채용공고·문항으로 판단)와 연결된 경험이 1개 이상 있는지(linked), 그 경험에 숫자나 결과(전후 변화)가 들어 있는지(hasResult) 판정한다.
+- jobEvidence: {"linked": true/false, "hasResult": true/false, "experience": "직무와 연결된 경험 이름 15자 이내(없으면 빈 문자열)", "tip": "부족할 때 무엇을 어디에 넣을지 한 문장(둘 다 충족하면 잘된 점 한 문장)"}`;
+}
+
+// ───────────────────────────────────────────
 // 4. 서버 함수 본체
 // ───────────────────────────────────────────
 export default async function handler(req, res) {
@@ -165,8 +194,10 @@ export default async function handler(req, res) {
   const {
     question, answer, questionType, framework,
     selfIntent, previousAnswer, charLimit,
-    presetPrompt, systemPrompt, jobPosting, hiringType, interviewNotes
+    presetPrompt, systemPrompt, jobPosting, hiringType, interviewNotes, clicheWords
   } = req.body || {};
+  // 원장님이 관리하는 AI 상투어 목록 (화면에서 함께 보내줌, 2026-10-05)
+  const extraCliches = (Array.isArray(clicheWords) ? clicheWords : []).map((w) => String(w || '').trim().slice(0, 20)).filter(Boolean).slice(0, 40);
   // 재료 인터뷰에서 학생이 한 단어라도 답한 내용 (2026-10-02 추가)
   const extraNotes = (Array.isArray(interviewNotes) ? interviewNotes : []).slice(0, 5)
     .map((n) => ({ q: String((n && n.q) || '').slice(0, 80), a: String((n && n.a) || '').trim().slice(0, 200) }))
@@ -195,7 +226,9 @@ export default async function handler(req, res) {
   "structure": { ${FRAMEWORK_KEYS[fw]} 를 각각 key로 두고 값은 true/false },
   "concreteness": { "hasNumber": true/false, "hasProperNoun": true/false, "hasJobKeyword": true/false },
   "riskFlags": [ "복사붙여넣기형" | "완벽한AI스타일형" | "동문서답형" | "추상적표현남발형" | "근거부족나열형" 중 해당하는 것만, 없으면 빈 배열 ],
-  "aiTracePhrases": [ { "phrase": "답변에서 그대로 인용한 AI스러운 문구", "note": "왜 그렇게 읽히는지와 대안 한 문장" } ],
+  "aiTracePhrases": [ { "phrase": "답변에서 그대로 인용한 AI스러운 문구", "note": "왜 그렇게 읽히는지 한 문장", "alternatives": ["내 말투 대체 표현 1", "2"] } ],
+  "reflection": [ { "experience": "경험 이름", "hasReflection": true/false, "quote": "성찰 문장 인용", "question": "성찰 보완 질문" } ],
+  "jobEvidence": { "linked": true/false, "hasResult": true/false, "experience": "직무 연결 경험 이름", "tip": "한 문장" },
   "interviewerInference": "이 답변으로 면접관이 추론할 평소 모습과 입사 후 행동을 한두 문장으로",
   "jobMatch": { "matchLevel": "높음|보통|낮음", "matchedKeywords": ["공고와 일치한 키워드"], "missingKeywords": ["빠진 키워드"] },
   "intentGapComment": "학생이 밝힌 의도와 실제 답변의 차이 (의도가 없으면 null)",
@@ -268,6 +301,7 @@ export default async function handler(req, res) {
     context +
     formatRules +
     RED_FLAG_RULES +
+    trendRules(fw, extraCliches) +
     hiringRules +
     storyRules +
     TONE_RULES +
@@ -287,7 +321,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: Math.min(8000, 3000 + Math.round((parseInt(charLimit, 10) || 0) * 1.6)), // 글자수가 길수록 여유 있게 (실제 쓴 만큼만 비용 발생)
+        max_tokens: Math.min(8000, 3500 + Math.round((parseInt(charLimit, 10) || 0) * 1.6)), // 글자수가 길수록 여유 있게 (실제 쓴 만큼만 비용 발생)
         system: fullSystem,
         messages: [
           { role: 'user', content: `[문항]\n${question}\n\n[학생 답변]\n${answer || ''}` }
@@ -317,6 +351,19 @@ export default async function handler(req, res) {
     if (!Array.isArray(feedback.redFlags)) feedback.redFlags = [];
     if (!Array.isArray(feedback.defenseQuestions)) feedback.defenseQuestions = [];
     feedback.defenseQuestions = feedback.defenseQuestions.filter((d) => d && d.sentence && d.question).slice(0, 2);
+    // 2026 트렌드 필드 정리 (2026-10-05)
+    feedback.aiTracePhrases = (Array.isArray(feedback.aiTracePhrases) ? feedback.aiTracePhrases : [])
+      .filter((p) => p && (p.phrase || p.note))
+      .map((p) => ({ phrase: String(p.phrase || ''), note: String(p.note || ''), alternatives: (Array.isArray(p.alternatives) ? p.alternatives : []).map(String).filter(Boolean).slice(0, 2) }))
+      .slice(0, 5);
+    feedback.reflection = (Array.isArray(feedback.reflection) ? feedback.reflection : [])
+      .filter((r) => r && r.experience)
+      .map((r) => ({ experience: String(r.experience).slice(0, 30), hasReflection: !!r.hasReflection, quote: String(r.quote || ''), question: r.hasReflection ? '' : String(r.question || '') }))
+      .slice(0, 3);
+    if (feedback.jobEvidence && typeof feedback.jobEvidence === 'object') {
+      const j = feedback.jobEvidence;
+      feedback.jobEvidence = { linked: !!j.linked, hasResult: !!j.hasResult, experience: String(j.experience || ''), tip: String(j.tip || '') };
+    } else feedback.jobEvidence = null;
     feedback.exampleSlots = (Array.isArray(feedback.exampleSlots) ? feedback.exampleSlots : [])
       .filter((s) => s && s.example)
       .map((s) => ({ example: String(s.example), hint: String(s.hint || ''), options: (Array.isArray(s.options) ? s.options : []).map(String).filter(Boolean).slice(0, 3) }))
