@@ -1758,6 +1758,7 @@ let RESUME_COMPANY_DEPTH = 'basic';
 let RESUME_COMPANY_BRIEF = null;
 let RESUME_BRIEF_AUTO_TRIED = '';
 function resumeDeepOn() { return !!CLIENT || RESUME_COMPANY_DEPTH === 'deep'; }
+function resumeCompanyOff() { return !CLIENT && RESUME_COMPANY_DEPTH === 'off'; } // moa-ui.js 코치가 '어디에 지원하나요?'를 건너뛸 때 사용
 function sameCompanyName(a, b) { const n = x => String(x || '').toLowerCase().replace(/\s|주식회사|\(주\)|㈜/g, ''); return n(a) && n(a) === n(b); }
 function resumeBriefHtml(b) {
   const kw = (b.values || []).length

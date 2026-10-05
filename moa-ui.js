@@ -451,11 +451,20 @@
         choices: [{ label: '자기소개서', value: 'resume' }, { label: '이력서 한 줄 소개', value: 'cv' }],
         pick: function (v) { docSel.value = v; fire(docSel, 'change'); }
       });
-      if (!(compInput && compInput.value.trim())) steps.push({
+      if (presetSelect && presetSelect.options.length > 1) steps.push({
+        say: '전공이나 직군을 골라 주세요.',
+        tip: '목록에 없으면 ‘기본’을 고르세요.',
+        selectChips: presetSelect
+      });
+      // 🔎 기업 심화 분석 (2026-10-05): 심화 수업·유료 고객이면 기업명을 받자마자 검색을 시작한다고 알려 줌
+      var deepOn = typeof window.resumeDeepOn === 'function' && window.resumeDeepOn();
+      var companyOff = typeof window.resumeCompanyOff === 'function' && window.resumeCompanyOff();
+      if (!companyOff && !(compInput && compInput.value.trim())) steps.push({
         say: '어디에 지원하나요?',
-        tip: '적어 주면 ‘입사 후 포부’ 첨삭을 그곳에 맞춰 드려요.',
+        tip: deepOn ? '적어 주면 그 회사의 인재상·최근 소식을 찾아서 지원동기·포부 첨삭에 반영해 드려요.' : '적어 주면 ‘입사 후 포부’ 첨삭을 그곳에 맞춰 드려요.',
         input: { placeholder: '기관·회사 이름 (예: OO복지관)', target: compInput },
-        skip: '아직 정하지 않았어요'
+        skip: '아직 정하지 않았어요',
+        reply: function (v) { return deepOn ? '🔎 ' + v + ' 정보를 찾아 둘게요. 문항 쓰는 화면 맨 위에서 볼 수 있어요.' : ''; }
       });
       steps.push({
         say: '채용공고에 ‘블라인드 채용’이라는 말이 있었나요?',
@@ -468,11 +477,6 @@
           if (seg) seg.querySelectorAll('button').forEach(function (b, i) { b.setAttribute('aria-pressed', String((v === 'blind') === (i === 1))); });
         },
         reply: function (v, label) { return label === '잘 모르겠어요' ? '일반 채용으로 볼게요. 공고를 확인하면 위에서 바꿀 수 있어요.' : (v === 'blind' ? '학교·지역·가족 이름은 빼고 첨삭할게요.' : '과목명·기관명 같은 이름을 살려서 첨삭할게요.'); }
-      });
-      if (presetSelect && presetSelect.options.length > 1) steps.push({
-        say: '전공이나 직군을 골라 주세요.',
-        tip: '목록에 없으면 ‘기본’을 고르세요.',
-        selectChips: presetSelect
       });
       if (instSel && instSel.options.length > 1) steps.push({
         say: '소속 기관을 골라 주세요.',
@@ -543,7 +547,7 @@
             if (!v && s.input.required) { inp.focus(); inp.style.borderColor = 'var(--moa-danger)'; return; }
             if (!v && s.skip) { advance(s.skip, ''); return; }
             if (s.input.target) { s.input.target.value = v; fire(s.input.target, 'input'); }
-            advance(v, '');
+            advance(v, s.reply ? s.reply(v) : '');
           }
           go.addEventListener('click', submit);
           inp.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); submit(); } });
