@@ -5,7 +5,7 @@
 //  - 대기함 전체 목록(GET)과 삭제(DELETE)는 강사용 암호 필요
 import Redis from 'ioredis';
 import { isStaff } from './_staff.js';
-import { CLIENT_T, getClient, useClientPart, releaseClientPart, attachReviewCode } from './client-code.js';
+import { CLIENT_T, getClient, useClientPart, releaseClientPart, attachReviewCode, getAdminEmail } from './client-code.js';
 
 let redis;
 function getRedis() {
@@ -31,7 +31,9 @@ async function notifyByEmail(client, t, item) {
     if (!process.env.RESEND_API_KEY) { console.error('알림 건너뜀: RESEND_API_KEY 없음'); return; }
     const configRaw = await client.get(`resume_app_config:${t}`);
     const config = configRaw ? JSON.parse(configRaw) : null;
-    const to = config && config.notifyEmail;
+    // 유료 개인 고객 제출은 알림 이메일이 비어 있어도 원장님께 꼭 보냄 (2026-10-05 점검 — 결과 2일 내 전달 약속)
+    const isClient = !!(item && item.clientCode);
+    const to = (config && config.notifyEmail) || (isClient ? await getAdminEmail(client) : '');
     if (!to) { console.error('알림 건너뜀: notifyEmail 미설정'); return; }
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -42,7 +44,7 @@ async function notifyByEmail(client, t, item) {
       body: JSON.stringify({
         from: 'MOA FORMULA <moaformula@jinromoa.co.kr>',
         to: [to],
-        subject: `[자소서 첨삭] ${item.studentName || '학생'}님의 검수 요청이 도착했어요`,
+        subject: `${isClient ? '💳 [유료 고객 · 2일 안에 결과] ' : ''}[자소서 첨삭] ${item.studentName || '학생'}님의 검수 요청이 도착했어요`,
         text: `${item.studentName || '학생'}님이 자소서 첨삭 검수를 요청했어요.\n\n강사용 화면의 "검수 대기함" 탭에서 확인해 주세요.`
       })
     });

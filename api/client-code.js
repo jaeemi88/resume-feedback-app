@@ -230,7 +230,7 @@ async function mailEntryLink(d) {
         from: 'MOA FORMULA <moaformula@jinromoa.co.kr>',
         to: [d.email],
         subject: `[진로모아커리어센터] ${PRODUCTS[d.product]} 입장 링크를 보내드려요`,
-        text: `${d.name || '고객'}님, 예약해 주셔서 감사합니다.\n\n아래 링크로 언제든 다시 들어와 이어서 작성할 수 있어요.\n${link}\n\n· 이용 기간: ${endText}까지\n· 작성 내용은 자동 저장돼요. 다 마치면 "최종 제출"을 눌러 주세요 (제출은 한 번만 가능해요).\n· 제출 후 강사가 직접 검토해 결과를 이 이메일로 보내드려요.\n\n진로모아커리어센터`
+        text: `${d.name || '고객'}님, 예약해 주셔서 감사합니다.\n\n아래 링크로 언제든 다시 들어와 이어서 작성할 수 있어요.\n${link}\n\n· 이용 기간: ${endText}까지\n${d.product === 'set' ? '· 세트 상품은 ① 자기소개서를 먼저 제출한 뒤, 같은 링크(코드)로 ② 모의면접을 이어서 진행해요.\n' : ''}· 작성 내용은 자동 저장돼요. 다 마치면 "최종 제출"을 눌러 주세요 (제출은 한 번만 가능해요).\n· 제출 후 강사가 직접 검토해 결과를 이 이메일로 보내드려요 (보통 2일 안).\n· 최종 제출 전에는 전액 환불, 제출 후에는 환불이 어려워요. 문의: jinromoa@naver.com\n\n진로모아커리어센터`
       })
     });
     if (!r.ok) console.error('입장 링크 메일 실패:', r.status, await r.text());

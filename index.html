@@ -1858,7 +1858,7 @@ function clientBannerHtml() {
         <div style="font-size:16px;font-weight:800;color:var(--navy)">${escapeHtml(CLIENT_PRODUCT_NAMES[CLIENT.product] || '')}</div>
         ${left !== null ? `<span class="badge" style="background:#fff;color:var(--navy)">이용 기간 ${moaDate(CLIENT.expiresAt - 1, 'short')}까지 · D-${left}</span>` : ''}
       </div>
-      ${CLIENT.product === 'set' ? `<div style="font-size:13px;color:var(--muted);margin-top:6px;line-height:1.7">① 자기소개서 첨삭 → ② 모의면접 순서로 진행돼요. 지금은 <b>① 자기소개서</b> 단계예요.</div>` : ''}
+      ${CLIENT.product === 'set' ? `<div style="font-size:13px;color:var(--muted);margin-top:6px;line-height:1.7">① 자기소개서 첨삭 → ② 모의면접 순서로 진행돼요. ${CLIENT.used && CLIENT.used.resume ? (CLIENT.used.interview ? '<b>두 단계 모두 제출을 마쳤어요.</b>' : '<b>① 자기소개서</b> 제출 완료 — 이제 <b>② 모의면접</b> 단계예요.') : '지금은 <b>① 자기소개서</b> 단계예요.'}</div>` : ''}
       ${CLIENT.hold ? clientHoldHtml() : ''}
       <div style="margin-top:8px;font-size:12.5px;color:var(--muted)">최종 제출 전에는 전액 환불, 제출 후에는 환불이 불가해요.${refundDetailsHtml()}</div>
     </div>`;
@@ -2660,7 +2660,7 @@ async function renderStudentSubmitForm() {
         body: JSON.stringify({ studentName, studentEmail, presetId: presetSelect.value, docType: docTypeSelect.value, jobPosting, studentInstitution: CLIENT ? '개인 고객' : studentInstitution, items: itemsWithDraft, ...(CLIENT ? { clientCode: CLIENT.code, refundAgreedAt: Date.now() } : {}) })
       });
 
-      if (CLIENT) { renderClientDone(reviewRes.code, true); return; }
+      if (CLIENT) { CLIENT.used = Object.assign({}, CLIENT.used, { resume: { at: Date.now(), reviewCode: reviewRes.code || "" } }); renderClientDone(reviewRes.code, true); return; }
       localStorage.setItem(countKey, String(usedCount + 1));
 
       statusMsg.innerHTML = `
