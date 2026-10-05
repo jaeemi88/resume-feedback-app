@@ -310,10 +310,10 @@ export default async function handler(req, res) {
 - 답변이 사실만 나열되어 장면이 떠오르지 않으면 improvements에서 한 번 짚고, 어느 문장 앞뒤에 그때의 한마디를 넣으면 장면이 살아나는지 안내한다. 이미 생생하면 짚지 않는다.
 - polishedText에 인용문(「 」)이 있으면 defenseQuestions 중 하나는 그 문장을 골라 그 말을 누가, 어떤 상황에서 했는지 확인하는 질문으로 만든다.`;
 
-  const fullSystem =
+  // 프롬프트 캐싱 (2026-10-05): 모든 학생에게 똑같은 긴 지침(고정 부분)을 앞에 두고 캐시 표시 →
+  // 5분 안에 다시 쓰이면 그 부분은 원래 가격의 10%만 냄. 학생마다 다른 부분(전공 기준·문항 정보·오늘의 재료)은 뒤에.
+  const staticSystem =
     COMMON_RULES +
-    (majorRules ? `\n\n[전공별 기준]\n${majorRules}` : '') +
-    context +
     formatRules +
     RED_FLAG_RULES +
     trendRules(fw, extraCliches) +
@@ -321,8 +321,15 @@ export default async function handler(req, res) {
     storyRules +
     TONE_RULES +
     DIVERSITY_RULES +
-    variety +
     JSON_SAFETY_RULE;
+  const dynamicSystem =
+    (majorRules ? `[전공별 기준]\n${majorRules}` : '[전공별 기준] 없음 (공통 기준만 적용)') +
+    context +
+    variety;
+  const systemBlocks = [
+    { type: 'text', text: staticSystem, cache_control: { type: 'ephemeral' } },
+    { type: 'text', text: dynamicSystem }
+  ];
 
   try {
     let feedback = null;
@@ -337,7 +344,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: Math.min(8000, 3500 + Math.round((parseInt(charLimit, 10) || 0) * 1.6)), // 글자수가 길수록 여유 있게 (실제 쓴 만큼만 비용 발생)
-        system: fullSystem,
+        system: systemBlocks,
         messages: [
           { role: 'user', content: `[문항]\n${question}\n\n[학생 답변]\n${answer || ''}` }
         ]
@@ -351,8 +358,10 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: aiErrorText(response.status, data) });
     }
 
+    if (data.usage) console.log('첨삭 토큰', JSON.stringify(data.usage)); // cache_read_input_tokens로 캐시 효과 확인
     const raw = (data.content || []).map((c) => c.text || '').join('').trim();
     feedback = parseAIJson(raw);
+    if (feedback && data.usage) feedback._usage = { in: data.usage.input_tokens, cached: data.usage.cache_read_input_tokens || 0, cacheWrite: data.usage.cache_creation_input_tokens || 0, out: data.usage.output_tokens };
     if (!feedback) {
       console.error(`JSON 변환 실패 (${attempt}번째 시도, 중단 이유: ${data.stop_reason}):`, raw.slice(0, 800));
     }
