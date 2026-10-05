@@ -271,6 +271,9 @@
   @media print{.rs-handoff,.trend-live{display:none !important}}
   .proof-wrap{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:18px;align-items:start}
   @media (max-width:760px){ .proof-wrap{grid-template-columns:1fr} .proof-title{font-size:22px} }
+  /* 결과 카드가 좁을 때(PC에서도 카드 폭 640px 이하) 교정지를 한 줄로 — 글이 한두 단어씩 끊기던 문제 (2026-10-05) */
+  .result-block{container-type:inline-size}
+  @container (max-width:640px){ .proof-wrap{grid-template-columns:1fr} }
   .proof-paper{border:1px solid var(--border);border-radius:14px;background:#FFFFFF;overflow:hidden}
   .proof-paper-head{padding:11px 18px;border-bottom:1px solid #E2E8F0;background:#F8FAFC;display:flex;justify-content:space-between;gap:10px;font-size:13px;font-weight:700;color:var(--text)}
   .proof-paper-head span:last-child{font-weight:400;color:var(--muted);white-space:nowrap}
@@ -3681,7 +3684,7 @@ function exInnerHtml(st) {
     <div class="ex-progress ex-interactive"><div class="ex-bar"><i style="width:${pct}%"></i></div><span>내 경험으로 바꾼 곳 <b>${done} / ${n}</b> · 완성도 <b>${pct}%</b></span></div>` : ''}
     <p class="ex-text">${textHtml}</p>
     <div class="ex-actions ex-interactive">
-      ${n ? `<button type="button" class="btn-primary ex-finish" data-exkey="${st.key}" ${done && !st.busy ? '' : 'disabled'}>${st.busy ? '완성하는 중... (30초 정도)' : '✨ 내 글로 완성하기'}</button>` : ''}
+      ${n ? `<button type="button" class="btn-primary ex-finish" data-exkey="${st.key}" ${done && !st.busy ? '' : 'disabled'}>${st.busy ? '완성하는 중... (30초~1분)' : '✨ 내 글로 완성하기'}</button>` : ''}
       <button type="button" class="btn-secondary ex-copy" data-exkey="${st.key}">📋 복사하기</button>
       <span class="ex-count">${plain.length}자${lim ? ` / ${lim}자` : ''}</span>
     </div>

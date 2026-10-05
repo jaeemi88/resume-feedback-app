@@ -69,6 +69,8 @@ function aiErrorText(status, data) {
   return `AI 호출 중 오류가 발생했습니다. (${status} ${t} ${m.slice(0, 120)})`;
 }
 
+import { fitLength } from './_fitlen.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'POST 요청만 가능합니다.' });
@@ -228,7 +230,9 @@ async function finish(body, res) {
       if (!parsed || !parsed.text) { console.error(`완성하기 JSON 변환 실패 (${attempt}번째 시도):`, raw.slice(0, 300)); parsed = null; }
     }
     if (!parsed) return res.status(500).json({ error: 'AI 응답 형식이 올바르지 않습니다. 다시 눌러주세요.' });
-    return res.status(200).json({ text: String(parsed.text).replace(/[⟪⟫]/g, '').trim() });
+    let out = String(parsed.text).replace(/[⟪⟫]/g, '').trim();
+    if (charLimit) { const fx = await fitLength(out, charLimit, { kind: 'essay' }); if (fx) out = fx.text; } // 글자 수 맞추기
+    return res.status(200).json({ text: out });
   } catch (err) {
     console.error('서버 오류:', err);
     return res.status(500).json({ error: '서버 오류가 발생했습니다.' });

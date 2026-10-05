@@ -199,6 +199,8 @@ function aiErrorText(status, data) {
   return `AI 호출 중 오류가 발생했습니다. (${status} ${t} ${m.slice(0, 120)})`;
 }
 
+import { fitLength } from './_fitlen.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'POST 요청만 가능합니다.' });
@@ -382,6 +384,14 @@ export default async function handler(req, res) {
       .map((s) => ({ example: String(s.example), hint: String(s.hint || ''), options: (Array.isArray(s.options) ? s.options : []).map(String).filter(Boolean).slice(0, 3) }))
       .slice(0, 8);
 
+    // 글자 수 맞추기: 다듬은 글이 제한의 80% 미만이거나 넘치면 서버가 세어 보고 다시 고쳐 씀 (2026-10-05)
+    if (fw !== 'RESUME' && charLimit && feedback.polishedText) {
+      const fx = await fitLength(feedback.polishedText, charLimit, { kind: 'essay', slots: true });
+      if (fx) {
+        feedback.polishedText = fx.text;
+        feedback.exampleSlots = (Array.isArray(fx.exampleSlots) ? fx.exampleSlots : []).filter((s) => s && s.example).map((s) => ({ example: String(s.example), hint: String(s.hint || ''), options: (Array.isArray(s.options) ? s.options : []).map(String).filter(Boolean).slice(0, 3) })).slice(0, 8);
+      }
+    }
     return res.status(200).json(feedback);
   } catch (err) {
     console.error('서버 오류:', err);
