@@ -56,6 +56,19 @@ function parseAIJson(raw) {
 
 const clip = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
 
+
+// AI 오류를 쉬운 말로 바꿔 줌 (2026-10-05) — 원인을 화면에서 바로 알 수 있게 (비밀값은 보내지 않음)
+function aiErrorText(status, data) {
+  const t = (data && data.error && (data.error.type || '')) || '';
+  const m = String((data && data.error && data.error.message) || '');
+  if (/credit balance|billing|purchase credits/i.test(m)) return `AI 사용 크레딧이 부족해요. 원장님이 Anthropic 콘솔(Plans & Billing)에서 충전해 주세요. (${status})`;
+  if (status === 401 || t === 'authentication_error') return `AI 열쇠(ANTHROPIC_API_KEY)가 맞지 않아요. Vercel 환경변수를 확인해 주세요. (${status})`;
+  if (status === 429 || t === 'rate_limit_error') return `AI 사용량 한도에 잠시 걸렸어요. 1분 뒤 다시 눌러 주세요. (${status})`;
+  if (status === 529 || t === 'overloaded_error' || status >= 500) return `AI 서버가 잠시 붐벼요. 잠시 뒤 다시 눌러 주세요. (${status})`;
+  if (t === 'not_found_error' || /model/i.test(m)) return `AI 모델 설정에 문제가 있어요: ${m.slice(0, 120)} (${status})`;
+  return `AI 호출 중 오류가 발생했습니다. (${status} ${t} ${m.slice(0, 120)})`;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'POST 요청만 가능합니다.' });
@@ -151,7 +164,7 @@ ${OPENER_GUIDE}
       const data = await response.json();
       if (!response.ok) {
         console.error('Anthropic API 오류:', data);
-        return res.status(500).json({ error: 'AI 호출 중 오류가 발생했습니다.' });
+        return res.status(500).json({ error: aiErrorText(response.status, data) });
       }
       const raw = (data.content || []).map((c) => c.text || '').join('').trim();
       parsed = parseAIJson(raw);
@@ -208,7 +221,7 @@ async function finish(body, res) {
       const data = await response.json();
       if (!response.ok) {
         console.error('Anthropic API 오류:', data);
-        return res.status(500).json({ error: 'AI 호출 중 오류가 발생했습니다.' });
+        return res.status(500).json({ error: aiErrorText(response.status, data) });
       }
       const raw = (data.content || []).map((c) => c.text || '').join('').trim();
       parsed = parseAIJson(raw);
@@ -269,7 +282,7 @@ async function defend(body, res) {
       const data = await response.json();
       if (!response.ok) {
         console.error('Anthropic API 오류:', data);
-        return res.status(500).json({ error: 'AI 호출 중 오류가 발생했습니다.' });
+        return res.status(500).json({ error: aiErrorText(response.status, data) });
       }
       const raw = (data.content || []).map((c) => c.text || '').join('').trim();
       parsed = parseAIJson(raw);
