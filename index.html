@@ -394,6 +394,25 @@
   .ex-final{border-color:#3D4500 !important;border-radius:14px !important}
   .ex-final h4{color:#3D4500 !important}
   @media print{ .rs-dock,.rs-jump{display:none !important} }
+/* 🔎 기업 심화 분석 카드 (2026-10-05, 모의면접 앱과 세트) */
+.cb-card{border:1px solid #E3DBFB;border-radius:12px;padding:12px 14px;margin-top:10px;background:#F8F6FF;display:flex;flex-direction:column;gap:8px}
+.cb-card .cb-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.cb-card .cb-name{font-size:15px;font-weight:700}
+.cb-card .cb-badge{font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:999px;background:#643DF2;color:#fff;white-space:nowrap}
+.cb-card .cb-ind{margin:0;font-size:13px;color:var(--muted);line-height:1.5}
+.cb-card .cb-lbl{font-size:12.5px;font-weight:700}
+.cb-card .cb-kw{display:flex;flex-wrap:wrap;gap:6px}
+.cb-card .cb-kw span{font-size:13px;padding:4px 11px;border-radius:999px;background:#fff;border:1px solid #E3DBFB;color:#3B1FA3}
+.cb-card details summary{cursor:pointer;font-size:13px;font-weight:700;color:#643DF2}
+.cb-card ol{margin:6px 0 0;padding-left:18px;font-size:13px;line-height:1.65}
+.cb-card .cb-tip{margin:0;font-size:13px;line-height:1.55;color:#8A5A00;background:#FFF6E0;border-radius:8px;padding:7px 10px}
+.cb-card .cb-thin{margin:0;font-size:12.5px;color:#8A5A00}
+.cb-card .cb-src{font-size:12px;color:var(--muted);line-height:1.6}
+.cb-card .cb-src a{color:#643DF2;word-break:break-all}
+.cb-btn{font:inherit;font-size:14px;font-weight:600;border:1px solid #643DF2;color:#643DF2;background:#fff;border-radius:10px;padding:10px 12px;min-height:44px;margin-top:10px;width:100%;cursor:pointer}
+.cb-btn:disabled{opacity:.6;cursor:wait}
+.cb-err{margin:6px 0 0;font-size:13px;color:#E5484D}
+.cb-err:empty{display:none}
 </style>
 <link rel="stylesheet" href="/moa-ui.css"><!-- 2026-10-03 MOA 디자인 키트 (학생 화면) -->
 </head>
@@ -1733,6 +1752,92 @@ function refundSubmitConfirm(opts) {
   });
 }
 
+// ---------- 🔎 기업 분석 수준 (2026-10-05, 모의면접 앱과 세트) ----------
+// 강사 '알림 설정' 탭: off(끔: 고등학생·1회성) / basic(기본, 검색 없음) / deep(심화, 실시간 검색). 유료 개인 고객은 항상 심화
+let RESUME_COMPANY_DEPTH = 'basic';
+let RESUME_COMPANY_BRIEF = null;
+let RESUME_BRIEF_AUTO_TRIED = '';
+function resumeDeepOn() { return !!CLIENT || RESUME_COMPANY_DEPTH === 'deep'; }
+function sameCompanyName(a, b) { const n = x => String(x || '').toLowerCase().replace(/\s|주식회사|\(주\)|㈜/g, ''); return n(a) && n(a) === n(b); }
+function resumeBriefHtml(b) {
+  const kw = (b.values || []).length
+    ? `<div class="cb-lbl">인재상 키워드</div><div class="cb-kw">${b.values.map(v => `<span>${escapeHtml(v)}</span>`).join('')}</div>`
+    : `<p class="cb-thin">${escapeHtml(b.valuesNote || '공식 인재상을 찾지 못했어요. 채용 홈페이지에서 확인해 보세요.')}</p>`;
+  const issues = (b.issues || []).length
+    ? `<details><summary>최근 이슈 ${b.issues.length}줄 더 보기</summary><ol>${b.issues.map(v => `<li>${escapeHtml(v)}</li>`).join('')}</ol></details>` : '';
+  const src = (b.sources || []).map((x, i) => `<a href="${escapeHtml(x.url)}" target="_blank" rel="noopener">${i + 1}. ${escapeHtml(x.title)}</a>`).join('<br>');
+  return `<div class="cb-head"><span class="cb-name">${escapeHtml(b.name)}</span><span class="cb-badge">심화 분석</span></div>
+    ${b.industry ? `<p class="cb-ind">${escapeHtml(b.industry)}</p>` : ''}
+    ${kw}${issues}
+    ${b.tip ? `<p class="cb-tip">💡 ${escapeHtml(b.tip)}</p>` : ''}
+    ${b.thin ? '<p class="cb-thin">검색된 정보가 적어요. 채용공고와 회사 홈페이지를 꼭 함께 확인하세요.</p>' : ''}
+    ${src ? `<details class="cb-src"><summary style="font-weight:400;color:var(--muted)">출처 ${b.sources.length}곳 · ${escapeHtml(b.searchedAt || '')} 검색</summary>${src}</details>` : ''}`;
+}
+function setupResumeCompanyField() {
+  const field = document.getElementById('companyField');
+  const input = document.getElementById('targetCompanyInput');
+  const area = document.getElementById('companyBriefArea');
+  const items = document.getElementById('itemsContainer');
+  if (!field || !input || !area) return;
+  if (RESUME_COMPANY_DEPTH === 'off' && !CLIENT) { field.style.display = 'none'; input.value = ''; return; }
+  field.style.display = '';
+  if (!resumeDeepOn()) { area.innerHTML = ''; return; }
+  document.getElementById('companyHint').textContent = "적어 주면 인재상·최근 소식을 검색해 '지원동기·입사 후 포부' 첨삭에 반영해 드려요.";
+  // 대화형 시작(코치) 화면에서는 기본 정보 칸이 접혀 있어서, 문항 쓰는 구역 맨 위에도 같은 카드를 보여 줌
+  let top = document.getElementById('companyBriefTop');
+  if (!top && items) { top = document.createElement('div'); top.id = 'companyBriefTop'; top.style.marginBottom = '12px'; items.parentNode.insertBefore(top, items); }
+  const areas = [area, top].filter(Boolean);
+  let busy = false, lastErr = '';
+  function paint() {
+    const b = RESUME_COMPANY_BRIEF;
+    const name = input.value.trim();
+    areas.forEach(a => {
+      if (b && sameCompanyName(b.name, name)) { a.innerHTML = `<div class="cb-card">${resumeBriefHtml(b)}</div>`; return; }
+      if (a === top && !name) { a.innerHTML = ''; return; }
+      a.innerHTML = `<button type="button" class="cb-btn" ${busy ? 'disabled' : ''}>${busy ? '기업 정보를 검색하는 중... (30초 정도)' : '🔎 ' + (name ? escapeHtml(name) + ' ' : '이 기업 ') + '분석하기'}</button><p class="cb-err" role="alert">${escapeHtml(lastErr)}</p>`;
+      a.querySelector('.cb-btn').onclick = run;
+    });
+  }
+  async function run() {
+    const name = input.value.replace(/\s+/g, ' ').trim();
+    if (name.length < 2) { lastErr = '지원 기업명을 먼저 적어 주세요.'; paint(); return; }
+    busy = true; lastErr = ''; paint();
+    try {
+      const r = await fetch('/api/coach', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(CLIENT ? { mode: 'companyBrief', c: CLIENT.code, company: name } : { mode: 'companyBrief', t: TEACHER_ID, company: name }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.brief) throw new Error(d.error || '기업 정보를 찾지 못했어요. 잠시 후 다시 눌러 주세요.');
+      RESUME_COMPANY_BRIEF = d.brief;
+    } catch (e) {
+      lastErr = e.message || '인터넷 연결을 확인하고 다시 눌러 주세요.';
+    }
+    busy = false; paint();
+  }
+  function autoRun() {
+    const name = input.value.trim();
+    if (name.length >= 2 && !RESUME_COMPANY_BRIEF && RESUME_BRIEF_AUTO_TRIED !== name) { RESUME_BRIEF_AUTO_TRIED = name; run(); }
+  }
+  input.addEventListener('input', () => {
+    if (RESUME_COMPANY_BRIEF && !sameCompanyName(RESUME_COMPANY_BRIEF.name, input.value)) RESUME_COMPANY_BRIEF = null;
+    lastErr = '';
+    // 코치 대화에서 기업명을 답하면(칸에 직접 타이핑한 게 아니면) 바로 분석 시작
+    if (document.activeElement !== input) autoRun(); else paint();
+  });
+  paint();
+  // 유료 고객은 예약 때 적은 기업을 자동으로 한 번 분석 (같은 기업은 서버에 7일 저장돼 바로 뜸)
+  if (CLIENT) autoRun();
+}
+// 첨삭 요청에 붙는 기업 요약 — 지원동기·입사 후 포부·에세이 문항에만
+function resumeBriefExtra(questionType, company) {
+  const b = RESUME_COMPANY_BRIEF;
+  if (!b || !resumeDeepOn() || !sameCompanyName(b.name, company)) return '';
+  if (!['지원동기', '입사후포부', '에세이'].includes(questionType)) return '';
+  return `\n\n[지원 기업 조사 요약 — 웹 검색으로 확인, ${b.searchedAt || ''} 기준]\n기업: ${b.name}${b.industry ? ' — ' + b.industry : ''}`
+    + ((b.values || []).length ? `\n공식 인재상 키워드: ${b.values.join(', ')}` : '')
+    + (b.issues || []).map((v, i) => `\n최근 이슈 ${i + 1}: ${v}`).join('')
+    + `\n[활용 원칙] 글이 위 인재상 키워드나 최근 이슈와 연결되면 칭찬하고, 연결이 없으면 위 요약 중 하나를 골라 "최근 ○○와 연결해 보세요"처럼 구체적으로 제안한다. 다듬은 문장에는 위 요약의 실제 내용은 그대로 써도 되지만, 요약에 없는 제도명·수치·사업명은 지어내지 말고 {{ }} 예시로 둔다.`;
+}
+
 let CLIENT = null;
 let CLIENT_DRAFT = null;
 const CLIENT_PRODUCT_NAMES = { resume: '자소서 첨삭', interview: '모의면접', set: '세트 (자소서 → 모의면접)' };
@@ -2403,9 +2508,12 @@ async function renderStudentSubmitForm() {
       <label>지원하는 채용공고의 핵심 내용 (선택, 모든 문항에 공통 적용)</label>
       <textarea id="jobPostingInput" placeholder="예) [○○기관] 사회복지사 채용 — 사례관리 경험자 우대, 공감·소통 역량 중시"></textarea>
 
+      <div id="companyField">
       <label>지원 기업명 (선택)</label>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">적어주면 '입사 후 포부' 문항 첨삭을 이 회사에 맞춰 드려요.</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px" id="companyHint">적어주면 '입사 후 포부' 문항 첨삭을 이 회사에 맞춰 드려요.</div>
       <input type="text" id="targetCompanyInput" maxlength="40" placeholder="예) ○○병원, ○○항공 (선택)">
+      <div id="companyBriefArea"></div>
+      </div>
 
       <div id="itemsContainer" style="margin-top:18px"></div>
       <button type="button" class="btn-add-preset" id="addItemBtn" style="margin-bottom:14px">+ 문항 추가</button>
@@ -2462,6 +2570,8 @@ async function renderStudentSubmitForm() {
   const presetSelect = document.getElementById('presetSelect');
   try {
     const { config } = await api('/api/config');
+    RESUME_COMPANY_DEPTH = ['off', 'basic', 'deep'].includes(config.companyDepth) ? config.companyDepth : 'basic';
+    setupResumeCompanyField();
     const wantId = CLIENT && CLIENT.presetId && config.presets.some(p => p.id === CLIENT.presetId) ? CLIENT.presetId : config.activePresetId;
     presetSelect.innerHTML = config.presets.map(p =>
       `<option value="${p.id}" ${p.id === wantId ? 'selected' : ''}>${escapeHtml(p.name)}</option>`
@@ -2537,7 +2647,7 @@ async function renderStudentSubmitForm() {
       const itemsWithDraft = await Promise.all(rawItems.map(async (it) => {
         const aiDraft = await api('/api/feedback', {
           method: 'POST',
-          body: JSON.stringify({ ...it, presetPrompt: (preset ? preset.prompt : '') + aspirationExtra(it.questionType, targetCompany), jobPosting, clicheWords: CLICHES.map(c => c.w) })
+          body: JSON.stringify({ ...it, presetPrompt: (preset ? preset.prompt : '') + aspirationExtra(it.questionType, targetCompany) + resumeBriefExtra(it.questionType, targetCompany), jobPosting, clicheWords: CLICHES.map(c => c.w) })
         });
         return { ...it, aiDraft };
       }));
@@ -2760,6 +2870,15 @@ async function renderNotifyTab(content) {
       <div id="groupExpirySavedMsg" style="font-size:13px;color:var(--green);margin-top:8px;display:none">저장됐어요.</div>
     </div>
     <div class="card">
+      <h2>🔒 기업 분석 수준</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">대상에 맞게 골라 주세요. 모의면접 앱의 '오늘 수업' 설정과는 따로 정해요. 네이버 유료 고객은 이 설정과 관계없이 항상 심화예요.</p>
+      <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;margin:6px 0"><input type="radio" name="companyDepth" value="off" style="width:auto;margin-top:4px"><span><b>끔</b><br><span style="font-size:12.5px;color:var(--muted)">지원 기업 칸 없음 · 고등학생, 1회성 특강</span></span></label>
+      <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;margin:6px 0"><input type="radio" name="companyDepth" value="basic" style="width:auto;margin-top:4px"><span><b>기본</b><br><span style="font-size:12.5px;color:var(--muted)">기업명만 반영, 검색 없음 · 일반 대학 수업</span></span></label>
+      <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;margin:6px 0"><input type="radio" name="companyDepth" value="deep" style="width:auto;margin-top:4px"><span><b>심화 (실시간 검색)</b><br><span style="font-size:12.5px;color:var(--muted)">인재상·최근 이슈를 검색해 지원동기·입사 후 포부 첨삭에 반영 · 취업 직전 반</span></span></label>
+      <p style="font-size:12.5px;color:var(--muted);margin-top:6px">심화는 기업 1곳당 검색 비용(약 50~100원)이 들어요. 같은 기업은 7일 동안 저장해 두고 다시 써요.</p>
+      <div id="companyDepthSavedMsg" style="font-size:13px;color:var(--green);margin-top:6px;display:none">저장됐어요.</div>
+    </div>
+    <div class="card">
       <h2>여러 기관 동시 운영 (집체교육용)</h2>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">한 강사 코드로 여러 학교·기관을 동시에 다니실 때 쓰세요. 여기에 기관을 미리 등록해두면, 위의 단일 기관명 대신 <b>학생이 직접 본인 소속을 선택</b>하는 화면이 제출 폼에 나타나요. 목록이 비어있으면 위의 단일 기관명 방식 그대로 작동해요.</p>
       <div id="institutionListArea" class="empty">불러오는 중...</div>
@@ -2775,7 +2894,21 @@ async function renderNotifyTab(content) {
     document.getElementById('retryLimitSelect').value = (data.config && data.config.retryLimit) || 'unlimited';
     document.getElementById('groupExpiryInput').value = (data.config && data.config.groupCodeExpiryDays) || 5;
     renderInstitutionList((data.config && data.config.institutions) || []);
+    const dep = (data.config && data.config.companyDepth) || 'basic';
+    document.querySelectorAll('input[name="companyDepth"]').forEach(r => { r.checked = r.value === dep; });
   } catch (e) { console.error(e); }
+  // 🔎 기업 분석 수준 — 고르는 즉시 저장 (다른 설정은 그대로)
+  document.querySelectorAll('input[name="companyDepth"]').forEach(r => r.addEventListener('change', async () => {
+    const msg = document.getElementById('companyDepthSavedMsg');
+    try {
+      const data = await api('/api/config');
+      const config = data.config || {};
+      config.companyDepth = r.value;
+      await api('/api/config', { method: 'POST', body: JSON.stringify(config) });
+      msg.textContent = '저장됐어요.'; msg.style.color = 'var(--green)';
+    } catch (e) { msg.textContent = '저장 실패: ' + e.message; msg.style.color = '#E5484D'; }
+    msg.style.display = 'block'; setTimeout(() => { msg.style.display = 'none'; }, 2500);
+  }));
 
   function renderInstitutionList(list) {
     const area = document.getElementById('institutionListArea');

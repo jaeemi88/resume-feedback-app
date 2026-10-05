@@ -70,6 +70,15 @@ function aiErrorText(status, data) {
 }
 
 import { fitLength } from './_fitlen.js';
+import Redis from 'ioredis';
+import { getClient } from './client-code.js';
+import { getCompanyBrief, readBrief, checkBriefLimit, cleanCompany } from './_company.js';
+
+let redis;
+function getRedis() {
+  if (!redis) redis = new Redis(process.env.REDIS_URL);
+  return redis;
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -79,6 +88,8 @@ export default async function handler(req, res) {
   const body = req.body || {};
   if (body.mode === 'defend') return defend(body, res);
   if (body.mode === 'finish') return finish(body, res);
+  // 🔎 기업 심화 분석 (2026-10-05, 모의면접 앱과 세트): '심화' 수업 학생 또는 유료 개인 고객만
+  if (body.mode === 'companyBrief') return companyBrief(req, res);
   if (body.mode !== 'draft') {
     return res.status(400).json({ error: '지원하지 않는 요청입니다.' });
   }
@@ -302,4 +313,42 @@ async function defend(body, res) {
     console.error('서버 오류:', err);
     return res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   }
+}
+
+
+// ---------- 🔎 기업 심화 분석 (2026-10-05) ----------
+// 강사 '알림 설정' 탭의 기업 분석 수준: off(끔) / basic(기본, 검색 없음) / deep(심화, 실시간 검색)
+// - 고객 코드(c)가 유효하면 수업 설정과 관계없이 심화 (유료 상품은 필수)
+async function companyBrief(req, res) {
+  const client = getRedis();
+  const body = req.body || {};
+  const company = cleanCompany(body.company);
+  if (company.length < 2) return res.status(400).json({ error: '기업 이름을 두 글자 이상 적어 주세요.' });
+  let clientCode = '';
+  let t = '';
+  if (body.c) {
+    try {
+      const d = await getClient(client, body.c);
+      if (!d || Date.now() > d.expiresAt || d.refundedAt) return res.status(403).json({ error: '이용 기간이 끝난 코드예요.' });
+      clientCode = d.code;
+    } catch (e) {
+      return res.status(500).json({ error: '확인 중 오류가 났어요.' });
+    }
+  } else {
+    t = String(body.t || '').trim().toLowerCase().replace(/[^a-z0-9가-힣_-]/g, '').slice(0, 40);
+    if (!t) return res.status(400).json({ error: '강사 코드가 없어요.' });
+    let config = null;
+    try {
+      const raw = await client.get(`resume_app_config:${t}`);
+      config = raw ? JSON.parse(raw) : null;
+    } catch (e) {}
+    if (!config || config.companyDepth !== 'deep') return res.status(403).json({ error: '이 수업에서는 기업 심화 분석을 쓰지 않아요.' });
+  }
+  const cached = await readBrief(client, company);
+  if (cached) return res.status(200).json({ brief: { ...cached, cached: true } });
+  const limMsg = await checkBriefLimit(client, { t: t ? 'r_' + t : '', clientCode });
+  if (limMsg) return res.status(429).json({ error: limMsg });
+  const r = await getCompanyBrief(client, company);
+  if (!r.ok) return res.status(r.status || 500).json({ error: r.error });
+  return res.status(200).json({ brief: r.brief });
 }
