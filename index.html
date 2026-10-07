@@ -1903,6 +1903,8 @@ function clientWireDraft(presetSelect, docTypeSelect) {
     const set = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.value = val; };
     set('studentNameInput', d.name); set('studentEmailInput', d.email);
     set('jobPostingInput', d.jobPosting); set('targetCompanyInput', d.company);
+    // 저장해 둔 지원 기업을 채운 뒤 알려 줘야 기업 분석이 다시 시작됨 (다시 들어온 유료 고객에게 카드가 안 나오던 문제, 2026-10-08)
+    if (d.company) { const ci = document.getElementById('targetCompanyInput'); if (ci) ci.dispatchEvent(new Event('input', { bubbles: true })); }
     if (d.presetId && Array.from(presetSelect.options).some(o => o.value === d.presetId)) presetSelect.value = d.presetId;
     const hr = document.querySelector(`input[name="hiringType"][value="${d.hiring === 'blind' ? 'blind' : 'general'}"]`);
     if (hr) hr.checked = true;
