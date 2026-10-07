@@ -149,7 +149,8 @@ export async function getCompanyBrief(redis, company) {
   const brief = {
     name: s(parsed.name, 40) || name,
     industry: s(parsed.industry, 80),
-    values: (Array.isArray(parsed.values) ? parsed.values : []).map((v) => s(v, 16)).filter(Boolean).slice(0, 5),
+    // 괄호 속 영문 등은 빼고 16자 — '진취성(Proactive&Ch'처럼 중간에 잘리지 않게 (2026-10-08)
+    values: (Array.isArray(parsed.values) ? parsed.values : []).map((v) => s(String(v || '').replace(/\s*[(\[][^)\]]*[)\]]?/g, ''), 16)).filter(Boolean).slice(0, 5),
     valuesNote: s(parsed.valuesNote, 60),
     issues: (Array.isArray(parsed.issues) ? parsed.issues : []).map((v) => s(v, 90)).filter(Boolean).slice(0, 3),
     tip: s(parsed.tip, 120),

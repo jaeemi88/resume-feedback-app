@@ -1759,10 +1759,15 @@ let RESUME_COMPANY_BRIEF = null;
 let RESUME_BRIEF_AUTO_TRIED = '';
 function resumeDeepOn() { return !!CLIENT || RESUME_COMPANY_DEPTH === 'deep'; }
 function resumeCompanyOff() { return !CLIENT && RESUME_COMPANY_DEPTH === 'off'; } // moa-ui.js 코치가 '어디에 지원하나요?'를 건너뛸 때 사용
-function sameCompanyName(a, b) { const n = x => String(x || '').toLowerCase().replace(/\s|주식회사|\(주\)|㈜/g, ''); return n(a) && n(a) === n(b); }
+// 회사 이름 비교 — 괄호 속 영문·(주)·띄어쓰기는 빼고 비교 (검색 결과가 '대한항공(Korean Air)'처럼 와도 같은 회사로, 2026-10-08)
+function sameCompanyName(a, b) { const n = x => String(x || '').toLowerCase().replace(/\(주\)|㈜|주식회사/g, '').replace(/\([^)]*\)|\[[^\]]*\]/g, '').replace(/\s/g, ''); return n(a) && n(a) === n(b); }
+// 기업 요약이 지금 적힌 회사 것인지 — 검색할 때 적었던 이름(query)과 결과 이름(name) 둘 다로 확인
+function briefMatches(b, company) { return !!b && (sameCompanyName(b.query, company) || sameCompanyName(b.name, company)); }
+// 인재상 키워드 표시용 — 괄호 속 영문(잘린 것 포함)은 빼고 보여 줌 (예전에 저장된 요약도 깔끔하게, 2026-10-08)
+const cleanKw = v => String(v || '').replace(/\s*[(\[][^)\]]*[)\]]?/g, '').trim() || String(v || '');
 function resumeBriefHtml(b) {
   const kw = (b.values || []).length
-    ? `<div class="cb-lbl">인재상 키워드</div><div class="cb-kw">${b.values.map(v => `<span>${escapeHtml(v)}</span>`).join('')}</div>`
+    ? `<div class="cb-lbl">인재상 키워드</div><div class="cb-kw">${b.values.map(v => `<span>${escapeHtml(cleanKw(v))}</span>`).join('')}</div>`
     : `<p class="cb-thin">${escapeHtml(b.valuesNote || '공식 인재상을 찾지 못했어요. 채용 홈페이지에서 확인해 보세요.')}</p>`;
   const issues = (b.issues || []).length
     ? `<details><summary>최근 이슈 ${b.issues.length}줄 더 보기</summary><ol>${b.issues.map(v => `<li>${escapeHtml(v)}</li>`).join('')}</ol></details>` : '';
@@ -1794,7 +1799,7 @@ function setupResumeCompanyField() {
     const b = RESUME_COMPANY_BRIEF;
     const name = input.value.trim();
     areas.forEach(a => {
-      if (b && sameCompanyName(b.name, name)) { a.innerHTML = `<div class="cb-card">${resumeBriefHtml(b)}</div>`; return; }
+      if (briefMatches(b, name)) { a.innerHTML = `<div class="cb-card">${resumeBriefHtml(b)}</div>`; return; }
       if (a === top && !name) { a.innerHTML = ''; return; }
       a.innerHTML = `<button type="button" class="cb-btn" ${busy ? 'disabled' : ''}>${busy ? '기업 정보를 검색하는 중... (30초 정도)' : '🔎 ' + (name ? escapeHtml(name) + ' ' : '이 기업 ') + '분석하기'}</button><p class="cb-err" role="alert">${escapeHtml(lastErr)}</p>`;
       a.querySelector('.cb-btn').onclick = run;
@@ -1809,7 +1814,7 @@ function setupResumeCompanyField() {
         body: JSON.stringify(CLIENT ? { mode: 'companyBrief', c: CLIENT.code, company: name } : { mode: 'companyBrief', t: TEACHER_ID, company: name }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.brief) throw new Error(d.error || '기업 정보를 찾지 못했어요. 잠시 후 다시 눌러 주세요.');
-      RESUME_COMPANY_BRIEF = d.brief;
+      RESUME_COMPANY_BRIEF = { ...d.brief, query: name };
     } catch (e) {
       lastErr = e.message || '인터넷 연결을 확인하고 다시 눌러 주세요.';
     }
@@ -1820,7 +1825,7 @@ function setupResumeCompanyField() {
     if (name.length >= 2 && !RESUME_COMPANY_BRIEF && RESUME_BRIEF_AUTO_TRIED !== name) { RESUME_BRIEF_AUTO_TRIED = name; run(); }
   }
   input.addEventListener('input', () => {
-    if (RESUME_COMPANY_BRIEF && !sameCompanyName(RESUME_COMPANY_BRIEF.name, input.value)) RESUME_COMPANY_BRIEF = null;
+    if (RESUME_COMPANY_BRIEF && !briefMatches(RESUME_COMPANY_BRIEF, input.value)) RESUME_COMPANY_BRIEF = null;
     lastErr = '';
     // 코치 대화에서 기업명을 답하면(칸에 직접 타이핑한 게 아니면) 바로 분석 시작
     if (document.activeElement !== input) autoRun(); else paint();
@@ -1832,7 +1837,7 @@ function setupResumeCompanyField() {
 // 첨삭 요청에 붙는 기업 요약 — 지원동기·입사 후 포부·에세이 문항에만
 function resumeBriefExtra(questionType, company) {
   const b = RESUME_COMPANY_BRIEF;
-  if (!b || !resumeDeepOn() || !sameCompanyName(b.name, company)) return '';
+  if (!b || !resumeDeepOn() || !briefMatches(b, company)) return '';
   if (!['지원동기', '입사후포부', '에세이'].includes(questionType)) return '';
   return `\n\n[지원 기업 조사 요약 — 웹 검색으로 확인, ${b.searchedAt || ''} 기준]\n기업: ${b.name}${b.industry ? ' — ' + b.industry : ''}`
     + ((b.values || []).length ? `\n공식 인재상 키워드: ${b.values.join(', ')}` : '')
