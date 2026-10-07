@@ -2078,10 +2078,44 @@ function studentTabsHtml() {
   `;
 }
 
+// '내 결과 확인' 탭을 다녀와도 쓰던 내용이 남도록 화면 안에 잠시 보관 (새로고침·창 닫기 전까지, 2026-10-08)
+let STUDENT_DRAFT = null;
+function keepStudentDraft() {
+  if (studentTab !== 'submit' || !document.querySelector('.item-block') || !document.getElementById('studentNameInput')) return;
+  const d = clientCollectResume();
+  const blocks = document.querySelectorAll('.item-block');
+  d.items.forEach((it, i) => { it.byType = blocks[i] && blocks[i]._byType ? JSON.parse(JSON.stringify(blocks[i]._byType)) : {}; });
+  const doc = document.getElementById('docTypeSelect');
+  d.docType = doc ? doc.value : '';
+  STUDENT_DRAFT = d;
+}
+function restoreStudentDraft(docTypeSelect) {
+  const d = STUDENT_DRAFT;
+  if (CLIENT || !d) return;
+  const set = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.value = val; };
+  set('studentNameInput', d.name); set('studentEmailInput', d.email);
+  set('jobPostingInput', d.jobPosting); set('targetCompanyInput', d.company);
+  const hr = document.querySelector(`input[name="hiringType"][value="${d.hiring === 'blind' ? 'blind' : 'general'}"]`);
+  if (hr) hr.checked = true;
+  if (d.docType && docTypeSelect.value !== d.docType) { docTypeSelect.value = d.docType; docTypeSelect.dispatchEvent(new Event('change', { bubbles: true })); }
+  const items = d.items || [];
+  for (let i = 1; i < items.length; i++) document.getElementById('addItemBtn').click();
+  const blocks = document.querySelectorAll('.item-block');
+  items.forEach((it, i) => {
+    const b = blocks[i]; if (!b) return;
+    const sel = b.querySelector('.item-questionType');
+    if (sel.value !== it.type) { sel.value = it.type; sel.dispatchEvent(new Event('change', { bubbles: true })); }
+    if (b._byType) Object.assign(b._byType, it.byType || {});
+    const put = (cls, val) => { const el = b.querySelector(cls); el.value = val || ''; el.dispatchEvent(new Event('input', { bubbles: true })); };
+    put('.item-question', it.question); put('.item-answer', it.answer);
+    put('.item-selfIntent', it.selfIntent); put('.item-prevAnswer', it.prevAnswer);
+  });
+}
+
 function wireStudentTabs() {
   if (CLIENT) return;
-  document.getElementById('tabSubmit').addEventListener('click', () => { studentTab = 'submit'; renderStudentView(); });
-  document.getElementById('tabLookup').addEventListener('click', () => { studentTab = 'lookup'; renderStudentView(); });
+  document.getElementById('tabSubmit').addEventListener('click', () => { keepStudentDraft(); studentTab = 'submit'; renderStudentView(); });
+  document.getElementById('tabLookup').addEventListener('click', () => { keepStudentDraft(); studentTab = 'lookup'; renderStudentView(); });
 }
 
 async function renderStudentLookup() {
@@ -2407,15 +2441,19 @@ function wireItemBlock(id, docTypeSelect) {
 
   const updatePlaceholder = () => { questionInput.placeholder = QUESTION_EXAMPLES[questionTypeSelect.value] || ''; };
   updatePlaceholder();
-  // 문항 유형마다 적은 문항을 따로 기억 — 다른 유형을 누르면 빈칸(또는 그 유형에 전에 적은 문항)으로 바뀜 (2026-10-07)
-  const questionByType = {};
+  // 문항 유형마다 적은 문항·답변을 따로 기억 — 다른 유형을 누르면 빈칸(또는 그 유형에 전에 적은 내용)으로 바뀜 (2026-10-07, 답변 10-08)
+  const byType = {};
+  block._byType = byType;
   let currentType = questionTypeSelect.value;
   questionTypeSelect.addEventListener('change', () => {
     if (questionTypeSelect.value !== currentType) {
-      questionByType[currentType] = questionInput.value;
+      byType[currentType] = { q: questionInput.value, a: answerInput.value };
       currentType = questionTypeSelect.value;
-      questionInput.value = questionByType[currentType] || '';
+      const saved = byType[currentType] || {};
+      questionInput.value = saved.q || '';
+      answerInput.value = saved.a || '';
       questionInput.dispatchEvent(new Event('input', { bubbles: true }));
+      answerInput.dispatchEvent(new Event('input', { bubbles: true }));
     }
     updatePlaceholder(); updateCounter();
   });
@@ -2567,6 +2605,7 @@ async function renderStudentSubmitForm() {
     itemsContainer.insertAdjacentHTML('beforeend', itemBlockHtml(id));
     wireItemBlock(id, docTypeSelect);
   });
+  restoreStudentDraft(docTypeSelect);
 
   document.querySelectorAll('input[name="hiringType"]').forEach(r => r.addEventListener('change', () => {
     document.querySelectorAll('.item-block').forEach(b => {
@@ -2687,6 +2726,7 @@ async function renderStudentSubmitForm() {
       statusMsg.className = 'status-msg';
       statusMsg.style.display = 'block';
       document.getElementById('itemsContainer').innerHTML = '';
+      STUDENT_DRAFT = null;
       document.getElementById('addItemBtn').style.display = 'none';
       submitBtn.style.display = 'none';
     } catch (e) {
@@ -2699,6 +2739,7 @@ async function renderStudentSubmitForm() {
     }
   });
   if (CLIENT) clientWireDraft(presetSelect, docTypeSelect);
+  else if (STUDENT_DRAFT && STUDENT_DRAFT.presetId && Array.from(presetSelect.options).some(o => o.value === STUDENT_DRAFT.presetId)) presetSelect.value = STUDENT_DRAFT.presetId;
 }
 
 // ---------- 추천 프리셋 라이브러리 (v2 · 2026.09) ----------
