@@ -195,8 +195,10 @@ function publicView(d) {
   };
 }
 
+// 고객 입장 링크 — 자소서·세트 상품은 짧은 주소(go.jinromoa.co.kr)로 (2026-10-07)
+export const RESUME_SHORT_URL = 'https://go.jinromoa.co.kr/';
 function entryLink(d) {
-  return (d.product === 'interview' ? INTERVIEW_APP_URL : RESUME_APP_URL) + '?c=' + d.code;
+  return (d.product === 'interview' ? INTERVIEW_APP_URL : RESUME_SHORT_URL) + '?c=' + d.code;
 }
 async function createClient(client, base, days) {
   for (let i = 0; i < 20; i++) {

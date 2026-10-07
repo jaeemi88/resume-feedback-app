@@ -1318,7 +1318,7 @@ function initClientManager(box, masterPw) {
     <div id="clList"><div class="empty">불러오는 중...</div></div>
   `;
   const $ = id => document.getElementById(id);
-  const linkOf = code => { const d = LIST.find(x => x.code === code); return (d && d.product === 'interview' ? INTERVIEW_APP_URL : location.origin + location.pathname) + '?c=' + code; };
+  const linkOf = code => { const d = LIST.find(x => x.code === code); return (d && d.product === 'interview' ? INTERVIEW_APP_URL : RESUME_SHORT_URL) + '?c=' + code; };
   const msgOf = d => `[진로모아커리어센터]\n예약해 주셔서 감사합니다.\n아래 링크에서 ${CLIENT_PRODUCT_NAMES[d.product] || ''}을(를) 진행해 주세요.\n\n${linkOf(d.code)}\n\n· 이용 기간: ${moaDate(d.expiresAt - 1, 'formal')}까지\n· 문항을 모두 모아 한 번에 제출해 주세요. 제출 후에는 수정할 수 없어요.`;
   async function post(body) {
     const res = await fetch('/api/client-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ master: masterPw, ...body }) });
@@ -1406,7 +1406,7 @@ function initClientManager(box, masterPw) {
       const rows = ALL.map(d => {
         const u = d.used || {};
         const parts = d.product === 'set' ? ['resume', 'interview'] : [d.product];
-        const link = (d.product === 'interview' ? INTERVIEW_APP_URL : location.origin + '/') + '?c=' + d.code;
+        const link = (d.product === 'interview' ? INTERVIEW_APP_URL : RESUME_SHORT_URL) + '?c=' + d.code;
         return {
           '등록일시': f(d.createdAt),
           '경로': d.auto ? '네이버 자동' : '직접 발급',
@@ -1483,7 +1483,7 @@ function initClientManager(box, masterPw) {
       const { item } = await post({ action: 'create', memo: $('clMemo').value, product: $('clProduct').value, days: $('clDays').value, job: $('clJob').value, company: $('clCompany').value, presetId: $('clPreset').value, email: $('clEmail').value, price: $('clPrice').value, items });
       $('clDone').innerHTML = `<div class="rb-done">✅ 코드 <b>${item.code}</b> 를 만들었어요.
         <div class="rb-btns" style="margin-top:8px"><button class="btn-primary" data-cl="copy" data-code="${item.code}">${SHARE_LABEL}</button></div>
-        <span style="color:var(--muted);font-size:12px">${escapeHtml((item.product === 'interview' ? INTERVIEW_APP_URL : location.origin + location.pathname) + '?c=' + item.code)}</span></div>`;
+        <span style="color:var(--muted);font-size:12px">${escapeHtml((item.product === 'interview' ? INTERVIEW_APP_URL : RESUME_SHORT_URL) + '?c=' + item.code)}</span></div>`;
       ['clMemo', 'clJob', 'clCompany', 'clEmail'].forEach(id => $(id).value = '');
       $('clAdd').style.display = 'none';
       await load();
@@ -1525,7 +1525,7 @@ function initClientManager(box, masterPw) {
   // ── 네이버 예약 자동 입장 링크 ──
   let SHOPS = [];
   // 네이버 입력칸에서 = 기호를 못 써서 /go/키 모양. 모의면접 상품은 처음부터 모의면접 앱 주소로
-  const shopLink = sh => (sh.product === 'interview' ? INTERVIEW_APP_URL : location.origin + '/') + 'go/' + sh.key;
+  const shopLink = sh => (sh.product === 'interview' ? INTERVIEW_APP_URL : RESUME_SHORT_URL) + 'go/' + sh.key;
   // 네이버 유의사항 칸은 · " = 같은 기호를 못 써서, 허용되는 기호(- , : ())만 사용
   const shopNotice = sh => `결제 후 아래 링크에서 이름, 이메일, 네이버 예약번호를 넣으면 바로 시작할 수 있어요.\n${shopLink(sh)}\n\n- 이용 기간: 시작한 날부터 ${sh.days}일\n- 작성 내용은 자동 저장돼요. 기간 안에는 나갔다가 다시 들어와도 이어서 쓸 수 있어요.\n- 다 마치면 최종 제출을 눌러 주세요. 제출은 한 번만 가능해요.\n- 최종 제출 전에는 전액 환불, 최종 제출 후에는 환불이 불가해요.\n- 제출 후 영업일 기준 2일 이내에 강사가 직접 검토한 결과를 이메일로 보내드려요.\n- 예약번호는 네이버 앱 예약 내역에서 확인할 수 있어요.`;
   function shopRow(sh) {
@@ -1786,7 +1786,8 @@ function setupResumeCompanyField() {
   document.getElementById('companyHint').textContent = "적어 주면 인재상·최근 소식을 검색해 '지원동기·입사 후 포부' 첨삭에 반영해 드려요.";
   // 대화형 시작(코치) 화면에서는 기본 정보 칸이 접혀 있어서, 문항 쓰는 구역 맨 위에도 같은 카드를 보여 줌
   let top = document.getElementById('companyBriefTop');
-  if (!top && items) { top = document.createElement('div'); top.id = 'companyBriefTop'; top.style.marginBottom = '12px'; items.parentNode.insertBefore(top, items); }
+  // 문항 칸 묶음(itemsContainer) 맨 앞에 넣음 — 바로 앞에 두면 화면 정리(moa-ui.js)가 먼저 돌 때 숨은 기본 정보 칸으로 같이 옮겨져 안 보였음 (2026-10-07)
+  if (!top && items) { top = document.createElement('div'); top.id = 'companyBriefTop'; top.style.marginBottom = '12px'; items.insertBefore(top, items.firstChild); }
   const areas = [area, top].filter(Boolean);
   let busy = false, lastErr = '';
   function paint() {
@@ -1843,6 +1844,7 @@ let CLIENT = null;
 let CLIENT_DRAFT = null;
 const CLIENT_PRODUCT_NAMES = { resume: '자소서 첨삭', interview: '모의면접', set: '세트 (자소서 → 모의면접)' };
 const INTERVIEW_APP_URL = 'https://moa-interview-app.vercel.app/';
+const RESUME_SHORT_URL = 'https://go.jinromoa.co.kr/'; // 고객에게 보내는 자소서 앱 짧은 주소 (2026-10-07 연결)
 
 function clientFilterOptions(html) {
   if (!CLIENT) return html;
@@ -2405,7 +2407,18 @@ function wireItemBlock(id, docTypeSelect) {
 
   const updatePlaceholder = () => { questionInput.placeholder = QUESTION_EXAMPLES[questionTypeSelect.value] || ''; };
   updatePlaceholder();
-  questionTypeSelect.addEventListener('change', () => { updatePlaceholder(); updateCounter(); });
+  // 문항 유형마다 적은 문항을 따로 기억 — 다른 유형을 누르면 빈칸(또는 그 유형에 전에 적은 문항)으로 바뀜 (2026-10-07)
+  const questionByType = {};
+  let currentType = questionTypeSelect.value;
+  questionTypeSelect.addEventListener('change', () => {
+    if (questionTypeSelect.value !== currentType) {
+      questionByType[currentType] = questionInput.value;
+      currentType = questionTypeSelect.value;
+      questionInput.value = questionByType[currentType] || '';
+      questionInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    updatePlaceholder(); updateCounter();
+  });
 
   wireScaffold(block, id);
   applyDocTypeToBlock(id, docTypeSelect.value);
