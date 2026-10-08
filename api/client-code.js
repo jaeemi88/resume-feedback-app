@@ -24,6 +24,7 @@
 //   상품별 고정 링크(?shop=키)를 네이버 예약 안내 문구에 넣어두면, 고객이 결제 후 스스로
 //   이름·이메일·예약번호를 넣고 바로 개인 코드를 받아 시작해요. (원장님 확인 없이 즉시)
 //   POST { action:'shopInfo', key }                       → 링크 정보 (누구나)
+//   POST { action:'shopList' }                            → 사용 중인 링크 목록 (누구나, go.jinromoa.co.kr 첫 화면 상품 고르기용)
 //   POST { action:'shopJoin', key, name, email, bookingNo, job, company } → 코드 발급 + 입장 링크 메일 (누구나)
 //   GET  ?shops=1&master=비밀번호                          → 링크 목록 (원장님)
 //   POST { action:'shopCreate'|'shopRotate'|'shopToggle'|'shopDelete'|'shopPrice', master, ... } (원장님)
@@ -371,6 +372,14 @@ export default async function handler(req, res) {
     }
 
     // ── 네이버 예약 자동 입장 (누구나) ──
+    // 주소만 입력하고 들어온 고객에게 상품을 고르게 함 (링크 키는 네이버 안내 문구에 이미 공개된 값)
+    if (req.method === 'POST' && body.action === 'shopList') {
+      const all = await client.hgetall(SHOPS);
+      const items = Object.values(all).map(r => { try { return JSON.parse(r); } catch (e) { return null; } })
+        .filter(s => s && s.active).sort((a, b) => a.createdAt - b.createdAt)
+        .map(s => ({ key: s.key, label: s.label, product: s.product, productName: PRODUCTS[s.product], days: s.days || DEFAULT_DAYS[s.product] || 7 }));
+      return res.status(200).json({ ok: true, items });
+    }
     if (req.method === 'POST' && (body.action === 'shopInfo' || body.action === 'shopJoin')) {
       const shop = await findShop(client, String(body.key || '').slice(0, 40));
       if (!shop || !shop.active) return res.status(404).json({ ok: false, error: '사용할 수 없는 링크예요. 진로모아로 문의해 주세요.' });
