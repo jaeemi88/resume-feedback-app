@@ -74,6 +74,9 @@ const DEFAULT_LIMITS = { resume: 2, interview: 2, set: 1 };
 const LEDGER = 'moa_client_ledger';            // 해시: 코드 → 정산 기록 JSON (5년 보관)
 const LEDGER_KEEP = 5 * 365 * 24 * 3600 * 1000;
 const ADMIN_FALLBACK = 'jinromoa@naver.com';
+// 상품별 기본 이용 기간 (2026-10-08 원장님 결정: 자소서 7일 · 모의면접 7일 · 세트 10일)
+export const DEFAULT_DAYS = { resume: 7, interview: 7, set: 10 };
+const daysOf = (raw, product) => { const n = parseInt(raw, 10); return n >= 1 && n <= 180 ? n : (DEFAULT_DAYS[product] || 7); };
 export const RESUME_APP_URL = 'https://resume-feedback-app-phi.vercel.app/';
 export const INTERVIEW_APP_URL = 'https://moa-interview-app.vercel.app/';
 
@@ -393,7 +396,7 @@ export default async function handler(req, res) {
           return res.status(409).json({ ok: false, error: '이미 등록된 예약번호예요. 처음 등록한 이메일의 안내 메일을 확인하시거나 진로모아로 문의해 주세요.' });
         }
       }
-      const days = shop.days || 14;
+      const days = shop.days || DEFAULT_DAYS[shop.product] || 7;
       const now = Date.now();
       // 하루 등록 상한 (네이버 하루 예약 수와 같게) — 넘으면 등록은 받되 제출은 원장님 확인 후
       const dayKey = DAILY(kstYmd(now), shop.product);
@@ -443,14 +446,14 @@ export default async function handler(req, res) {
     }
     if (req.method === 'POST' && body.action === 'shopCreate') {
       const product = PRODUCTS[body.product] ? body.product : 'set';
-      let days = parseInt(body.days, 10); if (!(days >= 1 && days <= 180)) days = 14;
+      const days = daysOf(body.days, product);
       let maxItems = parseInt(body.maxItems, 10); if (!(maxItems >= 1 && maxItems <= RESUME_ITEMS.length)) maxItems = RESUME_ITEMS.length;
       const id = 'shop_' + Date.now().toString(36);
       const shop = { id, key: genShopKey(), label: clean(body.label, 30) || PRODUCTS[product], product, days, maxItems, price: cleanPrice(body.price), active: true, createdAt: Date.now() };
       await client.hset(SHOPS, id, JSON.stringify(shop));
       return res.status(200).json({ ok: true, item: shop });
     }
-    if (req.method === 'POST' && ['shopRotate', 'shopToggle', 'shopDelete', 'shopPrice'].includes(body.action)) {
+    if (req.method === 'POST' && ['shopRotate', 'shopToggle', 'shopDelete', 'shopPrice', 'shopDays'].includes(body.action)) {
       const raw = await client.hget(SHOPS, String(body.id || ''));
       if (!raw) return res.status(404).json({ ok: false, error: '링크를 찾을 수 없어요.' });
       const shop = JSON.parse(raw);
@@ -458,6 +461,7 @@ export default async function handler(req, res) {
       if (body.action === 'shopRotate') shop.key = genShopKey();   // 옛 링크는 바로 막힘 (이미 받은 고객 코드는 그대로)
       if (body.action === 'shopToggle') shop.active = !shop.active;
       if (body.action === 'shopPrice') shop.price = cleanPrice(body.price); // 앞으로 등록하는 고객부터 적용
+      if (body.action === 'shopDays') shop.days = daysOf(body.days, shop.product); // 링크 주소는 그대로, 앞으로 등록하는 고객부터 적용
       await client.hset(SHOPS, shop.id, JSON.stringify(shop));
       return res.status(200).json({ ok: true, item: shop });
     }
@@ -476,8 +480,7 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST' && body.action === 'create') {
       const product = PRODUCTS[body.product] ? body.product : 'set';
-      let days = parseInt(body.days, 10);
-      if (!(days >= 1 && days <= 180)) days = 14;
+      const days = daysOf(body.days, product);
       let items = Array.isArray(body.items) ? body.items.filter(x => RESUME_ITEMS.includes(x)) : [];
       if (!items.length) items = RESUME_ITEMS.slice();
       const interviewCats = Array.isArray(body.interviewCats) ? body.interviewCats.map(x => clean(x, 40)).filter(Boolean).slice(0, 12) : [];
