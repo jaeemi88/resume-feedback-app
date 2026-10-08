@@ -1657,6 +1657,11 @@ async function route() {
     renderShopJoin(params.get('shop'));
     return;
   }
+  // go.jinromoa.co.kr 주소만 입력한 네이버 예약 고객 → 상품 고르기 (?start=1은 확인용)
+  if (!isAdmin && ((location.hostname === 'go.jinromoa.co.kr' && !location.search && !location.hash) || params.get('start') === '1')) {
+    renderShopPicker();
+    return;
+  }
   if (params.get('master') === '1') {
     document.body.classList.add('role-teacher');
     document.getElementById('roleBadge').textContent = '관리자';
@@ -1980,6 +1985,49 @@ function clientWireDraft(presetSelect, docTypeSelect) {
 
 // ---------- 네이버 예약 자동 입장 (2026-10-02) ----------
 // 네이버 예약 안내 문구에 넣어둔 상품별 고정 링크(?shop=키) → 고객이 스스로 등록하고 바로 시작
+// 주소(go.jinromoa.co.kr)만 입력하고 들어온 고객: 예약한 상품을 고르면 그 상품의 시작하기 화면으로
+async function renderShopPicker() {
+  document.body.classList.remove('role-teacher');
+  document.body.classList.add('role-student');
+  document.getElementById('roleBadge').textContent = '개인 고객';
+  document.querySelectorAll('.moa-hubbar a').forEach(a => a.style.display = 'none');
+  app.innerHTML = `<div class="card"><div class="empty">불러오는 중...</div></div>`;
+  let items = [];
+  try {
+    const r = await fetch('/api/client-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'shopList' }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.ok) throw new Error(d.error || '');
+    items = d.items || [];
+  } catch (e) {
+    app.innerHTML = `<div class="card"><h2>잠시 후 다시 열어 주세요</h2><p style="font-size:14px;color:var(--muted);line-height:1.7">상품 목록을 불러오지 못했어요. 계속 안 되면 진로모아로 문의해 주세요.</p></div>`;
+    return;
+  }
+  if (!items.length) {
+    app.innerHTML = `<div class="card"><h2>지금은 접수를 쉬고 있어요</h2><p style="font-size:14px;color:var(--muted);line-height:1.7">진로모아커리어센터로 문의해 주세요.</p></div>`;
+    return;
+  }
+  const order = { resume: 0, interview: 1, set: 2 };
+  items.sort((a, b) => (order[a.product] ?? 9) - (order[b.product] ?? 9));
+  const desc = { resume: 'AI 진단 + 강사 검수 첨삭', interview: 'AI 모의면접 + 강사 피드백', set: '자소서 첨삭 후 모의면접까지' };
+  const same = p => items.filter(i => i.product === p).length > 1; // 같은 상품 링크가 여러 개면 링크 이름도 함께 표시
+  app.innerHTML = `
+    <div class="card" style="background:var(--green-light);border-color:transparent">
+      <div style="font-size:17px;font-weight:800;color:var(--navy)">예약해 주셔서 감사해요</div>
+      <p style="font-size:13px;color:var(--muted);margin:6px 0 0;line-height:1.7">네이버에서 <b>예약한 상품</b>을 골라 주세요.<br>다음 화면에서 이름·이메일·예약번호를 넣으면 바로 시작돼요.</p>
+    </div>
+    <div class="card">
+      <h2>어떤 상품을 예약하셨나요?</h2>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
+        ${items.map(i => `
+        <a class="btn-primary" href="/go/${encodeURIComponent(i.key)}" style="display:flex;flex-direction:column;align-items:flex-start;justify-content:center;text-decoration:none;padding:12px 18px;border-radius:8px;line-height:1.5">
+          <span style="font-size:16px;font-weight:800">${escapeHtml(CLIENT_PRODUCT_NAMES[i.product] || i.productName)}${same(i.product) ? ` · ${escapeHtml(i.label)}` : ''}</span>
+          <span style="font-size:12.5px;font-weight:400;opacity:.85">${escapeHtml(desc[i.product] || '')} · 이용 기간 ${i.days}일</span>
+        </a>`).join('')}
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:12px;line-height:1.6">예약번호는 네이버 앱 › 예약 내역에서 확인할 수 있어요.</div>
+    </div>`;
+}
+
 async function renderShopJoin(key) {
   document.body.classList.remove('role-teacher');
   document.body.classList.add('role-student');
