@@ -496,6 +496,14 @@ export default async function handler(req, res) {
     const d = await getClient(client, body.code);
     if (!d) return res.status(404).json({ ok: false, error: '코드를 찾을 수 없어요.' });
 
+    // 입장 링크 메일 다시 보내기 — 원장님 화면에서 버튼 하나로 (카톡에서 고객을 찾지 않아도 되게, 2026-10-08)
+    if (req.method === 'POST' && body.action === 'resendMail') {
+      if (!d.email) return res.status(400).json({ ok: false, error: '이 고객은 이메일이 없어요. 안내문을 복사해서 톡톡·문자로 보내 주세요.' });
+      const ok = await mailEntryLink(d);
+      if (!ok) return res.status(502).json({ ok: false, error: '메일을 보내지 못했어요. 잠시 후 다시 눌러 주세요.' });
+      return res.status(200).json({ ok: true, item: await withUsed(client, d) });
+    }
+
     if (req.method === 'POST' && body.action === 'extend') {
       let days = parseInt(body.days, 10);
       if (!(days >= 1 && days <= 180)) days = 7;
