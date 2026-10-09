@@ -311,7 +311,7 @@
     write.style.display = 'none';
     card.insertBefore(write, itemsContainer);
     var head = el('div', { class: 'moa-write-head' },
-      '<h2 class="moa-h1">문항과 써 둔 답을<br>붙여 넣어 주세요</h2><p class="moa-sub" style="margin:0">문항에 글자 수 제한이 적혀 있으면 분량도 맞춰 드려요. 문항이 여러 개면 모두 넣고 한 번에 제출하세요.</p>');
+      '<h2 class="moa-h1">문항과 써 둔 답을<br>붙여 넣어 주세요</h2><p class="moa-sub" style="margin:0">문항에 글자 수 제한이 적혀 있으면 분량도 맞춰 드려요. 문항 유형을 눌러 칸마다 쓰면, 쓴 문항이 모두 한 번에 제출돼요.</p>');
     write.appendChild(head);
     var tail = [];
     var n = itemsContainer;
@@ -326,8 +326,6 @@
       if (statusMsg) dock.appendChild(statusMsg);
       btnRow.style.marginTop = '0';
     }
-    var addBtn = document.getElementById('addItemBtn');
-    if (addBtn) addBtn.textContent = '+ 문항 추가';
 
     // 요약 줄
     var summary = el('div', { class: 'moa-summary' }, '<p></p><button type="button">고치기</button>');
