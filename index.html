@@ -346,6 +346,13 @@
   .ex-count{font-size:12px;color:var(--muted)}
   .ex-final{background:#fff;border:2px solid #1F7A4D;border-radius:10px;padding:12px;margin-top:12px}
   .ex-final h4{margin:0 0 6px;color:#1F7A4D;font-size:14px}
+  .ex-final.ex-done{margin-top:0;background:#F7F8FA}
+  .ex-final.ex-done h4{font-size:16px;display:flex;flex-direction:column;gap:2px}
+  .ex-final.ex-done h4 span{font-size:12.5px;font-weight:400;color:var(--muted)}
+  .ex-final.ex-done .ex-text{font-size:15px;line-height:1.9}
+  .ex-before{margin-top:10px;font-size:13px;color:var(--muted)}
+  .ex-before summary{cursor:pointer;font-weight:700;padding:6px 2px}
+  .ex-before .ex-text{color:var(--muted);font-size:13.5px;line-height:1.8;background:#FAFAFB;border-radius:10px;padding:10px 12px;margin:4px 0 0}
   .ex-modal-bg{position:fixed;inset:0;background:rgba(20,20,40,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px}
   .ex-modal{background:#fff;border-radius:14px;max-width:520px;width:100%;max-height:88vh;overflow:auto;padding:20px}
   .ex-modal h3{margin:0 0 4px;color:var(--navy)}
@@ -4057,6 +4064,20 @@ function exInnerHtml(st) {
     const cls = 'ex-slot' + (sl.value ? ' mine' : '') + (st.open === p.k ? ' open' : '');
     return `<span class="${cls}" data-exkey="${st.key}" data-k="${p.k}" role="button" tabindex="0">${escapeHtml(sl.value || sl.example)}<sup class="ex-tag">${sl.value ? '내 경험' : '예시'}</sup></span>`;
   }).join('');
+  // 완성하기를 누른 뒤 (2026-10-09): 형광펜 초안 대신 '완성된 내 글'을 깨끗하게 보여 주고, 초안은 접어 둠
+  if (st.finalText && !st.editing) {
+    return `
+    <div class="ex-final ex-done">
+      <h4>✅ 완성된 내 글 <span>형광펜 없이 깨끗하게 정리했어요. 이제 이 글을 복사해서 제출하세요.</span></h4>
+      <p class="ex-text" style="padding:0">${exStaticHtml(st.finalText)}</p>
+      <div class="ex-actions ex-interactive">
+        <button type="button" class="btn-primary ex-copy-final" data-exkey="${st.key}">📋 완성된 글 복사</button>
+        <button type="button" class="btn-secondary ex-reedit" data-exkey="${st.key}">✏️ 다시 고치기</button>
+        <span class="ex-count">${exPlain(st.finalText).length}자${lim ? ` / ${lim}자` : ''}</span>
+      </div>
+    </div>
+    <details class="ex-before"><summary>바꾸기 전 초안 보기</summary><p class="ex-text">${escapeHtml(plain)}</p></details>`;
+  }
   return `
     ${n ? `<p class="ex-guide ex-interactive">🟨 노란 형광펜은 내 답변에 없어서 AI가 넣은 <b>예시</b>예요. 눌러서 <b>내 실제 경험</b>으로 바꿔 주세요.</p>
     <div class="ex-progress ex-interactive"><div class="ex-bar"><i style="width:${pct}%"></i></div><span>내 경험으로 바꾼 곳 <b>${done} / ${n}</b> · 완성도 <b>${pct}%</b></span></div>` : ''}
@@ -4066,11 +4087,7 @@ function exInnerHtml(st) {
       <button type="button" class="btn-secondary ex-copy" data-exkey="${st.key}">📋 복사하기</button>
       <span class="ex-count">${plain.length}자${lim ? ` / ${lim}자` : ''}</span>
     </div>
-    ${st.finalText ? `<div class="ex-final">
-      <h4>✅ 완성된 내 글</h4>
-      <p class="ex-text" style="padding:0">${exStaticHtml(st.finalText)}</p>
-      <div class="ex-actions ex-interactive"><button type="button" class="btn-primary ex-copy-final" data-exkey="${st.key}">📋 완성된 글 복사</button><span class="ex-count">${exPlain(st.finalText).length}자${lim ? ` / ${lim}자` : ''}</span></div>
-    </div>` : ''}`;
+`;
 }
 function exampleBlockHtml(item) {
   const text = String(item.polishedText || '');
@@ -4129,6 +4146,9 @@ function exRefresh(st) {
   document.querySelectorAll(`.ex-wrap[data-exkey="${st.key}"]`).forEach(w => { w.innerHTML = exInnerHtml(st); });
   exRenderSheet(st);
   if (typeof rsRefreshHero === 'function') rsRefreshHero(st.key);
+  // 바꿀 형광펜이 더 없으면 아래 단추를 '맨 위로'로 (2026-10-09)
+  const dockMain = document.querySelector('.rs-dock-main');
+  if (dockMain) dockMain.textContent = document.querySelector('.ex-slot:not(.mine):not(.static)') ? '형광펜 바꾸러 가기' : '맨 위로';
 }
 // 예시가 남은 채로 복사·저장할 때 경고 (⑨)
 function exLeftWarn(count) {
@@ -4167,6 +4187,7 @@ document.addEventListener('click', async (e) => {
     if (left && !exLeftWarn(left)) return;
     exCopyText(exPlain(st.finalText)); return;
   }
+  if (t.classList.contains('ex-reedit')) { st.editing = true; exRefresh(st); return; }
   if (t.classList.contains('ex-finish')) {
     const left = exLeft(st);
     if (left && !exLeftWarn(left)) return;
@@ -4174,6 +4195,7 @@ document.addEventListener('click', async (e) => {
     try {
       const r = await api('/api/coach', { method: 'POST', body: JSON.stringify({ mode: 'finish', text: exCompose(st, true), charLimit: st.charLimit }) });
       st.finalText = r.text || '';
+      st.editing = false;
       exSave(st);
     } catch (err) { alert('완성하지 못했어요: ' + err.message); }
     st.busy = false; exRefresh(st);
