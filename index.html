@@ -2517,8 +2517,10 @@ function itemBlockHtml(id) {
         </select>
       </div>
       <label class="item-question-label">자소서 문항</label>
+      <div class="item-q-hint" style="font-size:12px;color:var(--muted);line-height:1.6;margin:-2px 0 6px"></div>
       <textarea class="item-question" data-item-id="${id}"></textarea>
       <label class="item-answer-label">작성한 답변</label>
+      <div class="item-a-hint" style="font-size:12px;color:var(--muted);line-height:1.6;margin:-2px 0 6px"></div>
       <button type="button" class="btn-secondary sc-toggle-btn" data-item-id="${id}" style="font-size:13px;padding:7px 12px;margin-bottom:6px">💡 막막하면 눌러보세요 — 재료 꺼내기</button>
       <div class="sc-panel" data-item-id="${id}" style="display:none"></div>
       <div class="write-order">✍️ <b>초안은 직접</b> 쓰고, AI는 <b>다듬기·글자 수 조정</b>에만 쓰세요. 내 경험·내 말투가 남아야 면접에서 흔들리지 않아요.</div>
@@ -2592,17 +2594,24 @@ function applyDocTypeToBlock(id, docTypeVal) {
   const questionTypeSelect = block.querySelector('.item-questionType');
   const scToggle = block.querySelector('.sc-toggle-btn');
   const scPanel = block.querySelector('.sc-panel');
+  // 문항·답변 칸 아래 안내 (2026-10-09): 비워 두면 어떻게 되는지 미리 알려 줌
+  const setHints = (q, a) => {
+    const qh = block.querySelector('.item-q-hint'), ah = block.querySelector('.item-a-hint');
+    if (qh) qh.textContent = q; if (ah) ah.textContent = a;
+  };
   if (scToggle) scToggle.style.display = docTypeVal === 'cv' ? 'none' : '';
   if (scPanel && docTypeVal === 'cv') scPanel.style.display = 'none';
   if (docTypeVal === 'cv') {
     typeRow.style.display = 'none';
     qLabel.textContent = '경력·활동 항목명';
+    setHints('어떤 활동인지 이름과 기간을 적어 주세요. 비워 두면 "경력·활동"으로 제출돼요.', '한 줄 소개가 있어야 첨삭을 받아요. 비어 있는 칸은 제출에서 빠져요.');
     questionInput.placeholder = '예) 마케팅 서포터즈 활동 (2024.03~2024.08)';
     aLabel.textContent = '작성한 한 줄 소개 (경력기술서 문장)';
     answerInput.placeholder = '예) SNS 콘텐츠 기획 및 운영을 담당하여 팔로워를 6개월간 40% 증가시킴';
   } else {
     typeRow.style.display = 'none';
     qLabel.textContent = '자소서 문항';
+    setHints('회사가 준 문항을 그대로 붙여 넣어 주세요. 글자 수(예: 500자)까지 넣으면 분량도 맞춰 드려요. 비워 두면 문항 유형 이름으로 제출돼요.', '답변이 있어야 첨삭을 받아요. 답변이 비어 있는 칸은 제출에서 빠져요.');
     questionInput.placeholder = QUESTION_EXAMPLES[questionTypeSelect.value] || '';
     aLabel.textContent = '작성한 답변';
     answerInput.placeholder = '여기에 답변을 붙여넣거나 작성해 주세요.';
