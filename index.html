@@ -2791,7 +2791,7 @@ async function renderStudentSubmitForm() {
       return;
     }
 
-    const blocks = filledItemBlocks(); // 글을 쓴 칸은 탭이 숨어 있어도 모두 제출
+    let blocks = filledItemBlocks(); // 글을 쓴 칸은 탭이 숨어 있어도 모두 제출
     const failMsg = (msg, type) => {
       statusMsg.textContent = msg;
       statusMsg.className = 'status-msg error';
@@ -2799,11 +2799,30 @@ async function renderStudentSubmitForm() {
       if (type) refreshItemTabs(type);
     };
     if (!blocks.length) { failMsg('작성한 문항이 없어요. 문항 유형을 누르고 문항과 답변을 써 주세요.'); return; }
-    const halfDone = blocks.find(b => !b.querySelector('.item-question').value.trim() || !b.querySelector('.item-answer').value.trim());
-    if (halfDone) { failMsg(isCv ? '쓰다 만 칸이 있어요. 항목명과 한 줄 소개를 모두 채워 주세요.' : `'${blockTypeLabel(halfDone)}' 칸에 문항과 답변을 모두 채워 주세요.`, isCv ? '' : halfDone.dataset.type); return; }
+    // 반쯤 쓴 칸도 제출을 막지 않음 (2026-10-09): 답변이 없는 칸은 빼고 낼지, 문항이 빈 칸은 유형 이름으로 낼지 물어봄
+    const ask = o => window.moaConfirm ? window.moaConfirm(o) : Promise.resolve(confirm(o.title + '\n\n' + o.body));
+    const qOf = b => b.querySelector('.item-question').value.trim();
+    const ansOf = b => b.querySelector('.item-answer').value.trim();
+    const nameOf = b => isCv ? (qOf(b) || '항목') : blockTypeLabel(b);
+    const goTo = b => { if (!isCv) refreshItemTabs(b.dataset.type); };
+    const noAnswer = blocks.filter(b => !ansOf(b));
+    if (noAnswer.length === blocks.length) { failMsg(isCv ? '한 줄 소개(답변)를 써 주세요.' : `'${nameOf(noAnswer[0])}' 칸에 답변을 써 주세요.`, isCv ? '' : noAnswer[0].dataset.type); return; }
+    if (noAnswer.length) {
+      const names = noAnswer.map(b => `'${nameOf(b)}'`).join(', ');
+      if (!(await ask({ title: `답변이 없는 ${names} 칸은 빼고 제출할까요?`, body: '답변이 있는 문항만 첨삭을 받아요. 함께 받으려면 답변을 먼저 써 주세요.', stay: '답변 쓰러 가기', leave: '빼고 제출' }))) { goTo(noAnswer[0]); return; }
+      blocks = blocks.filter(ansOf);
+    }
+    const noQuestion = blocks.filter(b => !qOf(b));
+    if (noQuestion.length) {
+      const names = noQuestion.map(b => `'${nameOf(b)}'`).join(', ');
+      const go = await ask(isCv
+        ? { title: '항목명이 빈 칸이 있어요', body: '항목명(예: 마케팅 서포터즈 활동)을 적으면 첨삭이 더 정확해져요. 이대로 내면 "경력·활동"으로 제출돼요.', stay: '항목명 적으러 가기', leave: '이대로 제출' }
+        : { title: `${names} 칸에 자소서 문항이 비어 있어요`, body: '회사가 준 문항을 적으면 글자 수 제한까지 맞춰 첨삭해 드려서 더 정확해져요. 이대로 내면 문항 자리에 유형 이름이 들어가요.', stay: '문항 적으러 가기', leave: '이대로 제출' });
+      if (!go) { goTo(noQuestion[0]); const q = noQuestion[0].querySelector('.item-question'); if (q) q.focus(); return; }
+    }
     if (CLIENT && blocks.length > (CLIENT.maxItems || CLIENT.items.length)) { failMsg(`이 상품은 문항을 최대 ${(CLIENT.maxItems || CLIENT.items.length)}개까지 제출할 수 있어요. 지금 ${blocks.length}개를 쓰셨어요. 빼실 칸은 ✕로 비워 주세요.`); return; }
     const rawItems = blocks.map(b => ({
-      question: b.querySelector('.item-question').value.trim(),
+      question: qOf(b) || (isCv ? '경력·활동' : blockTypeLabel(b)),
       answer: b.querySelector('.item-answer').value.trim(),
       questionType: isCv ? '이력서항목' : b.querySelector('.item-questionType').value,
       framework: isCv ? 'RESUME' : b.querySelector('.item-questionType').selectedOptions[0].dataset.fw,
