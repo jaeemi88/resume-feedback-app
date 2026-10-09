@@ -1931,7 +1931,7 @@ function clientCollectResume() {
   return {
     name: v('studentNameInput'), email: v('studentEmailInput'), hiring: hire ? hire.value : 'general',
     presetId: v('presetSelect'), jobPosting: v('jobPostingInput'), company: v('targetCompanyInput'),
-    items: Array.from(document.querySelectorAll('.item-block')).map(b => ({
+    items: filledItemBlocks().map(b => ({
       type: b.querySelector('.item-questionType').value,
       question: b.querySelector('.item-question').value,
       answer: b.querySelector('.item-answer').value,
@@ -1952,17 +1952,7 @@ function clientWireDraft(presetSelect, docTypeSelect) {
     if (d.presetId && Array.from(presetSelect.options).some(o => o.value === d.presetId)) presetSelect.value = d.presetId;
     const hr = document.querySelector(`input[name="hiringType"][value="${d.hiring === 'blind' ? 'blind' : 'general'}"]`);
     if (hr) hr.checked = true;
-    const items = (d.items || []).slice(0, (CLIENT.maxItems || CLIENT.items.length));
-    for (let i = 1; i < items.length; i++) document.getElementById('addItemBtn').click();
-    const blocks = document.querySelectorAll('.item-block');
-    items.forEach((it, i) => {
-      const b = blocks[i]; if (!b) return;
-      const sel = b.querySelector('.item-questionType');
-      if (CLIENT.items.includes(it.type) && sel.value !== it.type) { sel.value = it.type; sel.dispatchEvent(new Event('change', { bubbles: true })); }
-      const put = (cls, val) => { const el = b.querySelector(cls); el.value = val || ''; el.dispatchEvent(new Event('input', { bubbles: true })); };
-      put('.item-question', it.question); put('.item-answer', it.answer);
-      put('.item-selfIntent', it.selfIntent); put('.item-prevAnswer', it.prevAnswer);
-    });
+    fillItemBlocks(d.items);
     if (state) state.textContent = '✅ 저장해 둔 내용을 불러왔어요.';
   }
   let timer = null, saving = false;
@@ -2172,8 +2162,6 @@ let STUDENT_DRAFT = null;
 function keepStudentDraft() {
   if (studentTab !== 'submit' || !document.querySelector('.item-block') || !document.getElementById('studentNameInput')) return;
   const d = clientCollectResume();
-  const blocks = document.querySelectorAll('.item-block');
-  d.items.forEach((it, i) => { it.byType = blocks[i] && blocks[i]._byType ? JSON.parse(JSON.stringify(blocks[i]._byType)) : {}; });
   const doc = document.getElementById('docTypeSelect');
   d.docType = doc ? doc.value : '';
   STUDENT_DRAFT = d;
@@ -2187,18 +2175,63 @@ function restoreStudentDraft(docTypeSelect) {
   const hr = document.querySelector(`input[name="hiringType"][value="${d.hiring === 'blind' ? 'blind' : 'general'}"]`);
   if (hr) hr.checked = true;
   if (d.docType && docTypeSelect.value !== d.docType) { docTypeSelect.value = d.docType; docTypeSelect.dispatchEvent(new Event('change', { bubbles: true })); }
-  const items = d.items || [];
-  for (let i = 1; i < items.length; i++) document.getElementById('addItemBtn').click();
-  const blocks = document.querySelectorAll('.item-block');
-  items.forEach((it, i) => {
-    const b = blocks[i]; if (!b) return;
-    const sel = b.querySelector('.item-questionType');
-    if (sel.value !== it.type) { sel.value = it.type; sel.dispatchEvent(new Event('change', { bubbles: true })); }
-    if (b._byType) Object.assign(b._byType, it.byType || {});
+  fillItemBlocks(d.items);
+}
+
+// 문항 유형마다 칸 하나 (2026-10-09) — 위 유형 단추는 칸을 바꾸는 탭이고, 글을 쓴 칸은 모두 모아서 제출
+// (같은 유형이 두 문항이면 한 칸에 묶어 쓰고 실제 제출 때 나눠 내도록 안내)
+let activeItemType = '';
+function blockFilled(b) { return ['.item-question', '.item-answer'].some(c => b.querySelector(c).value.trim()); }
+function filledItemBlocks() { return Array.from(document.querySelectorAll('.item-block')).filter(blockFilled); }
+function blockTypeLabel(b) { const o = b.querySelector('.item-questionType').selectedOptions[0]; return o ? o.textContent : ''; }
+// 저장해 둔 문항을 유형이 같은 칸에 채움 (예전 저장본에 같은 유형이 겹치면 남은 빈칸에)
+function fillItemBlocks(items) {
+  const blocks = Array.from(document.querySelectorAll('.item-block'));
+  const used = new Set();
+  (items || []).forEach(it => {
+    if (!it || !((it.question || '').trim() || (it.answer || '').trim())) return;
+    const b = blocks.find(x => !used.has(x) && x.dataset.type === it.type) || blocks.find(x => !used.has(x) && !blockFilled(x));
+    if (!b) return;
+    used.add(b);
     const put = (cls, val) => { const el = b.querySelector(cls); el.value = val || ''; el.dispatchEvent(new Event('input', { bubbles: true })); };
     put('.item-question', it.question); put('.item-answer', it.answer);
     put('.item-selfIntent', it.selfIntent); put('.item-prevAnswer', it.prevAnswer);
+    if ((document.getElementById('docTypeSelect') || {}).value === 'cv') b.dataset.cvOpen = '1';
   });
+  const first = filledItemBlocks()[0];
+  refreshItemTabs(first ? first.dataset.type : '');
+}
+function refreshItemTabs(showType) {
+  const tabs = document.getElementById('itemTypeTabs');
+  if (!tabs) return;
+  const blocks = Array.from(document.querySelectorAll('.item-block'));
+  const isCv = (document.getElementById('docTypeSelect') || {}).value === 'cv';
+  const addBtn = document.getElementById('addItemBtn');
+  if (showType) activeItemType = showType;
+  if (!blocks.some(b => b.dataset.type === activeItemType)) activeItemType = blocks[0] ? blocks[0].dataset.type : '';
+  tabs.style.display = isCv ? 'none' : '';
+  if (isCv) {
+    // 이력서: 첫 칸과 쓴 칸만 차례로 보여 주고, '+ 항목 추가'로 다음 빈칸을 엶
+    let shown = 0;
+    blocks.forEach((b, i) => { const on = i === 0 || blockFilled(b) || b.dataset.cvOpen === '1'; b.style.display = on ? '' : 'none'; if (on) shown++; });
+    if (addBtn) { addBtn.style.display = shown < blocks.length ? '' : 'none'; addBtn.textContent = '+ 항목 추가'; }
+  } else {
+    blocks.forEach(b => { b.style.display = b.dataset.type === activeItemType ? '' : 'none'; });
+    if (addBtn) addBtn.style.display = 'none';
+  }
+  tabs.querySelectorAll('.moa-chip').forEach(c => {
+    const b = blocks.find(x => x.dataset.type === c.dataset.type);
+    c.setAttribute('aria-pressed', String(c.dataset.type === activeItemType));
+    c.querySelector('.tab-done').textContent = b && blockFilled(b) ? ' ✓' : '';
+  });
+  const sum = document.getElementById('itemFilledSummary');
+  if (sum) {
+    const f = filledItemBlocks();
+    sum.style.display = isCv ? 'none' : '';
+    sum.innerHTML = f.length
+      ? `작성한 문항 <b>${f.length}개</b> · ${f.map(b => escapeHtml(blockTypeLabel(b))).join(' · ')}<br><span style="color:var(--muted)">제출하면 이 문항들이 모두 함께 제출돼요.</span>`
+      : '아직 작성한 문항이 없어요. 위 문항 유형을 눌러 문항마다 써 주세요.';
+  }
 }
 
 function wireStudentTabs() {
@@ -2463,8 +2496,8 @@ let itemCounter = 0;
 function itemBlockHtml(id) {
   return clientFilterOptions(`
     <div class="item-block" data-item-id="${id}" style="border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px;position:relative">
-      <button type="button" class="item-remove-btn" data-item-id="${id}" title="이 문항 삭제" style="position:absolute;top:12px;right:12px;background:none;border:none;color:var(--miss);font-size:18px;cursor:pointer;line-height:1">✕</button>
-      <div class="item-questionType-row" data-item-id="${id}">
+      <button type="button" class="item-remove-btn" data-item-id="${id}" title="이 칸 비우기" style="position:absolute;top:12px;right:12px;background:none;border:none;color:var(--miss);font-size:18px;cursor:pointer;line-height:1">✕</button>
+      <div class="item-questionType-row" data-item-id="${id}" style="display:none">
         <label>문항 유형 (진단 기준이 자동으로 적용됩니다)</label>
         <select class="item-questionType" data-item-id="${id}">
           <option value="성장과정" data-fw="PREP">성장과정(성장배경)</option>
@@ -2530,30 +2563,17 @@ function wireItemBlock(id, docTypeSelect) {
 
   const updatePlaceholder = () => { questionInput.placeholder = QUESTION_EXAMPLES[questionTypeSelect.value] || ''; };
   updatePlaceholder();
-  // 문항 유형마다 적은 문항·답변을 따로 기억 — 다른 유형을 누르면 빈칸(또는 그 유형에 전에 적은 내용)으로 바뀜 (2026-10-07, 답변 10-08)
-  const byType = {};
-  block._byType = byType;
-  let currentType = questionTypeSelect.value;
-  questionTypeSelect.addEventListener('change', () => {
-    if (questionTypeSelect.value !== currentType) {
-      byType[currentType] = { q: questionInput.value, a: answerInput.value };
-      currentType = questionTypeSelect.value;
-      const saved = byType[currentType] || {};
-      questionInput.value = saved.q || '';
-      answerInput.value = saved.a || '';
-      questionInput.dispatchEvent(new Event('input', { bubbles: true }));
-      answerInput.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-    updatePlaceholder(); updateCounter();
-  });
+  // 칸마다 문항 유형이 정해져 있음 (2026-10-09) — 유형을 바꾸려면 위 유형 단추로 다른 칸을 엶
+  questionTypeSelect.addEventListener('change', () => { updatePlaceholder(); updateCounter(); });
 
   wireScaffold(block, id);
   applyDocTypeToBlock(id, docTypeSelect.value);
 
   block.querySelector('.item-remove-btn').addEventListener('click', () => {
-    const allBlocks = document.querySelectorAll('.item-block');
-    if (allBlocks.length <= 1) { alert('최소 1개의 문항은 있어야 해요.'); return; }
-    block.remove();
+    if (blockFilled(block) && !confirm('이 칸에 쓴 문항과 답변을 지울까요? 지우면 제출에서 빠져요.')) return;
+    block.querySelectorAll('.item-question, .item-answer, .item-selfIntent, .item-prevAnswer, .sc-memo').forEach(el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
+    block.dataset.cvOpen = '';
+    refreshItemTabs();
   });
 }
 
@@ -2576,7 +2596,7 @@ function applyDocTypeToBlock(id, docTypeVal) {
     aLabel.textContent = '작성한 한 줄 소개 (경력기술서 문장)';
     answerInput.placeholder = '예) SNS 콘텐츠 기획 및 운영을 담당하여 팔로워를 6개월간 40% 증가시킴';
   } else {
-    typeRow.style.display = '';
+    typeRow.style.display = 'none';
     qLabel.textContent = '자소서 문항';
     questionInput.placeholder = QUESTION_EXAMPLES[questionTypeSelect.value] || '';
     aLabel.textContent = '작성한 답변';
@@ -2617,7 +2637,7 @@ async function renderStudentSubmitForm() {
     ${studentTabsHtml()}
     <div class="card">
       <h2>첨삭 요청</h2>
-      ${CLIENT ? `<p style="font-size:13px;color:var(--muted);margin:-4px 0 14px;line-height:1.7">첨삭받을 문항을 <b>모두 모아서 한 번에</b> 제출해 주세요. "+ 문항 추가"로 최대 ${(CLIENT.maxItems || CLIENT.items.length)}개까지 넣을 수 있어요. <b style="color:var(--text)">제출은 한 번만 가능하고, 제출 후에는 수정할 수 없어요.</b></p>` : `<p style="font-size:13px;color:var(--muted);margin:-4px 0 14px">자소서 문항이 여러 개면 아래 "+ 문항 추가"로 다 모아서 한 번에 제출해 주세요. ${limitNum === Infinity ? '' : limitNum === 1 ? '이 기기에서는 <b>한 번만</b> 제출할 수 있으니, ' : `이 기기에서는 <b>최대 ${limitNum}번</b>까지만 제출할 수 있으니, `}신중하게 작성한 뒤 제출해 주세요.</p>`}
+      ${CLIENT ? `<p style="font-size:13px;color:var(--muted);margin:-4px 0 14px;line-height:1.7">첨삭받을 문항을 <b>모두 모아서 한 번에</b> 제출해 주세요. 문항 유형을 눌러 칸마다 쓰면 되고, 최대 ${(CLIENT.maxItems || CLIENT.items.length)}개까지 넣을 수 있어요. <b style="color:var(--text)">제출은 한 번만 가능하고, 제출 후에는 수정할 수 없어요.</b></p>` : `<p style="font-size:13px;color:var(--muted);margin:-4px 0 14px">자소서 문항이 여러 개면 문항 유형을 눌러 칸마다 쓰고, 한 번에 제출해 주세요. ${limitNum === Infinity ? '' : limitNum === 1 ? '이 기기에서는 <b>한 번만</b> 제출할 수 있으니, ' : `이 기기에서는 <b>최대 ${limitNum}번</b>까지만 제출할 수 있으니, `}신중하게 작성한 뒤 제출해 주세요.</p>`}
       <label>이름</label>
       <input type="text" id="studentNameInput" placeholder="본인 이름을 입력해 주세요">
       <label>이메일 주소 (선택)</label>
@@ -2657,7 +2677,8 @@ async function renderStudentSubmitForm() {
       </div>
 
       <div id="itemsContainer" style="margin-top:18px"></div>
-      <button type="button" class="btn-add-preset" id="addItemBtn" style="margin-bottom:14px">+ 문항 추가</button>
+      <button type="button" class="btn-add-preset" id="addItemBtn" style="margin-bottom:14px;display:none">+ 항목 추가</button>
+      <div id="itemFilledSummary" style="font-size:13px;line-height:1.7;background:var(--navy-light);border-radius:8px;padding:10px 14px;margin:0 0 12px"></div>
 
       ${CLIENT ? `<div style="background:var(--navy-light);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.7;margin:4px 0 10px">
         ${CLIENT.product === 'set' ? '📌 <b>제출하면 끝이 아니에요!</b> 자기소개서를 제출하면 바로 <b>② 모의면접</b>으로 이어서 진행할 수 있어요. 모의면접도 같은 링크(코드)로 들어가요.<br>' : ''}
@@ -2676,8 +2697,29 @@ async function renderStudentSubmitForm() {
   const docTypeSelect = document.getElementById('docTypeSelect');
   const itemsContainer = document.getElementById('itemsContainer');
 
+  // 유형마다 칸 하나씩 만들고, 위에 유형 단추(탭)를 둠
+  itemsContainer.insertAdjacentHTML('beforeend', `<div id="itemTypeTabs" style="margin-bottom:12px">
+    <label style="margin-top:0">문항 유형 <span style="font-weight:400;color:var(--muted);font-size:12px">— 누르면 그 유형 칸으로 바뀌어요. 쓴 칸(✓)은 모두 함께 제출돼요.</span></label>
+    <div class="moa-chips" role="tablist" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    <div style="font-size:12px;color:var(--muted);margin-top:6px">같은 유형 문항이 2개면(예: 협업 경험 + 갈등 경험) 한 칸에 묶어 글자 수를 늘려 쓰고, 실제 제출 때 나눠 내세요.</div>
+  </div>`);
   itemsContainer.insertAdjacentHTML('beforeend', itemBlockHtml(firstId));
-  wireItemBlock(firstId, docTypeSelect);
+  const typeValues = Array.from(itemsContainer.querySelector('.item-questionType').options).map(o => [o.value, o.textContent]);
+  typeValues.forEach(([v, label], i) => {
+    const id = i === 0 ? firstId : itemCounter++;
+    if (i) itemsContainer.insertAdjacentHTML('beforeend', itemBlockHtml(id));
+    const b = itemsContainer.querySelector(`.item-block[data-item-id="${id}"]`);
+    b.dataset.type = v;
+    b.querySelector('.item-questionType').value = v;
+    wireItemBlock(id, docTypeSelect);
+    const chip = document.createElement('button');
+    chip.type = 'button'; chip.className = 'moa-chip'; chip.dataset.type = v; chip.setAttribute('role', 'tab');
+    chip.innerHTML = `${escapeHtml(label)}<span class="tab-done" style="font-weight:800"></span>`;
+    chip.addEventListener('click', () => { refreshItemTabs(v); const q = b.querySelector('.item-question'); if (q && !q.value.trim()) q.focus({ preventScroll: true }); });
+    itemsContainer.querySelector('#itemTypeTabs .moa-chips').appendChild(chip);
+  });
+  itemsContainer.addEventListener('input', e => { if (e.target.matches('.item-question, .item-answer')) refreshItemTabs(); });
+  refreshItemTabs(typeValues[0] && typeValues[0][0]);
 
   if (CLIENT) {
     if (CLIENT.job) document.getElementById('jobPostingInput').value = CLIENT.job;
@@ -2685,14 +2727,18 @@ async function renderStudentSubmitForm() {
     if (CLIENT.company) document.getElementById('targetCompanyInput').value = CLIENT.company;
   }
 
+  // 이력서(경력·활동) 모드에서만 보임: 다음 빈칸을 엶
   document.getElementById('addItemBtn').addEventListener('click', () => {
-    if (CLIENT && document.querySelectorAll('.item-block').length >= (CLIENT.maxItems || CLIENT.items.length)) {
+    const shown = Array.from(document.querySelectorAll('.item-block')).filter(b => b.style.display !== 'none').length;
+    if (CLIENT && shown >= (CLIENT.maxItems || CLIENT.items.length)) {
       alert(`이 상품은 문항을 최대 ${(CLIENT.maxItems || CLIENT.items.length)}개까지 넣을 수 있어요.`);
       return;
     }
-    const id = itemCounter++;
-    itemsContainer.insertAdjacentHTML('beforeend', itemBlockHtml(id));
-    wireItemBlock(id, docTypeSelect);
+    const next = Array.from(document.querySelectorAll('.item-block')).find(b => b.style.display === 'none');
+    if (!next) return;
+    next.dataset.cvOpen = '1';
+    refreshItemTabs();
+    const q = next.querySelector('.item-question'); if (q) q.focus();
   });
   restoreStudentDraft(docTypeSelect);
 
@@ -2707,6 +2753,7 @@ async function renderStudentSubmitForm() {
     document.querySelectorAll('.item-block').forEach(b => {
       applyDocTypeToBlock(parseInt(b.getAttribute('data-item-id'), 10), docTypeSelect.value);
     });
+    refreshItemTabs();
   });
 
   const presetSelect = document.getElementById('presetSelect');
@@ -2738,7 +2785,17 @@ async function renderStudentSubmitForm() {
       return;
     }
 
-    const blocks = Array.from(document.querySelectorAll('.item-block'));
+    const blocks = filledItemBlocks(); // 글을 쓴 칸은 탭이 숨어 있어도 모두 제출
+    const failMsg = (msg, type) => {
+      statusMsg.textContent = msg;
+      statusMsg.className = 'status-msg error';
+      statusMsg.style.display = 'block';
+      if (type) refreshItemTabs(type);
+    };
+    if (!blocks.length) { failMsg('작성한 문항이 없어요. 문항 유형을 누르고 문항과 답변을 써 주세요.'); return; }
+    const halfDone = blocks.find(b => !b.querySelector('.item-question').value.trim() || !b.querySelector('.item-answer').value.trim());
+    if (halfDone) { failMsg(isCv ? '쓰다 만 칸이 있어요. 항목명과 한 줄 소개를 모두 채워 주세요.' : `'${blockTypeLabel(halfDone)}' 칸에 문항과 답변을 모두 채워 주세요.`, isCv ? '' : halfDone.dataset.type); return; }
+    if (CLIENT && blocks.length > (CLIENT.maxItems || CLIENT.items.length)) { failMsg(`이 상품은 문항을 최대 ${(CLIENT.maxItems || CLIENT.items.length)}개까지 제출할 수 있어요. 지금 ${blocks.length}개를 쓰셨어요. 빼실 칸은 ✕로 비워 주세요.`); return; }
     const rawItems = blocks.map(b => ({
       question: b.querySelector('.item-question').value.trim(),
       answer: b.querySelector('.item-answer').value.trim(),
