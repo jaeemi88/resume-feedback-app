@@ -237,6 +237,10 @@
   }
   .moa-q:hover{ background:#C0D904; }
 
+  /* 문항 유형 탭: 글을 쓴 칸은 연한 회색으로 짙어지게 (2026-10-09) */
+  #itemTypeTabs .moa-chip.tab-filled{background:#DDE1E8;border-color:#A3AABA;color:#141A2E;font-weight:700}
+  #itemTypeTabs .moa-chip.tab-filled[aria-pressed="true"]{background:#141A2E;border-color:#141A2E;color:#fff}
+  #itemTypeTabs .moa-chip.tab-filled[aria-pressed="true"] .tab-done{color:#FFFFFF}
   /* ===== 2026-09-30 디자인 개편: 학생 결과 화면 '교정지' 스타일 ===== */
   .proof-kicker{font-size:12px;font-weight:700;letter-spacing:.12em;color:var(--green);margin-bottom:4px}
   .proof-title{font-family:'Noto Serif KR',serif;font-size:26px;font-weight:600;line-height:1.35;margin:0 0 6px;color:var(--text);border:none;padding:0}
@@ -2222,6 +2226,7 @@ function refreshItemTabs(showType) {
   tabs.querySelectorAll('.moa-chip').forEach(c => {
     const b = blocks.find(x => x.dataset.type === c.dataset.type);
     c.setAttribute('aria-pressed', String(c.dataset.type === activeItemType));
+    c.classList.toggle('tab-filled', !!(b && blockFilled(b))); // 쓴 칸은 회색으로 짙어짐 (2026-10-09)
     c.querySelector('.tab-done').textContent = b && blockFilled(b) ? ' ✓' : '';
   });
   const sum = document.getElementById('itemFilledSummary');
@@ -2699,7 +2704,8 @@ async function renderStudentSubmitForm() {
 
   // 유형마다 칸 하나씩 만들고, 위에 유형 단추(탭)를 둠
   itemsContainer.insertAdjacentHTML('beforeend', `<div id="itemTypeTabs" style="margin-bottom:12px">
-    <label style="margin-top:0">문항 유형 <span style="font-weight:400;color:var(--muted);font-size:12px">— 누르면 그 유형 칸으로 바뀌어요. 쓴 칸(✓)은 모두 함께 제출돼요.</span></label>
+    <label style="margin-top:0">문항 유형 <span style="font-weight:400;color:var(--muted);font-size:12px">— 누르면 그 유형 칸으로 바뀌어요.</span></label>
+    <div style="font-size:12px;color:var(--muted);margin:-2px 0 8px;line-height:1.6">✍️ 다 쓴 문항은 단추 색이 <b style="background:#DDE1E8;color:#141A2E;padding:0 5px;border-radius:4px">짙어지고 ✓</b>가 붙어요. 짙어진 문항은 모두 함께 제출돼요.</div>
     <div class="moa-chips" role="tablist" style="display:flex;flex-wrap:wrap;gap:6px"></div>
     <div style="font-size:12px;color:var(--muted);margin-top:6px">같은 유형 문항이 2개면(예: 협업 경험 + 갈등 경험) 한 칸에 묶어 글자 수를 늘려 쓰고, 실제 제출 때 나눠 내세요.</div>
   </div>`);
