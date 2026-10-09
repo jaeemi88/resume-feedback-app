@@ -109,11 +109,14 @@ export default async function handler(req, res) {
     // 나에게 배정된 센터 강의 (운영보드가 moa_assign:{강사코드}에 써 둠)
     if (req.method === 'GET' && req.query.assign) {
       const all = await client.hgetall('moa_assign:' + myT);
+      const hasCases = (await client.exists('jm:cases')) === 1; // 운영보드 강의 목록을 못 읽으면 지우지 않음
       const today = kstDay(Date.now()), now = Date.now();
       const lo = kstDay(now - 86400000), hi = kstDay(now + 14 * 86400000);
       const items = [];
       for (const [field, raw] of Object.entries(all || {})) {
         let a; try { a = JSON.parse(raw); } catch (e) { continue; }
+        // 운영보드에서 이미 지운 강의면 카드도 정리 (예전에 지워서 남아 있던 카드 포함, 2026-10-09)
+        if (hasCases && a.caseId && !(await client.hexists('jm:cases', a.caseId))) { await client.hdel('moa_assign:' + myT, field); continue; }
         const dates = Array.isArray(a.dates) ? a.dates.filter(Boolean) : [];
         if (dates.length && !dates.some(d => d >= lo && d <= hi)) continue; // 지난 강의·먼 강의는 숨김
         let live = null;
