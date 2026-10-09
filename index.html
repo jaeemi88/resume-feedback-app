@@ -4146,7 +4146,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ---------- 학생 결과 화면 (2026-10-03 B+C+D 통합안) ----------
-// 순서: 요약 카드 → 완성된 내 글 → 점검표 → 선생님 코멘트 → 교정지 → 꼬리질문 → 방어 테스트 → 자세히 보기(접기)
+// 순서 (2026-10-09 원장님 요청: 진단 → 고치기 → 완성 차례로): 요약 카드 → ① 교정지 → ② 점검표 → ③ 선생님 코멘트 → ④ 다듬은 초안(형광펜 바꿔 완성) → ⑤ 꼬리질문 → 방어 테스트 → 자세히 보기(접기)
 // 워드 파일은 별도 함수(wItemHtml)로 만들어서 이 순서와 무관. PDF는 접힌 칸까지 펼쳐서 인쇄.
 const RS_ITEMS = {}; // 예시 상태 키 → 있음 표시 (형광펜 바꾸러 가기 버튼용)
 const RS_LIST = []; // 문항 순서 → { item, idx, total } (요약 카드 새로고침용)
@@ -4206,25 +4206,7 @@ function resultItemBlockHtml(item, idx, total) {
     <div class="rs-hero" data-rsidx="${idx}"${key ? ` data-exkey="${key}"` : ''}>${rsHeroInner(item, idx, total)}</div>
     <div class="rs-q"><b>${escapeHtml(item.questionType === '이력서항목' ? '경력·활동 항목' : '기업 문항')}</b>${escapeHtml(item.question)}</div>
     <div class="result-block">
-      <h3>완성된 내 글</h3>
-      ${exampleBlockHtml(item)}
-    </div>
-    ${item.charLimitNote ? `<div class="result-block"><h3>글자수 초과 (제한 ${item.charLimit}자)</h3><p class="rs-warn">${escapeHtml(item.charLimitNote)}</p></div>` : ''}
-    <div class="result-block">
-      <h3>점검표 · ${(item.frameworkUsed || 'STAR')} 구조</h3>
-      ${proofChecklistHtml(item)}
-      ${riskFlagsHtml(item.riskFlags)}
-      ${trendCoachHtml(item)}
-    </div>
-    <div class="result-block">
-      <h3>선생님 코멘트</h3>
-      <div class="rs-comments">
-        ${item.strengths ? `<div class="rs-c good"><b>좋은 점</b><p>${escapeHtml(item.strengths)}</p></div>` : ''}
-        ${item.improvements ? `<div class="rs-c fix"><b>고칠 점</b><p>${escapeHtml(item.improvements)}</p></div>` : ''}
-      </div>
-    </div>
-    <div class="result-block">
-      <h3>교정지 — 제출한 답변과 메모</h3>
+      <h3>① 내가 쓴 글 — 교정지와 메모</h3>
       <div class="proof-legend">
         <span class="proof-chip p"><i></i>다듬을 표현</span>
         <span class="proof-chip y"><i></i>면접관이 멈칫할 표현</span>
@@ -4233,7 +4215,25 @@ function resultItemBlockHtml(item, idx, total) {
       ${proofSheetHtml(item)}
     </div>
     <div class="result-block">
-      <h3>예상 꼬리질문 (면접 대비)</h3>
+      <h3>② 점검표 · ${(item.frameworkUsed || 'STAR')} 구조</h3>
+      ${proofChecklistHtml(item)}
+      ${riskFlagsHtml(item.riskFlags)}
+      ${trendCoachHtml(item)}
+    </div>
+    <div class="result-block">
+      <h3>③ 선생님 코멘트</h3>
+      <div class="rs-comments">
+        ${item.strengths ? `<div class="rs-c good"><b>좋은 점</b><p>${escapeHtml(item.strengths)}</p></div>` : ''}
+        ${item.improvements ? `<div class="rs-c fix"><b>고칠 점</b><p>${escapeHtml(item.improvements)}</p></div>` : ''}
+      </div>
+    </div>
+    ${item.charLimitNote ? `<div class="result-block"><h3>글자수 초과 (제한 ${item.charLimit}자)</h3><p class="rs-warn">${escapeHtml(item.charLimitNote)}</p></div>` : ''}
+    <div class="result-block">
+      <h3>${key ? '④ 다듬은 초안 → 내 글로 완성하기' : '④ 다듬은 글'}</h3>
+      ${exampleBlockHtml(item)}
+    </div>
+    <div class="result-block">
+      <h3>⑤ 예상 꼬리질문 (면접 대비)</h3>
       ${followUpHtml(item.followUpQuestions)}
       ${interviewHandoffHtml(item)}
     </div>
@@ -4251,7 +4251,7 @@ function resultContentHtml(record) {
       <div id="resultExportArea">
       <p class="rs-kicker">첨삭 결과${record.studentName ? ` · ${escapeHtml(record.studentName)}님` : ''}</p>
       <h2 class="rs-title">선생님의 첨삭이 도착했어요</h2>
-      <p class="rs-sub">노란 형광펜(예시)을 내 경험으로 바꾸면 내 글이 완성돼요.${items.length > 1 ? ` 문항 ${items.length}개를 차례로 보여 드려요.` : ''}</p>
+      <p class="rs-sub">위에서부터 차례로 보세요. ① 내 글 진단 → ② 점검표 → ③ 선생님 코멘트 → ④ 노란 형광펜(예시)을 내 경험으로 바꾸면 내 글이 완성돼요.${items.length > 1 ? ` 문항 ${items.length}개를 차례로 보여 드려요.` : ''}</p>
       ${items.length > 1 ? `<nav class="rs-jump" aria-label="문항 바로가기">${items.map((it, i) => `<a href="#rs-${i}">${i + 1}. ${escapeHtml(it.questionType === '이력서항목' ? '경력·활동' : (it.questionType || '문항'))}</a>`).join('')}</nav>` : ''}
       ${record.jobPosting ? `<details class="rs-more" style="margin-bottom:14px"><summary>지원 채용공고 핵심 내용</summary><p style="white-space:pre-wrap;margin:8px 0 0">${escapeHtml(record.jobPosting)}</p></details>` : ''}
       ${items.map((it, idx) => `<div id="rs-${idx}" class="rs-anchor"></div>` + resultItemBlockHtml(it, idx, items.length)).join('')}
@@ -4368,7 +4368,7 @@ function wItemHtml(item, idx, total) {
     })();
   const commentLen = [item.interviewerInference, item.strengths, item.improvements, item.charLimitNote, item.intentGapComment].map(x => String(x || '').length).reduce((a, b) => a + b, 0);
   // 반 쪽(약 900자) 이하면 통째로 같은 쪽에, 더 길면 워드가 잘라 버리지 않게 넘김 허용
-  const commentHtml = commentLen <= 900 ? wSection(wTitle('💬 선생님 코멘트'), commentBody) : wTitle('💬 선생님 코멘트') + commentBody;
+  const commentHtml = commentLen <= 900 ? wSection(wTitle('💬 ③ 선생님 코멘트'), commentBody) : wTitle('💬 ③ 선생님 코멘트') + commentBody;
   const defs = (Array.isArray(item.defenseQuestions) ? item.defenseQuestions : []).filter(d => d && d.sentence && d.question);
   return `
     ${idx > 0 ? `<br clear="all" style="mso-special-character:line-break;page-break-before:always">` : ''}
@@ -4376,15 +4376,7 @@ function wItemHtml(item, idx, total) {
       <td style="background:${W.light};padding:5pt 10pt;font-family:${W.font};font-size:10pt;font-weight:bold;color:${W.purple}"><p style="margin:0;page-break-after:avoid">문항 ${idx + 1}${total > 1 ? ' / ' + total : ''} · ${escapeHtml(typeLabel)}</p></td></tr></table>
     <p style="page-break-after:avoid;margin:0 0 10pt;font-size:11pt;font-weight:bold;line-height:160%;font-family:${W.font}">${wEsc(item.question)}</p>
 
-    ${wTitle('✅ 완성된 내 글')}
-    <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse"><tr>
-      <td style="border:1.5pt solid ${W.green};padding:10pt 12pt;font-family:${W.font}">
-        <p style="margin:0;font-size:11pt;line-height:185%">${fin.html}</p>
-        <p style="margin:6pt 0 0;font-size:8.5pt;color:${W.muted};text-align:right">${fin.plainLen}자${lim ? ` / ${lim}자` : ''}</p>
-      </td></tr></table>
-    ${fin.left ? `<p style="margin:4pt 0 0;font-size:9pt;color:#8A6D00;font-family:${W.font}">🟨 노란 부분(예시 ${fin.left}곳)은 AI가 넣은 예시예요. 내 실제 경험으로 바꿔 써야 면접에서 흔들리지 않아요.</p>` : ''}
-
-    ${wTitle('📝 교정지 — 제출한 답변과 선생님 메모')}
+    ${wTitle('📝 ① 내가 쓴 글 — 교정지와 선생님 메모')}
     <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse"><tr>
       <td width="60%" valign="top" style="border:0.75pt solid ${W.line};padding:8pt 10pt;font-family:${W.font}">
         <p style="margin:0 0 4pt;font-size:9pt;font-weight:bold;color:${W.muted}">${isCv ? '경력·활동 항목' : '제출한 답변'} · ${escapeHtml(ps.lenInfo)}</p>
@@ -4393,11 +4385,20 @@ function wItemHtml(item, idx, total) {
         <p style="margin:0 0 6pt;font-size:9pt;font-weight:bold;color:${W.muted}">여백 메모</p>${notesHtml}</td>
     </tr></table>
 
-    ${wSection(wTitle(`☑️ 제출 전 점검표 · ${escapeHtml(item.frameworkUsed || 'STAR')} 구조`), `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">${checkRows}</table>`)}
+    ${wSection(wTitle(`☑️ ② 점검표 · ${escapeHtml(item.frameworkUsed || 'STAR')} 구조`), `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">${checkRows}</table>`)}
 
     ${commentHtml}
 
-    ${fuRows ? wSection(wTitle('🎤 예상 꼬리질문 (면접 대비)'), `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">${fuRows}</table>`) : ''}
+    ${wTitle(fin.left ? '✏️ ④ 다듬은 초안 — 노란 부분을 내 경험으로 바꾸면 완성' : '✅ ④ 완성된 내 글')}
+    <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse"><tr>
+      <td style="border:1.5pt solid ${W.green};padding:10pt 12pt;font-family:${W.font}">
+        <p style="margin:0;font-size:11pt;line-height:185%">${fin.html}</p>
+        <p style="margin:6pt 0 0;font-size:8.5pt;color:${W.muted};text-align:right">${fin.plainLen}자${lim ? ` / ${lim}자` : ''}</p>
+      </td></tr></table>
+    ${fin.left ? `<p style="margin:4pt 0 0;font-size:9pt;color:#8A6D00;font-family:${W.font}">🟨 노란 부분(예시 ${fin.left}곳)은 AI가 넣은 예시예요. 내 실제 경험으로 바꿔 써야 면접에서 흔들리지 않아요.</p>` : ''}
+
+
+    ${fuRows ? wSection(wTitle('🎤 ⑤ 예상 꼬리질문 (면접 대비)'), `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">${fuRows}</table>`) : ''}
     ${defs.length ? wSection(wTitle('🛡️ 이 문장, 면접에서 말할 수 있나요?'), defs.map(d => wBox('📌 "' + escapeHtml(exPlain(d.sentence)) + '"', '면접관: ' + escapeHtml(d.question), '#FFFFFF', W.purple)).join('')) : ''}`;
 }
 function buildWordHtml(record) {
