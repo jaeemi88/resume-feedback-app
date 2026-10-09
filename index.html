@@ -3328,12 +3328,18 @@ function diffHtml(oldStr, newStr) {
   }).join(' ');
 }
 
-function reviewItemBlockHtml(item, idx) {
+function reviewItemBlockHtml(item, idx, total) {
   const d = item.aiDraft || {};
   const framework = d.frameworkUsed || item.framework || 'STAR';
   return `
-    <div class="review-sub-item" data-idx="${idx}" style="border-top:1px solid var(--line);padding-top:14px;margin-top:14px">
-      <div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:8px">문항 ${idx + 1} · ${escapeHtml(item.questionType || '')} · ${framework}${item.hiringType ? ` · <span class="star-tag ${item.hiringType === 'blind' ? 'miss' : 'ok'}">${item.hiringType === 'blind' ? '블라인드 채용' : '일반 채용'}</span>` : ''}</div>
+    <div class="review-sub-item" data-idx="${idx}" style="border-top:2px solid var(--line);padding-top:18px;margin-top:${idx ? 28 : 14}px">
+      <!-- 문항 머리: 다음 문항이 시작되는 걸 한눈에 (2026-10-09) -->
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#141A2E;color:#fff;border-radius:10px;padding:10px 14px;margin-bottom:12px">
+        <span style="font-size:17px;font-weight:800">문항 ${idx + 1}${total > 1 ? `<span style="font-size:13px;font-weight:600;opacity:.7"> / ${total}</span>` : ''}</span>
+        <span style="font-size:17px;font-weight:800">· ${escapeHtml((CLIENT_ITEM_LABELS && CLIENT_ITEM_LABELS[item.questionType]) || (item.questionType === '이력서항목' ? '경력·활동 항목' : (item.questionType || '')))}</span>
+        <span style="font-size:12px;font-weight:700;background:rgba(255,255,255,.16);border-radius:999px;padding:2px 10px">${framework}</span>
+        ${item.hiringType ? `<span class="star-tag ${item.hiringType === 'blind' ? 'miss' : 'ok'}">${item.hiringType === 'blind' ? '블라인드 채용' : '일반 채용'}</span>` : ''}
+      </div>
       ${Array.isArray(item.memo) && item.memo.length ? `<div class="field-block" style="background:var(--navy-light);padding:10px 12px;border-radius:8px"><div class="fb-label">💡 학생이 적은 재료 메모 (코칭 참고용)</div>${item.memo.map(m => `<p style="margin:2px 0;font-size:13px"><b>${escapeHtml(m.label)}</b> ${escapeHtml(m.value)}</p>`).join('')}</div>` : ''}
       <div class="field-block">
         <div class="fb-label">자소서 문항</div>
@@ -3396,7 +3402,7 @@ function buildReviewCard(record, presetName) {
       </summary>
       <div style="margin-top:14px">
         ${record.jobPosting ? `<div class="field-block"><div class="fb-label">지원 채용공고 핵심 내용 (전체 문항 공통)</div><p style="white-space:pre-wrap">${escapeHtml(record.jobPosting)}</p></div>` : ''}
-        ${items.map((it, idx) => reviewItemBlockHtml(it, idx)).join('')}
+        ${items.map((it, idx) => reviewItemBlockHtml(it, idx, items.length)).join('')}
         <div class="btn-row">
           <button class="btn-primary approve-btn">전체 승인 및 링크 생성</button>
           <button class="btn-danger reject-btn">삭제</button>
