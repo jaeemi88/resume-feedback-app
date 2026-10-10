@@ -71,6 +71,7 @@ function aiErrorText(status, data) {
 
 import { fitLength } from './_fitlen.js';
 import Redis from 'ioredis';
+import { createHash } from 'crypto';
 import { getClient } from './client-code.js';
 import { getCompanyBrief, readBrief, checkBriefLimit, cleanCompany } from './_company.js';
 
@@ -88,6 +89,8 @@ export default async function handler(req, res) {
   const body = req.body || {};
   if (body.mode === 'defend') return defend(body, res);
   if (body.mode === 'finish') return finish(body, res);
+  // 🎁 무료 1문항 AI 진단 (2026-10-10): /free 페이지 — 1인 하루 1회, 전체 하루 30회, 저장 안 함
+  if (body.mode === 'freeCheck') return freeCheck(req, body, res);
   // 🔎 기업 심화 분석 (2026-10-05, 모의면접 앱과 세트): '심화' 수업 학생 또는 유료 개인 고객만
   if (body.mode === 'companyBrief') return companyBrief(req, res);
   if (body.mode !== 'draft') {
@@ -351,4 +354,97 @@ async function companyBrief(req, res) {
   const r = await getCompanyBrief(client, company);
   if (!r.ok) return res.status(r.status || 500).json({ error: r.error });
   return res.status(200).json({ brief: r.brief });
+}
+
+
+// ---------- 무료 1문항 AI 진단 (mode: 'freeCheck', 2026-10-10) ----------
+// 공개 페이지(/free)용. 누구나 쓸 수 있으므로 사용량을 Redis로 묶음 — 같은 사람(IP) 하루 1회, 전체 하루 30회
+// 입력한 글은 저장하지 않음 (횟수 세는 숫자만 이틀 뒤 자동 삭제)
+const FREE_DAILY_TOTAL = 30;
+const FREE_DAILY_PER_IP = 1;
+const kstDay = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10).replace(/-/g, '');
+
+async function freeCheck(req, body, res) {
+  const question = clip(body.question, 500);
+  const answer = clip(body.answer, 1500);
+  const type = clip(body.type, 20);
+  if (!question) return res.status(400).json({ error: '자소서 문항을 적어 주세요.' });
+  if (answer.length < 20) return res.status(400).json({ error: '답변을 20자 이상 적어 주세요.' });
+
+  const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
+  const ipHash = createHash('sha256').update('moa-free:' + ip).digest('hex').slice(0, 24);
+  const day = kstDay();
+  const ipKey = `free_check:ip:${day}:${ipHash}`;
+  const dayKey = `free_check:day:${day}`;
+  let r = null;
+  try {
+    r = getRedis();
+    const ipCount = await r.incr(ipKey); await r.expire(ipKey, 172800);
+    if (ipCount > FREE_DAILY_PER_IP) {
+      return res.status(429).json({ error: '무료 진단은 하루 1번이에요. 내일 다시 이용해 주세요.', limit: 'ip' });
+    }
+    const dayCount = await r.incr(dayKey); await r.expire(dayKey, 172800);
+    if (dayCount > FREE_DAILY_TOTAL) {
+      await r.decr(ipKey);
+      return res.status(429).json({ error: `오늘 준비한 무료 진단 ${FREE_DAILY_TOTAL}회가 모두 마감됐어요. 내일 다시 찾아 주세요.`, limit: 'day' });
+    }
+  } catch (e) {
+    console.error('무료 진단 횟수 확인 실패:', e);
+    return res.status(503).json({ error: '잠시 접속이 많아요. 조금 뒤 다시 눌러 주세요.' });
+  }
+  const refund = async () => { try { await r.decr(ipKey); await r.decr(dayKey); } catch (e) {} };
+
+  const systemPrompt = `당신은 15년 경력의 자기소개서 첨삭 코치입니다. 처음 만난 학생이 자소서 문항 1개와 답변을 보내 무료 진단을 받습니다.
+짧고 정확하게, 학생이 바로 고칠 수 있는 것만 알려 주세요. 학생 글에 없는 경험·숫자·이름은 지어내지 않습니다.
+
+[점검 5가지 — 각각 status는 good(잘함) / fix(보완) 중 하나, note는 1문장]
+1. structure: 문항이 묻는 것에 첫 문장부터 답하는지, 경험-행동-결과-직무연결 흐름이 있는지
+2. concrete: 숫자·고유명사·본인 행동이 구체적인지
+3. jobLink: 지원 직무·기관과 연결되는지
+4. redFlag: 면접관이 의심하거나 감점할 표현(과장, 남 탓, 지원처를 바꿔도 되는 문장 등)이 있는지
+5. cliche: "열정", "많은 것을 배웠습니다", "소통 능력" 같은 상투어가 있는지
+
+[작성 규칙]
+- 모든 문장은 학생에게 말하듯 부드러운 존댓말. 큰따옴표 대신 작은따옴표를 쓴다.
+- summary: 이 답변의 현재 상태 한 문장 (칭찬 1 + 핵심 아쉬움 1)
+- redFlags: 면접관 눈에 걸리는 학생의 실제 문장을 최대 2개 그대로 인용(quote)하고 이유(why) 1문장. 없으면 빈 배열.
+- oneFix: 지금 당장 하나만 고친다면 무엇을 어떻게 — 2문장 이내. 예시 문장을 줄 때 학생 글에 없는 사실은 [빈칸]으로 둔다.
+
+[JSON 작성 주의] 아래 JSON 하나만 출력한다.
+{"summary":"","checks":{"structure":{"status":"good|fix","note":""},"concrete":{"status":"good|fix","note":""},"jobLink":{"status":"good|fix","note":""},"redFlag":{"status":"good|fix","note":""},"cliche":{"status":"good|fix","note":""}},"redFlags":[{"quote":"","why":""}],"oneFix":""}`;
+
+  const userMsg = `[문항 유형] ${type || '미지정'}\n[문항]\n${question}\n\n[학생 답변]\n${answer}`;
+  try {
+    let parsed = null;
+    for (let attempt = 1; attempt <= 2 && !parsed; attempt++) {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1200, system: systemPrompt, messages: [{ role: 'user', content: userMsg }] })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        console.error('Anthropic API 오류:', data);
+        await refund();
+        return res.status(500).json({ error: aiErrorText(response.status, data) });
+      }
+      const raw = (data.content || []).map((c) => c.text || '').join('').trim();
+      parsed = parseAIJson(raw);
+      if (!parsed || !parsed.checks) { console.error(`무료 진단 JSON 변환 실패 (${attempt}번째 시도):`, raw.slice(0, 300)); parsed = null; }
+    }
+    if (!parsed) { await refund(); return res.status(500).json({ error: 'AI 응답 형식이 올바르지 않습니다. 다시 눌러 주세요.' }); }
+    const keys = ['structure', 'concrete', 'jobLink', 'redFlag', 'cliche'];
+    const checks = {};
+    keys.forEach((k) => {
+      const c = (parsed.checks && parsed.checks[k]) || {};
+      checks[k] = { status: c.status === 'good' ? 'good' : 'fix', note: clip(c.note, 200) };
+    });
+    const redFlags = (Array.isArray(parsed.redFlags) ? parsed.redFlags : []).slice(0, 2)
+      .map((f) => ({ quote: clip(f && f.quote, 160), why: clip(f && f.why, 200) })).filter((f) => f.quote);
+    return res.status(200).json({ summary: clip(parsed.summary, 300), checks, redFlags, oneFix: clip(parsed.oneFix, 400) });
+  } catch (err) {
+    console.error('서버 오류:', err);
+    await refund();
+    return res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
 }

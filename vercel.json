@@ -17,6 +17,10 @@
     {
       "source": "/check",
       "destination": "/check.html"
+    },
+    {
+      "source": "/free",
+      "destination": "/free.html"
     }
   ]
 }
