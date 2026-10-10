@@ -394,6 +394,11 @@
   .rs-more{border:1px solid #E6E8EE;border-radius:14px;padding:0 16px;margin-top:6px}
   .rs-more > summary{min-height:48px;display:flex;align-items:center;font-size:14px;font-weight:700;color:#141A2E;cursor:pointer}
   .rs-more[open]{padding-bottom:12px}
+  .rs-review{margin:24px 0 0;padding:16px 18px;border-radius:16px;background:#F3F5F9;font-size:14px;line-height:1.7;color:#141A2E}
+  .rs-review p{margin:0 0 6px}
+  .rs-review .rs-review-h{font-size:16px;font-weight:800;margin-bottom:4px}
+  .rs-review ol{margin:6px 0 12px;padding-left:20px;color:#3B4256}
+  .rs-review .rs-survey-btn{width:100%;box-sizing:border-box;background:#03C75A}
   .rs-survey{margin:24px 0 0;padding:16px;border-radius:16px;background:#EEF4C2;text-align:center}
   .rs-survey p{margin:0 0 10px;font-size:14px;color:#3D4500}
   .rs-survey-btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 20px;border-radius:12px;background:#141A2E;color:#FFFFFF;font-weight:700;font-size:14px;text-decoration:none}
@@ -1906,6 +1911,8 @@ let CLIENT_DRAFT = null;
 const CLIENT_PRODUCT_NAMES = { resume: '자소서 첨삭', interview: '모의면접', set: '세트 (자소서 → 모의면접)' };
 const INTERVIEW_APP_URL = 'https://moa-interview-app.vercel.app/';
 const SIGNUP_SOURCES = ['네이버 검색', '네이버 지도·플레이스', '인스타그램', '블로그', '강의·특강', '지인 소개', '기타']; // 입장 화면 '어디서 알게 되셨어요?' — api/client-code.js SOURCES와 같게 (2026-10-10)
+// 네이버 플레이스 주소 (리뷰 남기기 단추). 비워 두면 단추 없이 '네이버 앱 › 예약 내역' 안내만 보여요 (2026-10-10)
+const NAVER_PLACE_URL = '';
 const RESUME_SHORT_URL = 'https://go.jinromoa.co.kr/'; // 고객에게 보내는 자소서 앱 짧은 주소 (2026-10-07 연결)
 
 function clientFilterOptions(html) {
@@ -4328,6 +4335,13 @@ function resultContentHtml(record) {
       ${record.jobPosting ? `<details class="rs-more" style="margin-bottom:14px"><summary>지원 채용공고 핵심 내용</summary><p style="white-space:pre-wrap;margin:8px 0 0">${escapeHtml(record.jobPosting)}</p></details>` : ''}
       ${items.map((it, idx) => `<div id="rs-${idx}" class="rs-anchor"></div>` + resultItemBlockHtml(it, idx, items.length)).join('')}
       </div>
+      ${record.clientCode ? `
+      <div class="rs-review">
+        <p class="rs-review-h">첨삭이 도움이 되셨나요?</p>
+        <p>네이버에 리뷰를 남겨 주시면 같은 고민을 하는 다음 취준생에게 큰 도움이 돼요.</p>
+        <ol><li>네이버 앱 › <b>예약 내역</b></li><li><b>진로모아 커리어센터</b> 예약 선택</li><li><b>리뷰 쓰기</b></li></ol>
+        ${NAVER_PLACE_URL ? `<a href="${NAVER_PLACE_URL}" target="_blank" rel="noopener" class="rs-survey-btn">네이버 리뷰 남기기</a>` : ''}
+      </div>` : ''}
       ${record.trackerProgramId ? `
       <div class="rs-survey">
         <p>첨삭 결과, 어떠셨나요? 30초면 끝나는 의견을 남겨 주세요.</p>
