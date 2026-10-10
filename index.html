@@ -399,6 +399,8 @@
   .rs-review .rs-review-h{font-size:16px;font-weight:800;margin-bottom:4px}
   .rs-review ol{margin:6px 0 12px;padding-left:20px;color:#3B4256}
   .rs-review .rs-survey-btn{width:100%;box-sizing:border-box;background:#03C75A}
+  .rs-refer{margin-top:16px;padding-top:14px;border-top:1px solid #E1E5EE}
+  .rs-refer-btn{width:100%;box-sizing:border-box;font:inherit;font-size:15px;font-weight:700;padding:13px 16px;border-radius:12px;border:1.5px solid #141A2E;background:#fff;color:#141A2E;cursor:pointer}
   .rs-survey{margin:24px 0 0;padding:16px;border-radius:16px;background:#EEF4C2;text-align:center}
   .rs-survey p{margin:0 0 10px;font-size:14px;color:#3D4500}
   .rs-survey-btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 20px;border-radius:12px;background:#141A2E;color:#FFFFFF;font-weight:700;font-size:14px;text-decoration:none}
@@ -800,6 +802,17 @@ async function moaShare(text) {
   catch (e) { prompt('아래 내용을 길게 눌러 복사해 주세요', text); return 'copied'; }
 }
 const SHARE_LABEL = IS_MOBILE ? '💬 카톡으로 보내기' : '💬 카톡용 복사';
+// 친구 소개 문구 (2026-10-10): 결과 화면 리뷰 카드의 버튼 — 친구는 플레이스 쿠폰 5,000원, 소개한 분은 AI 모의면접 1회 (원장님이 직접 발급)
+document.addEventListener('click', async e => {
+  const b = e.target.closest && e.target.closest('#rsReferBtn');
+  if (!b) return;
+  const name = b.dataset.name || '';
+  const text = `나 진로모아에서 자소서 첨삭 받아 봤는데, 강사님이 문항마다 직접 봐 주셔서 도움 많이 됐어.\n` +
+    `네이버 플레이스에서 '친구 소개 쿠폰' 받고 예약하면 5,000원 할인돼!\n` +
+    `예약하고 입장할 때 '어디서 알게 되셨어요?'에 '지인 소개' 고르고 ${name ? `'${name}'` : '내 이름'} 적어 줘 🙂\n` + PLACE_HOME_URL;
+  const r = await moaShare(text);
+  if (r === 'copied') { const o = b.textContent; b.textContent = '복사됐어요! 카톡에 붙여 넣어 주세요'; setTimeout(() => { b.textContent = o; }, 2500); }
+});
 // ⋯ 더보기 메뉴 (2026-10-08): 바깥을 누르면 닫히고, 한 번에 하나만 열리고, 화면 밖으로 잘리지 않게
 document.addEventListener('pointerdown', e => {
   document.querySelectorAll('details.rb-more[open]').forEach(m => { if (!m.contains(e.target)) m.open = false; });
@@ -1376,7 +1389,7 @@ function initClientManager(box, masterPw) {
     const items = (d.maxItems && d.maxItems < allItems.length) ? `문항 ${d.maxItems}개` : d.items.length === allItems.length ? '전 문항' : d.items.map(k => CLIENT_ITEM_LABELS[k]).join('·');
     return `<div class="rb-row"${d.refundedAt ? ' style="background:#FAFBFD"' : ''}>
       <div class="rb-top"><div class="rb-name">${d.auto ? '🤖 ' + escapeHtml(d.name || '') + ' · 예약 ' + escapeHtml(d.bookingNo || '') : escapeHtml(d.memo || '(메모 없음)')}<span class="rb-code">${d.code}</span></div><span>${d.hold ? '<span class="rb-badge" style="margin-right:4px;background:#FFF4DC;color:#9A6200">🟠 예약번호 대조 필요</span>' : ''}${d.refundedAt ? `<span class="rb-badge b-end" style="margin-right:4px">↩ 환불 ${won(d.refundAmount != null ? d.refundAmount : d.price)}</span>` : ''}<span class="rb-badge ${cls}">${label}</span></span></div>
-      <div class="rb-sub">${escapeHtml(CLIENT_PRODUCT_NAMES[d.product])} · ${escapeHtml(items)}${d.job ? ' · ' + escapeHtml(d.job) : ''}${d.company ? ' · ' + escapeHtml(d.company) : ''}${d.source ? ' · 📍 ' + escapeHtml(d.source) : ''}<br>
+      <div class="rb-sub">${escapeHtml(CLIENT_PRODUCT_NAMES[d.product])} · ${escapeHtml(items)}${d.job ? ' · ' + escapeHtml(d.job) : ''}${d.company ? ' · ' + escapeHtml(d.company) : ''}${d.source ? ' · 📍 ' + escapeHtml(d.source) : ''}${d.referrer ? ' · 🎁 소개: ' + escapeHtml(d.referrer) : ''}<br>
         ${left > 0 ? `${moaDate(d.expiresAt - 1, 'short')}까지 (D-${left})` : '이용 기간 끝남'} · ${d.price ? won(d.price) : '<b style="color:#B42318">금액 없음</b>'} · 이메일 ${d.email ? '있음' : '<b style="color:#B42318">없음</b>'}${d.used && d.used.resume ? ' · 자소서 확인코드 ' + escapeHtml(d.used.resume.reviewCode || '-') : ''}${d.hold ? `<br><b style="color:#9A6200">⏳ 제출 보류 중</b> — ${escapeHtml(d.hold.reason || '')}. 네이버 예약 내역에서 예약번호를 찾아 확인되면 아래 버튼을 눌러 주세요. (작성은 지금도 할 수 있고, 확인 전에는 AI 첨삭이 돌지 않아요)` : ''}</div>
       <div class="rb-btns">
         ${d.hold ? `<button class="btn-primary" data-cl="holdOff" data-code="${d.code}">✅ 예약 확인 완료</button>` : ''}
@@ -1448,6 +1461,7 @@ function initClientManager(box, masterPw) {
           '등록일시': f(d.createdAt),
           '경로': d.auto ? '네이버 자동' : '직접 발급',
           '알게 된 경로': d.source || '',
+          '소개한 분': d.referrer || '',
           '이름': d.name || '',
           '네이버 예약번호': d.bookingNo || '',
           '예약번호 대조': d.hold ? '대조 필요 (제출 보류 중)' : d.checkedAt ? '확인 완료 (' + f(d.checkedAt, 'day') + ')' : (d.auto ? '상한 이내 · 월말 대조' : '-'),
@@ -1912,6 +1926,7 @@ const CLIENT_PRODUCT_NAMES = { resume: '자소서 첨삭', interview: '모의면
 const INTERVIEW_APP_URL = 'https://moa-interview-app.vercel.app/';
 const SIGNUP_SOURCES = ['네이버 검색', '네이버 지도·플레이스', '인스타그램', '블로그', '강의·특강', '지인 소개', '기타']; // 입장 화면 '어디서 알게 되셨어요?' — api/client-code.js SOURCES와 같게 (2026-10-10)
 // 네이버 플레이스 주소 (리뷰 남기기 단추). 비워 두면 단추 없이 '네이버 앱 › 예약 내역' 안내만 보여요 (2026-10-10)
+const PLACE_HOME_URL = 'https://m.place.naver.com/place/2077053527/home'; // 친구 소개 문구에 넣는 플레이스 홈 (2026-10-10)
 const NAVER_PLACE_URL = 'https://m.place.naver.com/place/2077053527/review/visitor'; // 진로모아 커리어센터 플레이스 리뷰 탭
 const RESUME_SHORT_URL = 'https://go.jinromoa.co.kr/'; // 고객에게 보내는 자소서 앱 짧은 주소 (2026-10-07 연결)
 
@@ -2076,6 +2091,11 @@ async function renderShopJoin(key) {
       <label>지원 기업 <span style="font-weight:400;color:var(--muted)">(선택)</span></label><input type="text" id="sjCompany" placeholder="예) ○○병원">
       <label>진로모아를 어디서 알게 되셨어요? <span style="font-weight:400;color:var(--muted)">(선택)</span></label>
       <select id="sjFrom"><option value="">선택 안 함</option>${SIGNUP_SOURCES.map(s => `<option>${s}</option>`).join('')}</select>
+      <div id="sjRefBox" hidden>
+        <label>소개해 준 분 이름 <span style="font-weight:400;color:var(--muted)">(선택)</span></label>
+        <input type="text" id="sjRef" maxlength="30" placeholder="예) 김모아">
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">적어 주시면 소개해 준 분께 감사 선물(AI 모의면접 1회)을 보내 드려요.</div>
+      </div>
       <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;font-size:13px;line-height:1.6;margin-top:14px;cursor:pointer">
         <input type="checkbox" id="sjAgree" style="width:auto;margin-top:3px">
         <span>[필수] 개인정보 수집·이용에 동의해요.<br><span style="color:var(--muted)">수집 항목: 이름·이메일·예약번호·작성 내용 / 목적: 첨삭·모의면접 결과 제공 / 보관: 작성 내용은 이용 기간이 끝나고 30일 뒤 자동 삭제, 결제·환불 기록(이름·이메일·예약번호·금액)은 법령에 따라 5년</span> <a href="https://moa-hub.vercel.app/privacy.html" target="_blank" rel="noopener">개인정보처리방침 보기</a></span>
@@ -2088,6 +2108,7 @@ async function renderShopJoin(key) {
       <div class="btn-row"><button class="btn-primary" id="sjGo">시작하기</button></div>
       <div class="status-msg" id="sjMsg"></div>
     </div>`;
+  document.getElementById('sjFrom').addEventListener('change', e => { document.getElementById('sjRefBox').hidden = e.target.value !== '지인 소개'; }); // 친구 추천 (2026-10-10)
   document.getElementById('sjGo').addEventListener('click', async () => {
     const btn = document.getElementById('sjGo'), msg = document.getElementById('sjMsg');
     const v = id => document.getElementById(id).value.trim();
@@ -2099,7 +2120,7 @@ async function renderShopJoin(key) {
     if (!document.getElementById('sjRefund').checked) return fail('취소·환불 규정을 확인하고 체크해 주세요.');
     btn.disabled = true; btn.textContent = '준비하는 중...';
     try {
-      const d = await post({ action: 'shopJoin', key, name: v('sjName'), email: v('sjEmail'), bookingNo: v('sjBooking'), job: v('sjJob'), company: v('sjCompany'), source: v('sjFrom'), agreeRefund: true });
+      const d = await post({ action: 'shopJoin', key, name: v('sjName'), email: v('sjEmail'), bookingNo: v('sjBooking'), job: v('sjJob'), company: v('sjCompany'), source: v('sjFrom'), referrer: v('sjFrom') === '지인 소개' ? v('sjRef') : '', agreeRefund: true });
       location.href = d.link;
     } catch (e) { fail(e.message); btn.disabled = false; btn.textContent = '시작하기'; }
   });
@@ -4341,6 +4362,11 @@ function resultContentHtml(record) {
         <p>네이버에 리뷰를 남겨 주시면 같은 고민을 하는 다음 취준생에게 큰 도움이 돼요.</p>
         <ol><li>네이버 앱 › <b>예약 내역</b></li><li><b>진로모아 커리어센터</b> 예약 선택</li><li><b>리뷰 쓰기</b></li></ol>
         ${NAVER_PLACE_URL ? `<a href="${NAVER_PLACE_URL}" target="_blank" rel="noopener" class="rs-survey-btn">네이버 리뷰 남기기</a>` : ''}
+        <div class="rs-refer">
+          <p class="rs-review-h">친구에게도 알려 주세요</p>
+          <p>친구는 <b>5,000원 할인 쿠폰</b>, 소개해 주신 분께는 <b>AI 모의면접 1회</b>를 선물로 드려요. 친구가 예약 후 입장할 때 '지인 소개'를 고르고 ${record.studentName ? `<b>${escapeHtml(record.studentName)}</b>` : '내'} 이름을 적으면 돼요.</p>
+          <button type="button" class="rs-refer-btn" id="rsReferBtn" data-name="${escapeHtml(record.studentName || '')}">${SHARE_LABEL.replace('💬 ', '')} · 친구 소개 문구</button>
+        </div>
       </div>` : ''}
       ${record.trackerProgramId ? `
       <div class="rs-survey">
