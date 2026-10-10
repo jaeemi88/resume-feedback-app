@@ -28,11 +28,11 @@ function netOf(r) {
 }
 
 export function buildReport(rows, now) {
-  const head = ['등록일시', '경로', '이름', '이메일', '네이버 예약번호', '상품', '판매 금액', '환불 금액', '환불일', '실매출', '환불 규정 동의', '자소서 제출', '면접 제출', '예약번호 대조', '오류 기록', '코드 삭제', '고객 코드'];
+  const head = ['등록일시', '경로', '알게 된 경로', '이름', '이메일', '네이버 예약번호', '상품', '판매 금액', '환불 금액', '환불일', '실매출', '환불 규정 동의', '자소서 제출', '면접 제출', '예약번호 대조', '오류 기록', '코드 삭제', '고객 코드'];
   const ledger = [head, ...rows.map(r => {
     const { price, rf, net } = netOf(r);
     const sub = r.submitted || {};
-    return [ymdhm(r.createdAt), r.auto ? '네이버 자동' : '직접 발급', r.name, r.email, r.bookingNo, PRODUCTS[r.product] || r.product,
+    return [ymdhm(r.createdAt), r.auto ? '네이버 자동' : '직접 발급', r.source || '', r.name, r.email, r.bookingNo, PRODUCTS[r.product] || r.product,
       price, r.refundedAt ? rf : '', ymd(r.refundedAt), net, ymdhm(r.refundAgreedAt),
       sub.resume ? ymdhm(sub.resume) : '', sub.interview ? ymdhm(sub.interview) : '',
       r.checkedAt ? '확인 완료 ' + ymd(r.checkedAt) : (r.holdReason ? '대조 필요' : ''),
@@ -55,7 +55,11 @@ export function buildReport(rows, now) {
   const tot = last.reduce((a, s) => ({ n: a.n + s.n, rn: a.rn + s.rn, rf: a.rf + s.rf, net: a.net + s.net }), { n: 0, rn: 0, rf: 0, net: 0 });
   const holds = rows.filter(r => r.holdReason && !r.checkedAt && !r.refundedAt && !r.deletedAt).length;
   const errs = rows.filter(r => (r.errors || []).some(e => ym(e.at) === lastYm)).length;
-  return { ledger: csv(ledger), summary: csv(summary), lastYm, tot, last, holds, errs };
+  // 지난달 '알게 된 경로'별 등록 수 (2026-10-10, 홍보 채널 효과 보기 — 삭제한 코드는 빼고)
+  const bySource = {};
+  rows.filter(r => ym(r.createdAt) === lastYm && !(r.deletedAt && !r.refundedAt) && r.auto)
+    .forEach(r => { const k = r.source || '응답 없음'; bySource[k] = (bySource[k] || 0) + 1; });
+  return { ledger: csv(ledger), summary: csv(summary), lastYm, tot, last, holds, errs, bySource };
 }
 
 export default async function handler(req, res) {
@@ -75,6 +79,7 @@ export default async function handler(req, res) {
     const text = `원장님, ${r.lastYm} 개인 고객 정산 요약이에요.\n\n` +
       `· 등록 ${r.tot.n}건 / 환불 ${r.tot.rn}건(${won(r.tot.rf)})\n· 실매출 ${won(r.tot.net)} (네이버 수수료 전)\n` +
       (r.last.length ? r.last.map(s => `   - ${s.p}: ${s.n}건, 실매출 ${won(s.net)}`).join('\n') + '\n' : '') +
+      (Object.keys(r.bySource).length ? `\n· 알게 된 경로 (네이버 예약 등록 기준)\n` + Object.entries(r.bySource).sort((a, b) => b[1] - a[1]).map(([k, n]) => `   - ${k}: ${n}건`).join('\n') + '\n' : '') +
       `\n· 예약번호 대조 대기: ${r.holds}건\n· 지난달 오류 기록 고객: ${r.errs}건\n\n` +
       `첨부 ① 정산장부_전체(5년 보관분) ② 월별요약 — 엑셀에서 바로 열려요.\n네이버 정산 내역과 실매출을 맞춰 보시고, 이 메일은 그대로 보관해 주세요.`;
     const tag = r.lastYm.replace('-', '');
