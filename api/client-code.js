@@ -25,7 +25,8 @@
 //   이름·이메일·예약번호를 넣고 바로 개인 코드를 받아 시작해요. (원장님 확인 없이 즉시)
 //   POST { action:'shopInfo', key }                       → 링크 정보 (누구나)
 //   POST { action:'shopList' }                            → 사용 중인 링크 목록 (누구나, go.jinromoa.co.kr 첫 화면 상품 고르기용)
-//   POST { action:'shopJoin', key, name, email, bookingNo, job, company } → 코드 발급 + 입장 링크 메일 (누구나)
+//   POST { action:'shopJoin', key, name, email, bookingNo, job, company, source } → 코드 발급 + 입장 링크 메일 (누구나)
+//        source: 어디서 알게 됐는지 (선택, SOURCES 중 하나) — 채널별 결제 수를 보려고 (2026-10-10)
 //   GET  ?shops=1&master=비밀번호                          → 링크 목록 (원장님)
 //   POST { action:'shopCreate'|'shopRotate'|'shopToggle'|'shopDelete'|'shopPrice', master, ... } (원장님)
 //   POST { action:'setPrice', master, code, price } / { action:'refund', master, code, refunded } → 정산용 (원장님)
@@ -67,6 +68,7 @@ const USED = (code, part) => `moa_client_used:${code}:${part}`; // 제출 1회 �
 const DRAFT = (code, part) => `moa_client_draft:${code}:${part}`; // 제출 전 임시 저장
 const DRAFT_MAX = 300 * 1024;                  // 임시 저장 최대 300KB
 const KEEP_AFTER_END = 30 * 24 * 3600;         // 기간 끝난 뒤 30일 지나면 Redis에서 자동 삭제 (개인정보처리방침 30일)
+export const SOURCES = ['네이버 검색', '네이버 지도·플레이스', '인스타그램', '블로그', '강의·특강', '지인 소개', '기타']; // 입장 화면 '어디서 알게 되셨어요?' (2026-10-10)
 const SHOPS = 'moa_client_shops';              // 해시: 링크 id → JSON (네이버 예약 자동 입장 링크)
 const BOOKINGS = 'moa_client_bookings';        // 해시: 네이버 예약번호 → 코드 (같은 번호 두 번 등록 막기)
 const LIMITS = 'moa_client_limits';            // JSON: 상품별 하루 자동 등록 상한
@@ -115,7 +117,7 @@ export async function ledgerSync(client, d, patch) {
     const row = {
       ...old,
       code: d.code, product: d.product, auto: !!d.auto, name: d.name || old.name || '', email: d.email || old.email || '',
-      bookingNo: d.bookingNo || old.bookingNo || '', memo: d.memo || '', shopLabel: d.shopLabel || '',
+      bookingNo: d.bookingNo || old.bookingNo || '', memo: d.memo || '', shopLabel: d.shopLabel || '', source: d.source || old.source || '',
       price: d.price || 0, createdAt: d.createdAt || old.createdAt || Date.now(), expiresAt: d.expiresAt,
       refundAgreedAt: d.refundAgreedAt || old.refundAgreedAt || null,
       refundedAt: d.refundedAt || null, refundAmount: d.refundedAt ? (d.refundAmount != null ? d.refundAmount : (d.price || 0)) : null,
@@ -416,6 +418,7 @@ export default async function handler(req, res) {
         product: shop.product, items: RESUME_ITEMS.slice(), maxItems: shop.maxItems || RESUME_ITEMS.length, interviewCats: [],
         memo: `예약 ${bookingNo}`, name, bookingNo, shopId: shop.id, shopLabel: shop.label, auto: true, price: shop.price || 0,
         job, company: clean(body.company, 40), presetId: await matchPreset(client, job), email,
+        source: SOURCES.includes(body.source) ? body.source : '',
         createdAt: now, expiresAt: now + days * 24 * 3600 * 1000, refundAgreedAt: now,
         ...(limit > 0 && nToday > limit ? { hold: { reason: `하루 상한 초과 (오늘 ${nToday}번째 · 상한 ${limit})`, at: now } } : {})
       };
