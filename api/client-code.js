@@ -27,6 +27,7 @@
 //   POST { action:'shopList' }                            → 사용 중인 링크 목록 (누구나, go.jinromoa.co.kr 첫 화면 상품 고르기용)
 //   POST { action:'shopJoin', key, name, email, bookingNo, job, company, source } → 코드 발급 + 입장 링크 메일 (누구나)
 //        source: 어디서 알게 됐는지 (선택, SOURCES 중 하나) — 채널별 결제 수를 보려고 (2026-10-10)
+//        referrer: source가 '지인 소개'일 때 소개해 준 분 이름 (선택) — 감사 선물(AI 모의면접 1회) 보낼 대상
 //   GET  ?shops=1&master=비밀번호                          → 링크 목록 (원장님)
 //   POST { action:'shopCreate'|'shopRotate'|'shopToggle'|'shopDelete'|'shopPrice', master, ... } (원장님)
 //   POST { action:'setPrice', master, code, price } / { action:'refund', master, code, refunded } → 정산용 (원장님)
@@ -117,7 +118,7 @@ export async function ledgerSync(client, d, patch) {
     const row = {
       ...old,
       code: d.code, product: d.product, auto: !!d.auto, name: d.name || old.name || '', email: d.email || old.email || '',
-      bookingNo: d.bookingNo || old.bookingNo || '', memo: d.memo || '', shopLabel: d.shopLabel || '', source: d.source || old.source || '',
+      bookingNo: d.bookingNo || old.bookingNo || '', memo: d.memo || '', shopLabel: d.shopLabel || '', source: d.source || old.source || '', referrer: d.referrer || old.referrer || '',
       price: d.price || 0, createdAt: d.createdAt || old.createdAt || Date.now(), expiresAt: d.expiresAt,
       refundAgreedAt: d.refundAgreedAt || old.refundAgreedAt || null,
       refundedAt: d.refundedAt || null, refundAmount: d.refundedAt ? (d.refundAmount != null ? d.refundAmount : (d.price || 0)) : null,
@@ -419,6 +420,7 @@ export default async function handler(req, res) {
         memo: `예약 ${bookingNo}`, name, bookingNo, shopId: shop.id, shopLabel: shop.label, auto: true, price: shop.price || 0,
         job, company: clean(body.company, 40), presetId: await matchPreset(client, job), email,
         source: SOURCES.includes(body.source) ? body.source : '',
+        referrer: body.source === '지인 소개' ? clean(body.referrer, 30) : '', // 친구 추천: 소개해 준 분 이름 (2026-10-10)
         createdAt: now, expiresAt: now + days * 24 * 3600 * 1000, refundAgreedAt: now,
         ...(limit > 0 && nToday > limit ? { hold: { reason: `하루 상한 초과 (오늘 ${nToday}번째 · 상한 ${limit})`, at: now } } : {})
       };
