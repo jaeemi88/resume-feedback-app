@@ -13,6 +13,10 @@
     {
       "source": "/go/:key",
       "destination": "/index.html"
+    },
+    {
+      "source": "/check",
+      "destination": "/check.html"
     }
   ]
 }
