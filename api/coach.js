@@ -91,6 +91,8 @@ export default async function handler(req, res) {
   if (body.mode === 'finish') return finish(body, res);
   // 🎁 무료 1문항 AI 진단 (2026-10-10): /free 페이지 — 1인 하루 1회, 전체 하루 30회, 저장 안 함
   if (body.mode === 'freeCheck') return freeCheck(req, body, res);
+  // 📦 서류 블랙박스 검사 (2026-10-14): /blackbox 페이지 — 떨어진 서류를 거름망 3단계로 판독. 1인 하루 1회, 전체 하루 30회, 저장 안 함
+  if (body.mode === 'blackboxCheck') return blackboxCheck(req, body, res);
   // 🔎 기업 심화 분석 (2026-10-05, 모의면접 앱과 세트): '심화' 수업 학생 또는 유료 개인 고객만
   if (body.mode === 'companyBrief') return companyBrief(req, res);
   if (body.mode !== 'draft') {
@@ -442,6 +444,106 @@ async function freeCheck(req, body, res) {
     const redFlags = (Array.isArray(parsed.redFlags) ? parsed.redFlags : []).slice(0, 2)
       .map((f) => ({ quote: clip(f && f.quote, 160), why: clip(f && f.why, 200) })).filter((f) => f.quote);
     return res.status(200).json({ summary: clip(parsed.summary, 300), checks, redFlags, oneFix: clip(parsed.oneFix, 400) });
+  } catch (err) {
+    console.error('서버 오류:', err);
+    await refund();
+    return res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+}
+
+
+// ---------- 서류 블랙박스 검사 (mode: 'blackboxCheck', 2026-10-14) ----------
+// 공개 페이지(/blackbox)용. 이미 써서 낸(떨어진) 서류를 면접관 거름망 3단계(형식·직무 연결·근거)로 판독.
+// 인스타 릴스 「서류 블랙박스」 시리즈와 같은 말을 씀. 사용량은 /free와 따로 셈 — 같은 사람(IP) 하루 1회, 전체 하루 30회
+// 입력한 글은 저장하지 않음 (횟수 세는 숫자만 이틀 뒤 자동 삭제)
+const BOX_DAILY_TOTAL = 30;
+const BOX_DAILY_PER_IP = 1;
+const BOX_STAGE = { fail: '서류에서 떨어진 글', wait: '결과를 기다리는 글', before: '다른 곳에 다시 내려는 글' };
+
+async function blackboxCheck(req, body, res) {
+  const question = clip(body.question, 500);
+  const answer = clip(body.answer, 1500);
+  const company = clip(body.company, 60);
+  const job = clip(body.job, 60);
+  const stage = BOX_STAGE[body.stage] ? body.stage : 'fail';
+  if (!question) return res.status(400).json({ error: '자소서 문항을 적어 주세요.' });
+  if (answer.length < 20) return res.status(400).json({ error: '답변을 20자 이상 적어 주세요.' });
+
+  const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
+  const ipHash = createHash('sha256').update('moa-box:' + ip).digest('hex').slice(0, 24);
+  const day = kstDay();
+  const ipKey = `box_check:ip:${day}:${ipHash}`;
+  const dayKey = `box_check:day:${day}`;
+  let r = null;
+  try {
+    r = getRedis();
+    const ipCount = await r.incr(ipKey); await r.expire(ipKey, 172800);
+    if (ipCount > BOX_DAILY_PER_IP) {
+      return res.status(429).json({ error: '블랙박스 검사는 하루 1번이에요. 내일 다시 이용해 주세요.', limit: 'ip' });
+    }
+    const dayCount = await r.incr(dayKey); await r.expire(dayKey, 172800);
+    if (dayCount > BOX_DAILY_TOTAL) {
+      await r.decr(ipKey);
+      return res.status(429).json({ error: `오늘 준비한 무료 검사 ${BOX_DAILY_TOTAL}회가 모두 마감됐어요. 내일 다시 찾아 주세요.`, limit: 'day' });
+    }
+  } catch (e) {
+    console.error('블랙박스 검사 횟수 확인 실패:', e);
+    return res.status(503).json({ error: '잠시 접속이 많아요. 조금 뒤 다시 눌러 주세요.' });
+  }
+  const refund = async () => { try { await r.decr(ipKey); await r.decr(dayKey); } catch (e) {} };
+
+  const systemPrompt = `당신은 기업·공공기관 서류 심사를 많이 본 자기소개서 코치입니다. 학생이 이미 제출했던 자소서 답변 1개를 보내 '어디서 걸러졌는지' 판독을 받습니다.
+면접관은 잘 쓴 사람을 고르기보다 걸러 낼 이유를 먼저 찾는다는 관점으로 봅니다. 실제 탈락 사유는 알 수 없으므로 '가능성'으로 말하고, 단정하지 않습니다.
+학생을 탓하지 않고, 버리지 말아야 할 좋은 문장도 반드시 찾아 줍니다. 학생 글에 없는 경험·숫자·이름은 지어내지 않습니다.
+
+[거름망 3단계 — 각각 s는 g(통과) / y(주의) / r(걸림) 중 하나, note는 1~2문장]
+1. 형식: 문항에서 벗어난 답, 오탈자, 회사·기관 이름 실수나 다른 회사 이름, 글자 수가 지나치게 모자람
+2. 직무 연결: 이 회사·직무여야 하는 이유가 있는지. 회사 이름만 바꾸면 어디에나 낼 수 있는 문장, 조건(안정·연봉·복지)만 말하는 지원 이유는 걸림
+3. 근거: 숫자·기간·고유명사·본인 행동·결과가 있는지. '열심히', '최선을' 같은 다짐만 있으면 주의
+
+[작성 규칙]
+- 모든 문장은 학생에게 말하듯 부드러운 존댓말. 큰따옴표 대신 작은따옴표를 쓴다.
+- verdict: 판독 결과 한 줄. 가장 먼저 걸렸을 단계를 말한다. 예) '2단계 직무 연결에서 멈췄을 가능성이 커요'. 세 단계 모두 g면 '거름망은 통과할 만한 글이에요'로 쓴다.
+- summary: 2문장 이내. 잘한 점 1 + 멈췄을 이유 1.
+- stop: 면접관이 읽기를 멈췄을 학생의 실제 문장 1개를 글자 그대로 인용(quote)하고, 면접관 눈에 어떻게 읽히는지(why) 1~2문장. 없으면 null.
+- keep: 버리지 말고 살릴 학생의 실제 문장을 최대 2개 글자 그대로 인용(quote)하고, 살릴 이유와 어디에 쓰면 좋은지(why) 1문장. 정말 없으면 빈 배열.
+- oneFix: 다음 서류에서 하나만 고친다면 무엇을 어떻게 — 2문장 이내. 예시를 줄 때 학생 글에 없는 사실은 [빈칸]으로 둔다.
+
+[JSON 작성 주의] 아래 JSON 하나만 출력한다.
+{"verdict":"","summary":"","sieve":[{"k":"형식","s":"g|y|r","note":""},{"k":"직무 연결","s":"g|y|r","note":""},{"k":"근거","s":"g|y|r","note":""}],"stop":{"quote":"","why":""},"keep":[{"quote":"","why":""}],"oneFix":""}`;
+
+  const userMsg = `[이 글의 상태] ${BOX_STAGE[stage]}\n[지원한 회사·기관] ${company || '미입력'}\n[지원 직무] ${job || '미입력'}\n[문항]\n${question}\n\n[학생이 냈던 답변]\n${answer}`;
+  // 인용은 학생 글에 실제로 있는 문장만 (AI가 지어낸 인용은 버림)
+  const norm = (s) => String(s || '').replace(/\s+/g, '').replace(/['"‘’“”]/g, '');
+  const inAnswer = (q) => q && norm(answer).includes(norm(q));
+  try {
+    let parsed = null;
+    for (let attempt = 1; attempt <= 2 && !parsed; attempt++) {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1400, system: systemPrompt, messages: [{ role: 'user', content: userMsg }] })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        console.error('Anthropic API 오류:', data);
+        await refund();
+        return res.status(500).json({ error: aiErrorText(response.status, data) });
+      }
+      const raw = (data.content || []).map((c) => c.text || '').join('').trim();
+      parsed = parseAIJson(raw);
+      if (!parsed || !Array.isArray(parsed.sieve)) { console.error(`블랙박스 JSON 변환 실패 (${attempt}번째 시도):`, raw.slice(0, 300)); parsed = null; }
+    }
+    if (!parsed) { await refund(); return res.status(500).json({ error: 'AI 응답 형식이 올바르지 않습니다. 다시 눌러 주세요.' }); }
+    const names = ['형식', '직무 연결', '근거'];
+    const sieve = names.map((k, i) => {
+      const c = parsed.sieve.find((x) => x && x.k === k) || parsed.sieve[i] || {};
+      return { k, s: ['g', 'y', 'r'].includes(c.s) ? c.s : 'y', note: clip(c.note, 240) };
+    });
+    const st = parsed.stop && inAnswer(parsed.stop.quote) ? { quote: clip(parsed.stop.quote, 200), why: clip(parsed.stop.why, 260) } : null;
+    const keep = (Array.isArray(parsed.keep) ? parsed.keep : []).filter((k) => k && inAnswer(k.quote)).slice(0, 2)
+      .map((k) => ({ quote: clip(k.quote, 200), why: clip(k.why, 220) }));
+    return res.status(200).json({ verdict: clip(parsed.verdict, 80), summary: clip(parsed.summary, 300), sieve, stop: st, keep, oneFix: clip(parsed.oneFix, 400) });
   } catch (err) {
     console.error('서버 오류:', err);
     await refund();

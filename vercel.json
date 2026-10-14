@@ -21,6 +21,10 @@
     {
       "source": "/free",
       "destination": "/free.html"
+    },
+    {
+      "source": "/blackbox",
+      "destination": "/blackbox.html"
     }
   ]
 }
