@@ -9,8 +9,8 @@
 <meta property="og:description" content="형식 · 직무 연결 · 근거, 면접관 거름망 3단계로 판독해요. 살릴 문장까지 알려 드려요.">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap">
 <!-- 서류 블랙박스 검사 (2026-10-14): 이미 써서 낸 서류를 '면접관 거름망 3단계'로 판독하는 무료 페이지.
-     인스타 릴스 「서류 블랙박스」 12편 시리즈와 같은 말을 씀. 지금은 화면 샘플(서버 연결 전) — 버튼을 누르면 예시 결과가 나옴.
-     연결 후: /api/coach mode blackboxCheck · 1인 하루 1회 · 전체 하루 30회 · 글 저장 안 함 (free.html과 같은 원칙) -->
+     인스타 릴스 「서류 블랙박스」 12편 시리즈와 같은 말을 씀.
+     /api/coach mode blackboxCheck · 1인 하루 1회 · 전체 하루 30회 · 글 저장 안 함 (free.html과 같은 원칙) -->
 <style>
 :root{--ink:#141A2E;--ink2:#3B4256;--muted:#5F6678;--line:#E6E8EE;--surface:#F4F5F7;--lime:#C0D904;--lime-soft:#EEF4C2;--olive:#3D4500;--app:#643DF2;--app-soft:#EFEAFE;--mark:#FFF1A8;--warn:#B54708;--warn-soft:#FFF4E5;--ok:#1F7A4D;--ok-soft:#E3F5EA;--red:#C4320A;--red-soft:#FDECEA;--yel:#B08800;--yel-soft:#FFF7D6;--box:#FF7A1A}
 *{box-sizing:border-box}
@@ -87,9 +87,8 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:0 20px 40px}
 <body>
 <header><div class="brand"><i aria-hidden="true"></i>MOA FORMULA</div><div class="app">서류 블랙박스 검사</div></header>
 <main>
-  <div class="sample" role="note">화면 샘플이에요 · 지금은 버튼을 누르면 예시 결과가 나와요 (AI 연결 전)</div>
   <div>
-    <p class="kicker">떨어진 서류, 버리지 마세요</p>
+    <p class="kicker">떨어진 서류, 버리지 마세요 · 하루 30명 무료</p>
     <h1>내 서류는 <u>어디서</u><br>멈췄을까요?</h1>
   </div>
   <p class="lead">이미 냈던 답변을 붙여 넣으면 <b>면접관 거름망 3단계</b>로 판독해 드려요. 걸린 한 줄과 함께, <b>살려도 되는 문장</b>까지 알려 드려요.</p>
@@ -130,9 +129,9 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:0 20px 40px}
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const SAMPLE=true; // 화면 샘플: AI 연결 전까지 예시 결과
 const EX={co:'OO복지관',job:'사회복지사',q:'우리 기관에 지원한 동기를 작성해 주세요. (500자)',
  a:'평소 사회복지에 관심이 많았고, 안정적인 기관에서 오래 일하며 귀 기관의 발전에 기여하고 싶어 지원했습니다. 어릴 때부터 어려운 이웃을 돕는 일이 꿈이었고, 대학에서 사회복지를 전공하며 그 꿈을 키워 왔습니다. 복지관 실습 4주 동안 어르신 안부 확인 업무를 도우며, 전화 한 통이 하루의 유일한 대화라는 말씀을 들었습니다. 입사 후에는 맡은 일에 최선을 다하는 사회복지사가 되겠습니다.'};
+// 예시 결과 (?demo 로 열면 AI 호출 없이 화면만 확인)
 const DEMO={verdict:'2단계 직무 연결에서 멈췄을 가능성이 커요',summary:'형식은 깔끔해요. 다만 앞 두 문장이 어느 기관에 내도 되는 말이라, 면접관이 "왜 우리 기관인지"를 찾기 전에 읽기를 멈췄을 수 있어요.',
  sieve:[{k:'형식',s:'g',note:'오탈자·기관 이름 실수 없이 글자 수도 맞췄어요.'},{k:'직무 연결',s:'r',note:'"귀 기관의 발전에 기여"는 기관 이름만 바꾸면 어디에나 맞는 문장이에요. 이 기관만의 사업이 한 번도 나오지 않아요.'},{k:'근거',s:'y',note:'실습 4주라는 좋은 근거가 있는데, 글 뒤쪽에 숨어 있어요. 앞으로 끌어오면 살아나요.'}],
  stop:{quote:'안정적인 기관에서 오래 일하며',why:'면접관은 "조건이 바뀌면 떠날 수도 있겠다"로 읽어요. 지원 이유가 기관이 아니라 조건에 있다는 신호예요.'},
@@ -144,7 +143,7 @@ $('ex').onclick=()=>{for(const k of ['co','job','q','a'])$(k).value=EX[k];$('a')
 function show(d){
   const R=$('result');
   R.innerHTML=`<div class="verdict"><small>블랙박스 판독 결과</small><b>${esc(d.verdict)}</b><p>${esc(d.summary)}</p></div>`
-   +`<p class="h3">면접관 거름망 3단계</p><ul class="sieve">${d.sieve.map((x,i)=>`<li><span class="light ${LIGHT[x.s]}" aria-hidden="true"><i></i><i></i><i></i></span><div><b>${i+1}단계 · ${esc(x.k)}</b><span class="st ${x.s}">${LBL[x.s]}</span><p>${esc(x.note)}</p></div></li>`).join('')}</ul>`
+   +`<p class="h3">면접관 거름망 3단계</p><ul class="sieve">${(d.sieve||[]).map((x,i)=>`<li><span class="light ${LIGHT[x.s]||'y'}" aria-hidden="true"><i></i><i></i><i></i></span><div><b>${i+1}단계 · ${esc(x.k)}</b><span class="st ${LIGHT[x.s]||'y'}">${LBL[x.s]||'주의'}</span><p>${esc(x.note)}</p></div></li>`).join('')}</ul>`
    +(d.stop?`<p class="h3">면접관이 멈췄을 한 줄</p><div class="stop"><q>${esc(d.stop.quote)}</q><span class="why">${esc(d.stop.why)}</span></div>`:'')
    +((d.keep||[]).length?`<p class="h3">버리지 말 문장</p>`+d.keep.map(k=>`<div class="keep"><q>${esc(k.quote)}</q><span>${esc(k.why)}</span></div>`).join(''):'')
    +(d.oneFix?`<div class="fix1"><b>다음 서류에서 하나만 고친다면</b>${esc(d.oneFix)}</div>`:'')
@@ -157,7 +156,13 @@ $('go').onclick=async()=>{
   if(!q)return msg('문항을 적어 주세요','어떤 질문에 대한 답인지 알아야 정확히 판독할 수 있어요.');
   if(a.length<20)return msg('답변을 조금 더 넣어 주세요','20자 이상 넣으면 판독할 수 있어요.');
   B.disabled=true;R.hidden=false;R.innerHTML='<div class="wait"><span class="spin" aria-hidden="true"></span>블랙박스를 여는 중이에요… 20초쯤 걸려요</div>';
-  if(SAMPLE){setTimeout(()=>{show(DEMO);B.disabled=false},1200);return}
+  if(new URLSearchParams(location.search).has('demo')){setTimeout(()=>{show(DEMO);B.disabled=false},1200);return}
+  try{
+    const r=await fetch('/api/coach',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'blackboxCheck',company:$('co').value.trim(),job:$('job').value.trim(),stage:$('stage').value,question:q,answer:a})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok){B.disabled=false;return msg(r.status===429?'오늘 무료 검사가 끝났어요':'잠시 문제가 생겼어요',d.error||'잠시 뒤 다시 눌러 주세요.')}
+    show(d);B.textContent='오늘 검사 완료';
+  }catch(e){B.disabled=false;msg('연결이 잠시 끊겼어요','인터넷 연결을 확인하고 다시 눌러 주세요.')}
 };
 </script>
 </body>
