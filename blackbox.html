@@ -128,6 +128,9 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:0 20px 40px}
 <footer>진로모아커리어센터 · MOA FORMULA<br>AI 참고 판독이에요 · 실제 탈락 사유는 회사마다 달라요</footer>
 <script>
 const $=id=>document.getElementById(id);
+// 무료 체험 현황 (2026-10-15): 화면 열기·예약 버튼 누름을 숫자로만 기록 (원장님 화면에서 봄)
+const stat=ev=>{try{if(new URLSearchParams(location.search).has('demo'))return;navigator.sendBeacon('/api/config?scope=freestats',new Blob([JSON.stringify({ev})],{type:'application/json'}))}catch(e){}};
+stat('box_view');document.querySelector('.cta .main').addEventListener('click',()=>stat('box_cta'));
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const EX={co:'OO복지관',job:'사회복지사',q:'우리 기관에 지원한 동기를 작성해 주세요. (500자)',
  a:'평소 사회복지에 관심이 많았고, 안정적인 기관에서 오래 일하며 귀 기관의 발전에 기여하고 싶어 지원했습니다. 어릴 때부터 어려운 이웃을 돕는 일이 꿈이었고, 대학에서 사회복지를 전공하며 그 꿈을 키워 왔습니다. 복지관 실습 4주 동안 어르신 안부 확인 업무를 도우며, 전화 한 통이 하루의 유일한 대화라는 말씀을 들었습니다. 입사 후에는 맡은 일에 최선을 다하는 사회복지사가 되겠습니다.'};
