@@ -926,6 +926,7 @@ function renderMasterTeacherList() {
     </div>
     <div class="card" id="clBook" style="display:none"></div>
     <div class="card" id="clicheBook" style="display:none"></div>
+    <div class="card" id="freeBook" style="display:none"></div>
   `;
 
   const $ = id => document.getElementById(id);
@@ -1125,6 +1126,8 @@ function renderMasterTeacherList() {
       initClientManager($('clBook'), pw());
       $('clicheBook').style.display = 'block';
       initClicheManager($('clicheBook'), pw());
+      $('freeBook').style.display = 'block';
+      initFreeStats($('freeBook'), pw());
     } catch (e) {
       err.textContent = e.message; err.style.display = 'block';
     }
@@ -1243,6 +1246,47 @@ function renderMasterTeacherList() {
 
 // ---------- 🤖 AI 상투어 목록 (원장님 · 2026-10-05) ----------
 // 자소서 앱이 학생 글에서 회색 밑줄로 표시하고, AI 첨삭에도 함께 알려 주는 단어 목록. 코드 수정 없이 여기서 고쳐요.
+// 무료 체험 현황 (2026-10-15): 블랙박스·1문항 진단·AI 티 검사기를 몇 명이 써 보는지 숫자로만 봄 (글·이름은 저장 안 함)
+//   api/config?scope=freestats {master} → { stats: {'<도구>_<지표>:YYYY-MM-DD': 숫자} }
+function initFreeStats(box, masterPw) {
+  const TOOLS = [['box', '서류 블랙박스', '/blackbox'], ['free', '1문항 AI 진단', '/free'], ['check', 'AI 티 검사기', '/check']];
+  const ROWS = [['view', '화면 열어 봄'], ['use', '검사 완료'], ['full', '하루 30회 마감으로 못 씀'], ['cta', '첨삭 예약 버튼 누름']];
+  const day = (ms) => new Date(ms + 9 * 3600 * 1000).toISOString().slice(0, 10);
+  const now = Date.now(), today = day(now), month = today.slice(0, 7);
+  const last7 = Array.from({ length: 7 }, (_, i) => day(now - i * 86400000));
+  const draw = (S) => {
+    const sum = (tool, row, test) => Object.keys(S).reduce((a, k) => { const [ev, d] = k.split(':'); return ev === tool + '_' + row && test(d) ? a + (+S[k] || 0) : a; }, 0);
+    const cols = [['오늘', (d) => d === today], ['최근 7일', (d) => last7.includes(d)], ['이번 달', (d) => d.startsWith(month)], ['전체', () => true]];
+    const fullDays = (tool) => Object.keys(S).filter((k) => k.startsWith(tool + '_full:') && k.slice(-10).startsWith(month) && +S[k] > 0).length;
+    box.innerHTML = `
+      <h2 style="margin:0">📊 무료 체험 현황</h2>
+      <p style="font-size:12.5px;color:var(--muted);margin:6px 0 12px;line-height:1.6">숫자만 세요. 입력한 글·이름·연락처는 저장하지 않아요. <b style="white-space:nowrap">2026-10-15부터</b> 기록돼요.</p>
+      ${TOOLS.map(([k, name, url]) => `
+        <div style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+            <b style="font-size:14.5px">${name}</b>
+            <span style="font-size:12px;color:var(--muted)">${url}${k === 'check' ? ' · 횟수 제한 없음' : ` · 이번 달 마감된 날 <b style="color:var(--navy)">${fullDays(k)}일</b>`}</span>
+          </div>
+          <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:300px">
+            <thead><tr><th style="text-align:left;padding:6px 4px;border-bottom:1px solid #e5e7eb;font-weight:700"></th>${cols.map((c) => `<th style="text-align:right;padding:6px 4px;border-bottom:1px solid #e5e7eb;font-weight:700;white-space:nowrap">${c[0]}</th>`).join('')}</tr></thead>
+            <tbody>${ROWS.filter(([r]) => !(k === 'check' && r === 'full')).map(([r, label]) => `<tr><td style="padding:6px 4px;border-bottom:1px solid #f1f2f4">${label}</td>${cols.map((c) => `<td style="text-align:right;padding:6px 4px;border-bottom:1px solid #f1f2f4;font-variant-numeric:tabular-nums">${sum(k, r, c[1]).toLocaleString()}</td>`).join('')}</tr>`).join('')}</tbody>
+          </table></div>
+        </div>`).join('')}
+      <button type="button" class="btn-secondary" id="fsReload" style="font-size:12.5px;padding:6px 12px">새로고침</button>`;
+    box.querySelector('#fsReload').onclick = load;
+  };
+  async function load() {
+    box.innerHTML = '<h2 style="margin:0">📊 무료 체험 현황</h2><div class="empty">불러오는 중...</div>';
+    try {
+      const r = await fetch('/api/config?scope=freestats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ master: masterPw }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || '불러오지 못했어요');
+      draw(d.stats || {});
+    } catch (e) { box.innerHTML = `<h2 style="margin:0">📊 무료 체험 현황</h2><div class="empty">${escapeHtml(e.message)}</div>`; }
+  }
+  load();
+}
+
 function initClicheManager(box, masterPw) {
   let LIST = [], OPENED = false;
   const draw = () => {

@@ -363,6 +363,9 @@ async function companyBrief(req, res) {
 // 공개 페이지(/free)용. 누구나 쓸 수 있으므로 사용량을 Redis로 묶음 — 같은 사람(IP) 하루 1회, 전체 하루 30회
 // 입력한 글은 저장하지 않음 (횟수 세는 숫자만 이틀 뒤 자동 삭제)
 const FREE_DAILY_TOTAL = 30;
+// 무료 체험 현황 (2026-10-15): 날짜별 숫자만 'moa_free_stats' 해시에 쌓음 (글·이름·IP 저장 안 함).
+//   필드 '<이벤트>:YYYY-MM-DD' → 원장님 화면 '무료 체험 현황'에서 봄 (api/config?scope=freestats)
+async function freeStat(r, ev) { try { if (r) await r.hincrby('moa_free_stats', ev + ':' + kstDay(), 1); } catch (e) {} }
 const FREE_DAILY_PER_IP = 1;
 const kstDay = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10).replace(/-/g, '');
 
@@ -388,6 +391,7 @@ async function freeCheck(req, body, res) {
     const dayCount = await r.incr(dayKey); await r.expire(dayKey, 172800);
     if (dayCount > FREE_DAILY_TOTAL) {
       await r.decr(ipKey);
+      await freeStat(r, 'free_full');
       return res.status(429).json({ error: `오늘 준비한 무료 진단 ${FREE_DAILY_TOTAL}회가 모두 마감됐어요. 내일 다시 찾아 주세요.`, limit: 'day' });
     }
   } catch (e) {
@@ -443,6 +447,7 @@ async function freeCheck(req, body, res) {
     });
     const redFlags = (Array.isArray(parsed.redFlags) ? parsed.redFlags : []).slice(0, 2)
       .map((f) => ({ quote: clip(f && f.quote, 160), why: clip(f && f.why, 200) })).filter((f) => f.quote);
+    await freeStat(r, 'free_use');
     return res.status(200).json({ summary: clip(parsed.summary, 300), checks, redFlags, oneFix: clip(parsed.oneFix, 400) });
   } catch (err) {
     console.error('서버 오류:', err);
@@ -484,6 +489,7 @@ async function blackboxCheck(req, body, res) {
     const dayCount = await r.incr(dayKey); await r.expire(dayKey, 172800);
     if (dayCount > BOX_DAILY_TOTAL) {
       await r.decr(ipKey);
+      await freeStat(r, 'box_full');
       return res.status(429).json({ error: `오늘 준비한 무료 검사 ${BOX_DAILY_TOTAL}회가 모두 마감됐어요. 내일 다시 찾아 주세요.`, limit: 'day' });
     }
   } catch (e) {
@@ -543,6 +549,7 @@ async function blackboxCheck(req, body, res) {
     const st = parsed.stop && inAnswer(parsed.stop.quote) ? { quote: clip(parsed.stop.quote, 200), why: clip(parsed.stop.why, 260) } : null;
     const keep = (Array.isArray(parsed.keep) ? parsed.keep : []).filter((k) => k && inAnswer(k.quote)).slice(0, 2)
       .map((k) => ({ quote: clip(k.quote, 200), why: clip(k.why, 220) }));
+    await freeStat(r, 'box_use');
     return res.status(200).json({ verdict: clip(parsed.verdict, 80), summary: clip(parsed.summary, 300), sieve, stop: st, keep, oneFix: clip(parsed.oneFix, 400) });
   } catch (err) {
     console.error('서버 오류:', err);

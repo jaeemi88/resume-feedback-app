@@ -90,6 +90,9 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:0 20px 40px}
 </main>
 <footer>진로모아커리어센터 · MOA FORMULA<br>참고용 검사예요 · AI 탐지기 판정이 아니에요</footer>
 <script>
+// 무료 체험 현황 (2026-10-15): 화면 열기·검사·예약 버튼 누름을 숫자로만 기록 (원장님 화면에서 봄)
+const stat=ev=>{try{if(new URLSearchParams(location.search).has('demo'))return;navigator.sendBeacon('/api/config?scope=freestats',new Blob([JSON.stringify({ev})],{type:'application/json'}))}catch(e){}};
+stat('check_view');document.querySelector('.cta .main').addEventListener('click',()=>stat('check_cta'));
 // 자소서 앱 index.html의 CLICHE_DEFAULTS와 같은 기본 목록 (원장님이 저장한 목록이 있으면 그걸 씀)
 const DEFAULTS=[
   { w: '귀사에 기여', alt: ['입사 첫해 맡을 ○○ 업무에서', '제가 맡은 일의 결과로'] },
@@ -122,7 +125,7 @@ function scan(t){const hits=[];LIST.forEach(c=>{if(!c||!c.w)return;let f=0,a;whi
 function tone(t){const s=(t.match(/[^.!?\n]+[.!?]?/g)||[]).map(x=>x.trim()).filter(x=>x.length>=6);const n=s.length;if(n<5)return false;const L=s.map(x=>x.length),avg=L.reduce((a,b)=>a+b,0)/n,sd=Math.sqrt(L.reduce((a,b)=>a+(b-avg)*(b-avg),0)/n);return sd/avg<0.2}
 $('txt').addEventListener('input',()=>{$('cnt').textContent=$('txt').value.length+'자'});
 $('sample').onclick=()=>{$('txt').value='평소 사회복지에 관심이 많았고, 다양한 경험을 통해 소통 능력을 길렀습니다. 열정을 바탕으로 귀사의 발전에 기여하고 싶습니다. 입사 후에도 끊임없이 노력하며 최선을 다하겠습니다.';$('txt').dispatchEvent(new Event('input'));run()};
-$('go').onclick=run;
+$('go').onclick=()=>{stat('check_use');run()};
 function run(){
   const t=$('txt').value.trim(),R=$('result');
   if(t.length<20){R.hidden=false;R.innerHTML='<div class="score bad"><b>조금 더 붙여 넣어 주세요</b><p>답변을 20자 이상 넣으면 검사할 수 있어요.</p></div>';return}

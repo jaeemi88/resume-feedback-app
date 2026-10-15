@@ -118,6 +118,9 @@ select:focus,input:focus{outline:none;border-color:var(--ink)}
 <footer>진로모아커리어센터 · MOA FORMULA<br>AI 참고 진단이에요 · 최종 판단은 강사 검수에서</footer>
 <script>
 const $=id=>document.getElementById(id);
+// 무료 체험 현황 (2026-10-15): 화면 열기·예약 버튼 누름을 숫자로만 기록 (원장님 화면에서 봄)
+const stat=ev=>{try{if(new URLSearchParams(location.search).has('demo'))return;navigator.sendBeacon('/api/config?scope=freestats',new Blob([JSON.stringify({ev})],{type:'application/json'}))}catch(e){}};
+stat('free_view');document.querySelector('.cta .main').addEventListener('click',()=>stat('free_cta'));
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const LABEL={structure:'구조 · 묻는 말에 답했나',concrete:'구체성 · 숫자와 내 행동',jobLink:'직무 연결 · 왜 여기인가',redFlag:'감점 표현 · 면접관이 걸리는 말',cliche:'상투어 · 누구나 쓰는 말'};
 $('a').addEventListener('input',()=>{$('cnt').textContent=$('a').value.length.toLocaleString()+' / 1,500자'});
