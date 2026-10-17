@@ -78,6 +78,29 @@ select:focus,input:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .cta a.sub{border:1px solid rgba(255,255,255,.35);color:#fff;font-size:14px}
 footer{text-align:center;font-size:12px;color:var(--muted);padding:0 20px 40px}
 [hidden]{display:none!important}
+/* 2026-10-17 개선: 강사 소개 · 결과 예시 · 문장 예시 · 네이버 예약 버튼 */
+.coach{display:flex;gap:14px;align-items:center;border:1px solid var(--line);border-radius:18px;padding:14px 16px;background:#fff}
+.coach img{width:76px;height:76px;border-radius:50%;object-fit:cover;object-position:top;flex:none;background:var(--app-soft)}
+.coach b{display:block;font-size:15px}
+.coach span{display:block;font-size:13px;color:var(--ink2);margin-top:2px}
+.coach em{display:block;font-style:normal;font-size:13px;color:var(--app);font-weight:700;margin-top:4px}
+.peek{border:1.5px dashed var(--app);border-radius:18px;padding:14px 14px 12px;display:flex;flex-direction:column;gap:10px;background:#FCFBFF}
+.peek .tag{font-size:12px;font-weight:900;color:var(--app);letter-spacing:.06em}
+.peek .verdict{padding:16px 16px}.peek .verdict b{font-size:18px}
+.peek .sieve li{padding:10px 12px}.peek .sieve b{font-size:14px}.peek .sieve p{font-size:13px}
+.peek .more{align-self:flex-start;background:none;border:0;padding:0;font:inherit;font-size:13px;font-weight:700;color:var(--app);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.cases{display:flex;flex-direction:column;gap:10px}
+.case{border:1px solid var(--line);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;font-size:14px}
+.case .who{font-size:12px;font-weight:900;color:var(--muted);letter-spacing:.04em}
+.case .b4{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--red);text-decoration-thickness:2px}
+.case .af{font-weight:700;color:var(--ink)}
+.case .af::before{content:"→ ";color:var(--ok)}
+.case .note{font-size:13px;color:var(--ink2);border-top:1px dashed var(--line);padding-top:8px}
+.price{display:flex;gap:8px;flex-wrap:wrap;font-size:13px;color:#C8CEE0}
+.price b{color:#fff;background:rgba(255,255,255,.12);border-radius:999px;padding:3px 10px;font-weight:700}
+.coupon{display:flex;gap:8px;align-items:center;background:var(--lime-soft);color:var(--olive);border-radius:12px;padding:10px 12px;font-size:13px;font-weight:700}
+.coupon i{flex:none;width:22px;height:22px;border-radius:6px;background:var(--lime);display:inline-block}
+.cta a.main{font-size:17px}
 .wait{display:flex;gap:10px;align-items:center;color:var(--ink2);font-size:15px}
 .spin{width:20px;height:20px;border:3px solid var(--line);border-top-color:var(--app);border-radius:50%;animation:sp 0.9s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
@@ -95,6 +118,12 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:0 20px 40px}
   <div class="steps" aria-label="거름망 3단계">
     <div><b>1단계</b>형식</div><div><b>2단계</b>직무 연결</div><div><b>3단계</b>근거</div>
   </div>
+  <div class="coach"><img src="/coach.jpg" alt="차재임 강사" width="76" height="76"><div><b>차재임 · 진로모아커리어센터 대표</b><span>항공사 승무원 12년 · 대학 겸임교수 · 취업·면접 강의</span><em>강의 현장에서 쓰는 거름망 3단계, 그대로 판독해요</em></div></div>
+  <section class="peek" id="peek" aria-label="결과 예시">
+    <span class="tag">결과는 이렇게 나와요 · 예시 (사회복지사 지원동기)</span>
+    <div id="peekBody"></div>
+    <button type="button" class="more" id="peekMore">예시 전체 보기</button>
+  </section>
   <div class="priv" role="note"><span aria-hidden="true">🔒</span><span>쓴 글은 판독에만 쓰고 <b>저장하지 않아요.</b> 이름·학교·연락처는 빼고 넣어 주세요.</span></div>
 
   <div class="two">
@@ -118,10 +147,21 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:0 20px 40px}
 
   <section id="result" hidden aria-live="polite"></section>
 
+  <section aria-labelledby="caseH">
+    <p class="h3" id="caseH">걸린 한 줄, 이렇게 살아나요</p>
+    <p class="left" style="display:block;margin:4px 0 10px">자주 보는 문장 유형을 예시로 바꿔 본 거예요. 실제 수강생 글은 아니에요.</p>
+    <div class="cases">
+      <div class="case"><span class="who">공기업 · 지원동기</span><span class="b4">안정적인 직장에서 오래 일하며 귀 공사의 발전에 기여하고 싶습니다.</span><span class="af">인턴 3개월, 민원 응대 기록 120건을 정리하며 '같은 질문이 왜 반복되는지'를 먼저 보게 됐습니다.</span><span class="note">면접관이 멈춘 곳: '안정·오래' → 조건이 바뀌면 떠날 사람으로 읽혀요. 내가 한 일 한 줄이 들어가면 이 공사여야 하는 이유가 돼요.</span></div>
+      <div class="case"><span class="who">호텔·서비스직 · 장단점</span><span class="b4">저의 장점은 꼼꼼함과 책임감입니다.</span><span class="af">체크인 명단에서 중복 예약 한 건을 미리 잡아, 손님이 로비에서 기다리는 10분을 없앴습니다.</span><span class="note">면접관이 멈춘 곳: 장점 단어만 있고 장면이 없어요. 숫자 하나가 붙은 장면은 면접에서 꼬리 질문이 와도 버텨요.</span></div>
+    </div>
+  </section>
+
   <section class="cta" aria-labelledby="ctaH">
     <h2 id="ctaH">걸린 곳을 찾았다면, 다음 서류는 같이 고쳐요</h2>
     <p>강사가 문항마다 교정지·점검표·다듬은 초안까지 봐 드려요. 항공사 승무원 12년, 대학 겸임교수 출신 강사가 직접 검수합니다.</p>
-    <a class="main" href="https://m.place.naver.com/place/2077053527/home" target="_blank" rel="noopener">1:1 자소서 첨삭 예약하기</a>
+    <div class="price"><b>자소서 첨삭 59,000원</b><b>모의면접 59,000원</b><b>세트 99,000원</b><span>11/30 결제분까지 오픈 기념가</span></div>
+    <div class="coupon"><i aria-hidden="true"></i>네이버 예약 페이지에서 5,000원 할인 쿠폰을 먼저 받고 예약하세요</div>
+    <a class="main" href="https://booking.naver.com/booking/5/bizes/1748919" target="_blank" rel="noopener">네이버에서 1:1 자소서 첨삭 예약하기</a>
     <a class="sub" href="/check">AI 티 검사기도 해 보기 (무제한 무료)</a>
   </section>
 </main>
@@ -141,6 +181,17 @@ const DEMO={verdict:'2단계 직무 연결에서 멈췄을 가능성이 커요',
  keep:[{quote:'전화 한 통이 하루의 유일한 대화라는 말씀을 들었습니다',why:'직접 겪은 장면이라 면접관 기억에 남아요. 이 문장을 첫 줄로 올리세요.'}],
  oneFix:'첫 문장을 실습 장면으로 바꾸고, 기관의 사업 이름 하나(예: 어르신 안부 확인 사업)를 넣어 보세요. 같은 경험이 "이 기관이어야 하는 이유"가 돼요.'};
 const LBL={g:'통과',y:'주의',r:'걸림'},LIGHT={g:'g',y:'y',r:'r'};
+// 결과 예시 미리보기 (2026-10-17): 판독 전에 결과 모양을 먼저 보여 줌
+(function(){const d=DEMO,P=$('peekBody');
+  const sieve=`<ul class="sieve">${d.sieve.map((x,i)=>`<li><span class="light ${LIGHT[x.s]}" aria-hidden="true"><i></i><i></i><i></i></span><div><b>${i+1}단계 · ${esc(x.k)}</b><span class="st ${LIGHT[x.s]}">${LBL[x.s]}</span><p>${esc(x.note)}</p></div></li>`).join('')}</ul>`;
+  const short=`<div class="verdict"><small>블랙박스 판독 결과</small><b>${esc(d.verdict)}</b></div>`+sieve;
+  const full=`<div class="verdict"><small>블랙박스 판독 결과</small><b>${esc(d.verdict)}</b><p>${esc(d.summary)}</p></div>`+sieve
+   +`<p class="h3">면접관이 멈췄을 한 줄</p><div class="stop"><q>${esc(d.stop.quote)}</q><span class="why">${esc(d.stop.why)}</span></div>`
+   +`<p class="h3">버리지 말 문장</p>`+d.keep.map(k=>`<div class="keep"><q>${esc(k.quote)}</q><span>${esc(k.why)}</span></div>`).join('')
+   +`<div class="fix1"><b>다음 서류에서 하나만 고친다면</b>${esc(d.oneFix)}</div>`;
+  P.innerHTML=short;let open=false;
+  $('peekMore').onclick=()=>{open=!open;P.innerHTML=open?full:short;$('peekMore').textContent=open?'예시 접기':'예시 전체 보기';if(!open)$('peek').scrollIntoView({behavior:'smooth',block:'start'})};
+})();
 $('a').addEventListener('input',()=>{$('cnt').textContent=$('a').value.length.toLocaleString()+' / 1,500자'});
 $('ex').onclick=()=>{for(const k of ['co','job','q','a'])$(k).value=EX[k];$('a').dispatchEvent(new Event('input'))};
 function show(d){
