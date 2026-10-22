@@ -105,6 +105,7 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:0 20px 40px}
 .spin{width:20px;height:20px;border:3px solid var(--line);border-top-color:var(--app);border-radius:50%;animation:sp 0.9s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 @media (max-width:420px){.two{grid-template-columns:1fr}}
+.once{margin:0;font-size:15px;color:var(--ink);background:var(--app-soft);border-radius:12px;padding:12px 14px}.once b{color:var(--app);font-weight:900}
 </style>
 </head>
 <body>
@@ -142,7 +143,7 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:0 20px 40px}
     <label for="a">내가 냈던 답변</label>
     <textarea id="a" maxlength="1500" placeholder="냈던 답변을 그대로 붙여 넣어 주세요. (20자 ~ 1,500자)"></textarea>
     <div class="row"><button type="button" class="btn" id="go">블랙박스 열어 보기</button><button type="button" class="btn ghost" id="ex">예시 넣기</button><span class="cnt" id="cnt">0 / 1,500자</span></div>
-    <span class="left">판독은 하루 1번만 할 수 있어요. 가장 아쉬운 서류로 골라 주세요.</span>
+    <p class="once"><b>판독은 하루 1번만 할 수 있어요.</b> 가장 아쉬운 서류로 골라 주세요.</p>
   </div>
 
   <section id="result" hidden aria-live="polite"></section>
