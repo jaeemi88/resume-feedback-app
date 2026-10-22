@@ -507,6 +507,8 @@ async function api(path, options = {}) {
     const msg = (err.error || ('요청 실패: ' + res.status)) + (err.detail ? ' — 상세: ' + err.detail : '');
     const e = new Error(msg);
     if (err.expired) e.expired = true;
+    e.status = res.status;
+    e.retryable = !!err.retryable || res.status === 429 || res.status >= 500;
     throw e;
   }
   return res.json();
@@ -2270,6 +2272,35 @@ function restoreStudentDraft(docTypeSelect) {
   fillItemBlocks(d.items);
 }
 
+// 수강생 이어쓰기 (2026-10-22): 쓰는 동안 이 기기에 저장 → 나갔다 와도 이어서 씀. 서버로 보내지 않음, 제출에 성공하면 지움, 14일 지나면 무시
+// (유료 고객은 서버 저장(clientWireDraft)을 따로 씀)
+const AI_DRAFT_KEEP = new Map(); // 제출 중 끝난 문항의 AI 첨삭 (새로고침 전까지)
+const stuDraftKey = () => 'moa_resume_draft_' + TEACHER_ID;
+function stuDraftSave() {
+  if (CLIENT || studentTab !== 'submit' || !document.getElementById('studentNameInput') || !document.querySelector('.item-block')) return;
+  const d = clientCollectResume();
+  const doc = document.getElementById('docTypeSelect');
+  d.docType = doc ? doc.value : '';
+  d.savedAt = Date.now();
+  if (!d.items.some(it => (it.answer || '').trim())) return;
+  try { localStorage.setItem(stuDraftKey(), JSON.stringify(d)); } catch (e) {}
+}
+function stuDraftLoad() {
+  try { const d = JSON.parse(localStorage.getItem(stuDraftKey()) || 'null'); if (d && d.items && Date.now() - (d.savedAt || 0) < 14 * 864e5) return d; } catch (e) {}
+  return null;
+}
+function stuDraftClear() { try { localStorage.removeItem(stuDraftKey()); } catch (e) {} }
+let stuDraftWired = false;
+function stuDraftWire() {
+  if (stuDraftWired) return; stuDraftWired = true;
+  let t = null;
+  const later = () => { clearTimeout(t); t = setTimeout(stuDraftSave, 800); };
+  app.addEventListener('input', later);
+  app.addEventListener('change', later);
+  window.addEventListener('pagehide', stuDraftSave);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stuDraftSave(); });
+}
+
 // 문항 유형마다 칸 하나 (2026-10-09) — 위 유형 단추는 칸을 바꾸는 탭이고, 글을 쓴 칸은 모두 모아서 제출
 // (같은 유형이 두 문항이면 한 칸에 묶어 쓰고 실제 제출 때 나눠 내도록 안내)
 let activeItemType = '';
@@ -2843,7 +2874,17 @@ async function renderStudentSubmitForm() {
     refreshItemTabs();
     const q = next.querySelector('.item-question'); if (q) q.focus();
   });
+  if (!CLIENT && !STUDENT_DRAFT) {
+    const saved = stuDraftLoad();
+    if (saved) {
+      const keep = window.moaConfirm
+        ? await window.moaConfirm({ title: '쓰던 글이 있어요', body: `${moaDate(saved.savedAt, 'stime')}에 이 기기에 저장된 글이에요. 이어서 쓸까요?`, stay: '새로 쓰기', leave: '이어 쓰기' })
+        : true;
+      if (keep) STUDENT_DRAFT = saved; else stuDraftClear();
+    }
+  }
   restoreStudentDraft(docTypeSelect);
+  if (!CLIENT) stuDraftWire();
 
   document.querySelectorAll('input[name="hiringType"]').forEach(r => r.addEventListener('change', () => {
     document.querySelectorAll('.item-block').forEach(b => {
@@ -2965,13 +3006,43 @@ async function renderStudentSubmitForm() {
       const { config } = await api('/api/config').catch(() => ({ config: { presets: [] } }));
       const preset = (config.presets || []).find(p => p.id === presetSelect.value);
 
-      const itemsWithDraft = await Promise.all(rawItems.map(async (it) => {
-        const aiDraft = await api('/api/feedback', {
-          method: 'POST',
-          body: JSON.stringify({ ...it, presetPrompt: (preset ? preset.prompt : '') + aspirationExtra(it.questionType, targetCompany) + resumeBriefExtra(it.questionType, targetCompany), jobPosting, clicheWords: CLICHES.map(c => c.w) })
-        });
-        return { ...it, aiDraft };
-      }));
+      // 문항별로 따로 처리 (2026-10-22): 한 문항이 실패해도 끝난 문항은 보관하고, 빨리 실패한 문항만 한 번 더 시도.
+      // 다시 제출하면 글이 바뀌지 않은 문항은 보관해 둔 첨삭을 그대로 씀 (다시 기다리지 않음).
+      const total = rawItems.length;
+      let done = 0;
+      const showProgress = () => { submitBtn.textContent = `첨삭 중이에요... 문항 ${done}/${total} 완료 (화면을 닫지 마세요)`; };
+      showProgress();
+      const draftKey = it => JSON.stringify([it.question, it.answer, it.questionType, it.charLimit, it.hiringType, presetSelect.value, jobPosting, targetCompany]);
+      const draftOne = async (it) => {
+        const key = draftKey(it);
+        if (AI_DRAFT_KEEP.has(key)) { done++; showProgress(); return { ...it, aiDraft: AI_DRAFT_KEEP.get(key) }; }
+        for (let attempt = 1; ; attempt++) {
+          const t0 = Date.now();
+          try {
+            const aiDraft = await api('/api/feedback', {
+              method: 'POST',
+              body: JSON.stringify({ ...it, presetPrompt: (preset ? preset.prompt : '') + aspirationExtra(it.questionType, targetCompany) + resumeBriefExtra(it.questionType, targetCompany), jobPosting, clicheWords: CLICHES.map(c => c.w) })
+            });
+            AI_DRAFT_KEEP.set(key, aiDraft);
+            done++; showProgress();
+            return { ...it, aiDraft };
+          } catch (e) {
+            // 2분 안에 난 일시적 오류(사용량 한도·서버 붐빔·형식 오류)만 한 번 더. 오래 걸려 끊긴 문항은 학생이 다시 누르게 함
+            const quick = Date.now() - t0 < 120000;
+            if (attempt >= 2 || !quick || !(e.retryable || e instanceof TypeError)) throw e;
+            await new Promise(r => setTimeout(r, e.status === 429 ? 15000 : 4000));
+          }
+        }
+      };
+      const settled = await Promise.allSettled(rawItems.map(draftOne));
+      const failed = settled.map((r, i) => r.status === 'rejected' ? { i, e: r.reason } : null).filter(Boolean);
+      if (failed.length) {
+        const names = failed.map(f => `'${rawItems[f.i].question.slice(0, 14)}'`).join(', ');
+        const why = failed[0].e && failed[0].e.message ? failed[0].e.message : '';
+        throw new Error(`${total}문항 중 ${failed.length}문항(${names})의 첨삭이 끝나지 않았어요. ${why} 쓴 글은 그대로 있어요. 잠시 뒤 다시 제출하면 끝난 ${total - failed.length}문항은 기다리지 않고 바로 넘어가요.`);
+      }
+      const itemsWithDraft = settled.map(r => r.value);
+      submitBtn.textContent = '제출 마무리 중이에요...';
 
       const studentInstitution = institutions.length ? document.getElementById('institutionSelect').value : '';
 
@@ -2995,6 +3066,7 @@ async function renderStudentSubmitForm() {
       statusMsg.style.display = 'block';
       document.getElementById('itemsContainer').innerHTML = '';
       STUDENT_DRAFT = null;
+      stuDraftClear(); AI_DRAFT_KEEP.clear();
       document.getElementById('addItemBtn').style.display = 'none';
       submitBtn.style.display = 'none';
     } catch (e) {

@@ -201,7 +201,15 @@ function aiErrorText(status, data) {
 
 import { fitLength } from './_fitlen.js';
 
+// 시간 안전장치 (2026-10-22): 수업 중 여러 문항이 한꺼번에 몰리면 한 문항이 5분 제한을 넘겨 통째로 끊겼음.
+// 남은 시간을 재서 다시 만들기·글자 수 고쳐 쓰기를 건너뛰고, 끊기기 전에 반드시 답을 돌려줌.
+const TIME_LIMIT = 300000;      // vercel maxDuration과 같게
+const SAFE_END = TIME_LIMIT - 15000; // 이 시각까지는 답을 보냄
+const RETRY_NEEDS = 150000;     // 다시 만들기는 이만큼 남았을 때만
+
 export default async function handler(req, res) {
+  const startedAt = Date.now();
+  const deadline = startedAt + SAFE_END;
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'POST 요청만 가능합니다.' });
   }
@@ -333,8 +341,13 @@ export default async function handler(req, res) {
 
   try {
     let feedback = null;
+    let lastStop = '';
     for (let attempt = 1; attempt <= 2 && !feedback; attempt++) {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    if (attempt > 1 && deadline - Date.now() < RETRY_NEEDS) break; // 다시 만들 시간이 없으면 멈춤
+    let response;
+    try {
+    response = await fetch('https://api.anthropic.com/v1/messages', {
+      signal: typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(Math.max(5000, deadline - Date.now())) : undefined,
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -350,12 +363,19 @@ export default async function handler(req, res) {
         ]
       })
     });
+    } catch (e) {
+      if (e && (e.name === 'TimeoutError' || e.name === 'AbortError')) {
+        console.error(`첨삭 시간 초과 (${attempt}번째 시도, ${Math.round((Date.now() - startedAt) / 1000)}초)`);
+        return res.status(504).json({ error: '첨삭이 너무 오래 걸렸어요. 잠시 뒤 이 문항만 다시 보내 주세요.', retryable: true });
+      }
+      throw e;
+    }
 
     const data = await response.json();
 
     if (!response.ok) {
       console.error('Anthropic API 오류:', data);
-      return res.status(500).json({ error: aiErrorText(response.status, data) });
+      return res.status(500).json({ error: aiErrorText(response.status, data), retryable: response.status === 429 || response.status >= 500 });
     }
 
     if (data.usage) console.log('첨삭 토큰', JSON.stringify(data.usage)); // cache_read_input_tokens로 캐시 효과 확인
@@ -363,12 +383,13 @@ export default async function handler(req, res) {
     feedback = parseAIJson(raw);
     if (feedback && data.usage) feedback._usage = { in: data.usage.input_tokens, cached: data.usage.cache_read_input_tokens || 0, cacheWrite: data.usage.cache_creation_input_tokens || 0, out: data.usage.output_tokens };
     if (!feedback) {
-      console.error(`JSON 변환 실패 (${attempt}번째 시도, 중단 이유: ${data.stop_reason}):`, raw.slice(0, 800));
+      lastStop = data.stop_reason || '';
+      console.error(`JSON 변환 실패 (${attempt}번째 시도, 중단 이유: ${data.stop_reason}, ${Math.round((Date.now() - startedAt) / 1000)}초):`, raw.slice(0, 800));
     }
     } // 재시도 끝
 
     if (!feedback) {
-      return res.status(500).json({ error: 'AI 응답 형식이 올바르지 않습니다. 다시 시도해 주세요.' });
+      return res.status(500).json({ error: 'AI 응답 형식이 올바르지 않습니다. 다시 시도해 주세요.', retryable: true, stop: lastStop });
     }
 
     if (!feedback.frameworkUsed) feedback.frameworkUsed = fw;
@@ -395,7 +416,7 @@ export default async function handler(req, res) {
 
     // 글자 수 맞추기: 다듬은 글이 제한의 80% 미만이거나 넘치면 서버가 세어 보고 다시 고쳐 씀 (2026-10-05)
     if (fw !== 'RESUME' && charLimit && feedback.polishedText) {
-      const fx = await fitLength(feedback.polishedText, charLimit, { kind: 'essay', slots: true });
+      const fx = await fitLength(feedback.polishedText, charLimit, { kind: 'essay', slots: true, deadline });
       if (fx) {
         feedback.polishedText = fx.text;
         feedback.exampleSlots = (Array.isArray(fx.exampleSlots) ? fx.exampleSlots : []).filter((s) => s && s.example).map((s) => ({ example: String(s.example), hint: String(s.hint || ''), options: (Array.isArray(s.options) ? s.options : []).map(String).filter(Boolean).slice(0, 3) })).slice(0, 8);
