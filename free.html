@@ -79,6 +79,7 @@ select:focus,input:focus{outline:none;border-color:var(--ink)}
 .wait{display:flex;gap:10px;align-items:center;color:var(--ink2);font-size:15px}
 .spin{width:20px;height:20px;border:3px solid var(--line);border-top-color:var(--app);border-radius:50%;animation:sp 0.9s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
+.once{margin:0;font-size:15px;color:var(--ink);background:var(--app-soft);border-radius:12px;padding:12px 14px}.once b{color:var(--app);font-weight:900}
 </style>
 </head>
 <body>
@@ -103,7 +104,7 @@ select:focus,input:focus{outline:none;border-color:var(--ink)}
     <label for="a">내 답변</label>
     <textarea id="a" maxlength="1500" placeholder="답변을 붙여 넣어 주세요. (20자 ~ 1,500자)"></textarea>
     <div class="row"><button type="button" class="btn app" id="go">무료 진단 받기</button><span class="cnt" id="cnt">0 / 1,500자</span></div>
-    <span class="left">진단은 하루 1번만 할 수 있어요. 가장 고민되는 문항으로 골라 주세요.</span>
+    <p class="once"><b>진단은 하루 1번만 할 수 있어요.</b> 가장 고민되는 문항으로 골라 주세요.</p>
   </div>
 
   <section id="result" hidden aria-live="polite"></section>
