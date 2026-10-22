@@ -23,7 +23,10 @@ export async function fitLength(text, limit, opts = {}) {
   const ok = (n) => n >= lo && n <= L;
   let cur = String(text), best = null;
   if (ok(plainLen(cur))) return null; // 이미 맞음
+  // opts.deadline: 이 시각(ms)까지 끝내야 함 — 첨삭 함수가 5분 제한에 걸리지 않게 (2026-10-22)
+  const left = () => (opts.deadline ? opts.deadline - Date.now() : Infinity);
   for (let round = 1; round <= 2; round++) {
+    if (left() < 45000) break; // 남은 시간이 45초도 안 되면 고쳐 쓰기를 그만두고 지금 글로 마침
     const n = plainLen(cur);
     const longer = n < lo;
     const goal = Math.round((lo + hi) / 2);
@@ -38,6 +41,7 @@ export async function fitLength(text, limit, opts = {}) {
 {"text": "고친 본문"${opts.slots ? ', "exampleSlots": [{"example": "본문 {{ }} 안 글과 똑같이", "hint": "학생이 넣을 것 15자 이내", "options": ["다른 흔한 표현 1", "2", "3"]}]' : ''}}${opts.slots ? '\nexampleSlots는 고친 본문에 {{ }}가 나오는 순서대로 하나씩 만든다. {{ }}가 없으면 빈 배열.' : ''}`;
     try {
       const r = await fetch('https://api.anthropic.com/v1/messages', {
+        signal: opts.deadline && typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(Math.max(5000, left() - 5000)) : undefined,
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
         body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: Math.min(8000, 1500 + Math.round(L * 2)), system, messages: [{ role: 'user', content: cur }] })
