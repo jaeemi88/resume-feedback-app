@@ -891,6 +891,7 @@ function renderMasterTeacherList() {
       .rb-dot{width:10px;height:10px;border-radius:999px;flex-shrink:0}
       .rb-dot.g{background:#1F8A55}.rb-dot.y{background:#C77700}.rb-dot.n{border:2px solid #8A90A0;box-sizing:border-box}
       .rb-line .nm{flex:1;min-width:0;font-size:14px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .rb-line .nm .cd{font-size:12px;font-weight:400;color:var(--muted);margin-left:6px}
       .rb-line .nm small{font-size:11px;font-weight:700;color:var(--navy);background:var(--green-light);border-radius:999px;padding:2px 7px;margin-left:6px}
       .rb-line .ls{font-size:12px;color:var(--muted);white-space:nowrap}
       .rb-line .rb-more summary{border:0;background:transparent;min-height:44px;min-width:44px;display:flex;align-items:center;justify-content:center}
@@ -1040,7 +1041,7 @@ function renderMasterTeacherList() {
     const tag = t.expiresAt ? `<small>${escapeHtml(statusOf(t)[2].replace('⏳ ', ''))}</small>` : '';
     return `<div class="rb-line">
         <span class="rb-dot ${dot}" aria-hidden="true"></span>
-        <div class="nm" title="${escapeHtml(t.code)}">${escapeHtml(t.name)}${tag}</div>
+        <div class="nm">${escapeHtml(t.name)}<span class="cd">${escapeHtml(t.code)}</span>${tag}</div>
         <div class="ls">${t.lastSeen ? escapeHtml(relDay(t.lastSeen)) : ''}</div>
         ${moreMenu(t, true)}
       </div>`;
