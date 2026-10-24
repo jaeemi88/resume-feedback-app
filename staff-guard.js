@@ -43,12 +43,30 @@
     try { history.replaceState(null, '', location.pathname + (q ? '?' + q : '') + location.hash); } catch (e) {}
   }
 
-  if (p.get('master') === '1') return;
+  // ── AI 사용 기록용 (2026-10-24): /api/ 요청에 누가 쓰는지 표시를 붙임 → 서버 api/_usage.js가 강사별로 모음 ──
+  //    학생 화면은 들어온 강사 링크의 t, 유료 개인 고객은 client, 원장님 화면은 master (강사 화면은 아래 승인 키로 구분)
+  function tagApi(name, val) {
+    if (!val || !window.fetch) return;
+    var f = window.fetch.bind(window);
+    window.fetch = function (input, init) {
+      var url = typeof input === 'string' ? input : (input && input.url) || '';
+      if (url.indexOf('/api/') !== 0 && url.indexOf(location.origin + '/api/') !== 0) return f(input, init);
+      init = init || {};
+      var h = new Headers(init.headers || {});
+      h.set(name, val);
+      init.headers = h;
+      return f(input, init);
+    };
+  }
+
+  if (p.get('master') === '1') { tagApi('x-moa-who', 'master'); return; }
 
   var isStaff = mode === 'always' ? p.get('survey') !== '1' : p.get('admin') === '1';
 
   // ── 학생 화면: 허브 버튼 숨김 ──
   if (!isStaff) {
+    tagApi('x-moa-t', encodeURIComponent(p.get('t') || ''));
+    if (p.get('c') || p.get('shop') || /^\/go\//.test(location.pathname)) tagApi('x-moa-who', 'client');
     var st = document.createElement('style');
     st.textContent = '.moa-hubbar{display:none!important}';
     document.head.appendChild(st);

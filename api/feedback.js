@@ -199,6 +199,7 @@ function aiErrorText(status, data) {
   return `AI 호출 중 오류가 발생했습니다. (${status} ${t} ${m.slice(0, 120)})`;
 }
 
+import { withUsage } from './_usage.js'; // AI 사용 기록 (2026-10-24)
 import { fitLength } from './_fitlen.js';
 
 // 시간 안전장치 (2026-10-22): 수업 중 여러 문항이 한꺼번에 몰리면 한 문항이 5분 제한을 넘겨 통째로 끊겼음.
@@ -207,7 +208,7 @@ const TIME_LIMIT = 300000;      // vercel maxDuration과 같게
 const SAFE_END = TIME_LIMIT - 15000; // 이 시각까지는 답을 보냄
 const RETRY_NEEDS = 150000;     // 다시 만들기는 이만큼 남았을 때만
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const startedAt = Date.now();
   const deadline = startedAt + SAFE_END;
   if (req.method !== 'POST') {
@@ -428,3 +429,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   }
 }
+
+export default withUsage('resume', 'feedback', handler);

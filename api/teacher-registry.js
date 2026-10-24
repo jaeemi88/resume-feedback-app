@@ -18,6 +18,9 @@
 //
 // [누구나 호출 가능]
 //   GET  ?check=강사코드 → 삭제(차단)된 강사 코드인지 확인 { blocked: true/false }
+//
+// [운영보드 — 헤더 x-usage-key = MOA_USAGE_KEY]
+//   GET  ?usage=1&days=31 → AI 사용 기록(강사·기능별 횟수·예상 비용) + 강사 이름 (api/_usage.js)
 //   POST { code, name, inviteCode } → 강사 등록. 이미 승인된 코드면 초대코드 없이도 통과.
 //                                      새 코드면 초대코드가 유효+미사용+기간내여야 통과, 통과 즉시 그 초대코드는 사용 처리됨.
 //                                      새로 등록되면 개인 승인 링크 키(hubKey)도 함께 발급해서 돌려줌.
@@ -29,6 +32,7 @@
 // ※ 차단은 "삭제 목록"에 있는 코드만 막습니다. 예전부터 쓰던 코드가 승인 목록에 없더라도 막히지 않아요.
 import Redis from 'ioredis';
 import crypto from 'crypto';
+import { usageReport } from './_usage.js';
 
 let redis;
 function getRedis() {
@@ -83,6 +87,8 @@ export default async function handler(req, res) {
   const client = getRedis();
 
   if (req.method === 'GET') {
+    // 운영보드 'AI 사용 현황' (2026-10-24) — 헤더 x-usage-key 필요, 자세한 내용은 api/_usage.js
+    if (req.query.usage) return usageReport(req, res);
     const { master, list, check } = req.query;
 
     // 차단 여부 확인 (누구나) — 확인에 실패하면 막지 않고 통과시킴
