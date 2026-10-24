@@ -76,6 +76,8 @@ async function record(ctx, data) {
   const P = priceOf(data.model);
   const usd = ((u.input_tokens || 0) * P.in + (u.output_tokens || 0) * P.out + (u.cache_creation_input_tokens || 0) * P.cw + (u.cache_read_input_tokens || 0) * P.cr) / 1e6 + ws * P.ws;
   m.hincrby(k, base + 'u', Math.round(usd * 1e6));
+  ctx.sum.usd += usd;
+  ctx.sum.n += 1;
   m.expire(k, KEEP_SEC);
   await m.exec();
 }
@@ -101,13 +103,21 @@ export function withUsage(app, file, handler) {
   return async function (req, res) {
     const body = req.body && typeof req.body === 'object' ? req.body : {};
     const mode = String(body.mode || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 30);
-    const ctx = { req, app, route: file + (mode ? ':' + mode : ''), jobs: [], who: null };
+    const ctx = { req, app, route: file + (mode ? ':' + mode : ''), jobs: [], who: null, sum: { usd: 0, n: 0 } };
     try {
       return await als.run(ctx, () => handler(req, res));
     } finally {
       if (ctx.jobs.length) await Promise.allSettled(ctx.jobs); // 기록이 끝난 뒤에 함수가 멈추도록
     }
   };
+}
+
+// 지금 요청에서 지금까지 쓴 AI 횟수·예상 비용 (원장님 비교 화면용) — { usd, n }
+export async function usageSoFar() {
+  const ctx = als.getStore();
+  if (!ctx) return null;
+  await Promise.allSettled(ctx.jobs);
+  return { usd: Math.round(ctx.sum.usd * 10000) / 10000, n: ctx.sum.n };
 }
 
 // 운영보드용 집계 — 최근 days일(한국 날짜)의 기록 + 강사 이름

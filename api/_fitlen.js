@@ -15,6 +15,7 @@ function parseJson(raw) {
   return null;
 }
 
+// opts.model: 비교 화면에서 고른 모델 (2026-10-24, 없으면 claude-sonnet-4-6)
 // text: 지금 글, limit: 글자수 제한, opts.kind: 'essay'(자소서) | 'speech'(면접 답변), opts.slots: true면 exampleSlots도 다시 받음
 export async function fitLength(text, limit, opts = {}) {
   const L = parseInt(limit, 10);
@@ -44,7 +45,7 @@ export async function fitLength(text, limit, opts = {}) {
         signal: opts.deadline && typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(Math.max(5000, left() - 5000)) : undefined,
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: Math.min(8000, 1500 + Math.round(L * 2)), system, messages: [{ role: 'user', content: cur }] })
+        body: JSON.stringify({ model: opts.model || 'claude-sonnet-4-6', ...(opts.model === 'claude-sonnet-5-5' ? { thinking: { type: 'between_tools' } } : {}), max_tokens: Math.min(8000, 1500 + Math.round(L * 2)), system, messages: [{ role: 'user', content: cur }] })
       });
       if (!r.ok) { console.error('글자 수 맞추기 AI 오류', r.status); break; }
       const data = await r.json();

@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>모델 비교 · 자소서 첨삭</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<!-- 원장님 전용 (2026-10-24): 같은 자소서 문항·답변을 A 지금 모델 · B 후속 모델로 동시에 첨삭받아 완성본을 나란히 비교.
+     서버(api/feedback.js)는 원장님 암호가 맞을 때만 시험 설정을 받음. 학생 화면에는 영향 없음.
+     비용·시간은 글자 수 맞추기(api/_fitlen.js)까지 포함한 값. -->
+<script src="/staff-guard.js" data-mode="always" data-color="#643DF2"></script>
+<style>
+  :root{--ink:#141A2E;--ink2:#3B4256;--muted:#5F6678;--line:#E6E8EE;--surface:#F4F5F7;--app:#643DF2;--mark:#FFF1A8;--danger:#B42318}
+  *{box-sizing:border-box}
+  body{margin:0;background:#fff;color:var(--ink);font-family:'Noto Sans KR','맑은 고딕','Malgun Gothic',sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:16px}
+  .logo{font-weight:700;letter-spacing:.12em;font-size:13px;color:var(--ink);display:flex;align-items:center;gap:8px}
+  .logo i{width:8px;height:8px;border-radius:50%;background:var(--app);display:inline-block}
+  h1{font-size:22px;margin:14px 0 4px}
+  .lead{color:var(--muted);font-size:14px;line-height:1.7;margin:0 0 14px}
+  .card{border:1px solid var(--line);border-radius:14px;padding:14px;background:#fff;margin-bottom:12px}
+  label{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:10px 0 6px}
+  select,textarea,input{width:100%;font:inherit;font-size:15px;border:1px solid var(--line);border-radius:10px;padding:10px;background:#fff;color:var(--ink)}
+  textarea{min-height:120px;line-height:1.6;resize:vertical}
+  .two{display:grid;grid-template-columns:1fr 140px;gap:8px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
+  button{font:inherit;min-height:44px;padding:8px 16px;border-radius:10px;border:1px solid var(--ink);background:var(--ink);color:#fff;font-weight:700;cursor:pointer}
+  button[disabled]{opacity:.5;cursor:default}
+  .note{font-size:12px;color:var(--muted);line-height:1.6}
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  @media (max-width:760px){.grid{grid-template-columns:1fr}.two{grid-template-columns:1fr}}
+  .col h3{margin:0 0 2px;font-size:15px}
+  .col .sub{font-size:12px;color:var(--muted);margin-bottom:10px}
+  .ans{font-size:15px;line-height:1.85;white-space:pre-wrap;word-break:keep-all}
+  .ans mark{background:var(--mark);padding:0 2px;border-radius:3px}
+  .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+  .meta span{font-size:12px;background:var(--surface);border-radius:999px;padding:3px 10px;color:var(--ink2)}
+  .meta span.warn{background:#FDECEA;color:var(--danger)}
+  details{margin-top:10px;font-size:13px;color:var(--ink2);line-height:1.7}
+  details summary{cursor:pointer;color:var(--muted)}
+  .err{color:var(--danger);font-size:13px}
+  .pick{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .pick button{background:#fff;color:var(--ink);border-color:var(--line);font-weight:500}
+  .pick button[aria-pressed="true"]{border-color:var(--app);color:var(--app);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo"><i></i>MOA FORMULA</div>
+  <h1>자소서 첨삭 모델 비교</h1>
+  <p class="lead">같은 자소서 문항과 답변을 두 가지 모델로 동시에 첨삭받아 완성본을 나란히 비교합니다. 한 번 비교할 때 약 300~600원이 듭니다(글자 수 맞추기 포함). 실제 학생 답변 대신 예시 답변을 사용하십시오.</p>
+
+  <div class="card">
+    <label for="sample">예시 답변</label>
+    <select id="sample"></select>
+    <div class="two">
+      <div><label for="q">자소서 문항</label><textarea id="q" style="min-height:52px"></textarea></div>
+      <div><label for="lim">글자 수 제한</label><input id="lim" type="number" min="0" step="50" inputmode="numeric"></div>
+    </div>
+    <label for="a">학생 답변</label>
+    <textarea id="a"></textarea>
+    <div class="row">
+      <button type="button" id="run">두 모델로 비교하기</button>
+      <span class="note" id="status"></span>
+    </div>
+  </div>
+
+  <div class="grid" id="out"></div>
+  <div class="card" id="vote" style="display:none">
+    <b style="font-size:15px">어느 쪽이 더 좋았나요?</b>
+    <p class="note" style="margin:4px 0 0">고르신 결과는 이 기기에만 남습니다. 여러 예시를 보신 뒤 채팅으로 알려 주시면 그대로 반영하겠습니다.</p>
+    <div class="pick" id="pick"></div>
+    <p class="note" id="tally" style="margin-top:10px"></p>
+  </div>
+</div>
+<script>
+var WON = 1400; // 1달러 = 1,400원으로 환산한 추정치
+var VARIANTS = [
+  { key: 'A', title: 'A. 지금 그대로', sub: '현재 모델 (Sonnet 4.6)', lab: { model: 'claude-sonnet-4-6' } },
+  { key: 'B', title: 'B. 새 모델', sub: '후속 모델 (Sonnet 5.5)', lab: { model: 'claude-sonnet-5-5' } }
+];
+var SAMPLES = [
+  { name: '객실승무원 · 지원동기 (500자)', lim: 500, q: '대한항공에 지원한 동기와 입사 후 포부를 기술해 주십시오.',
+    a: '저는 어릴 때부터 승무원이 꿈이었습니다. 대학에서 항공서비스를 전공하면서 서비스에 대해 많이 배웠고 면세점 아르바이트를 하며 외국인 고객을 응대했습니다. 대한항공은 아시아나와 통합하여 세계적인 항공사로 성장하고 있어 함께 성장하고 싶습니다. 입사 후에는 안전과 서비스를 모두 갖춘 승무원이 되겠습니다.' },
+  { name: '간호 · 성장과정 (600자)', lim: 600, q: '본인의 성장과정과 간호사를 지원하게 된 계기를 기술해 주십시오.',
+    a: '저는 맞벌이 부모님 밑에서 자라 어릴 때부터 스스로 하는 습관이 있었습니다. 고등학교 때 할머니가 입원하셨을 때 간호사 선생님이 친절하게 대해 주시는 것을 보고 간호사가 되고 싶다는 생각을 했습니다. 대학에서는 실습을 열심히 했고 환자분들께 칭찬도 받았습니다.' },
+  { name: '사무행정 · 직무역량 (800자)', lim: 800, q: '지원 직무와 관련하여 본인이 갖춘 역량과 이를 키우기 위한 노력을 기술해 주십시오.',
+    a: '저는 컴퓨터활용능력 1급과 워드프로세서 자격증을 취득했습니다. 학교 행정실에서 근로장학생으로 1년간 일하며 공문 정리와 엑셀 자료 작성을 했습니다. 처음에는 실수도 있었지만 체크리스트를 만들어서 실수를 줄였습니다. 이런 경험을 바탕으로 정확하고 꼼꼼하게 업무를 처리하는 직원이 되겠습니다.' },
+  { name: '공공기관 · 갈등 해결 (500자)', lim: 500, q: '공동의 목표를 위해 다른 사람과 갈등을 해결한 경험을 기술해 주십시오.',
+    a: '대학교 팀 프로젝트에서 발표 자료 방향을 두고 팀원과 의견이 달랐습니다. 저는 각자의 의견을 정리해서 장단점을 비교해 보자고 제안했고 결국 두 의견을 합쳐서 좋은 결과를 얻었습니다. 이 경험으로 소통의 중요성을 배웠습니다.' }
+];
+
+var sel = document.getElementById('sample'), qEl = document.getElementById('q'), aEl = document.getElementById('a'), limEl = document.getElementById('lim');
+var runBtn = document.getElementById('run'), statusEl = document.getElementById('status'), out = document.getElementById('out');
+
+SAMPLES.forEach(function (s, i) { var o = document.createElement('option'); o.value = i; o.textContent = s.name; sel.appendChild(o); });
+var oc = document.createElement('option'); oc.value = 'custom'; oc.textContent = '직접 입력'; sel.appendChild(oc);
+function fill() { var s = SAMPLES[sel.value]; qEl.value = s ? s.q : ''; aEl.value = s ? s.a : ''; limEl.value = s ? s.lim : 500; }
+sel.addEventListener('change', fill); fill();
+
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function marked(t) { return esc(t).replace(/\{\{([\s\S]*?)\}\}/g, '<mark>$1</mark>'); }
+function plainLen(t) { return String(t || '').replace(/\{\{|\}\}|[⟪⟫]/g, '').length; }
+function text(v) { return Array.isArray(v) ? v.join(' ') : (v || ''); }
+function colHtml(v, body) {
+  return '<div class="card col" id="col' + v.key + '"><h3>' + esc(v.title) + '</h3><div class="sub">' + esc(v.sub) + '</div>' + body + '</div>';
+}
+
+function runOne(v, q, a, lim) {
+  return fetch('/api/feedback', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question: q, answer: a, charLimit: lim || '', framework: 'STAR', hiringType: 'normal', lab: v.lab })
+  }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); }).then(function (x) {
+    var el = document.getElementById('col' + v.key);
+    if (!x.ok) { el.outerHTML = colHtml(v, '<p class="err">' + esc(x.d.error || '오류가 발생했습니다.') + '</p>'); return; }
+    var d = x.d, lab = d._lab || {}, n = plainLen(d.polishedText);
+    var inRange = !lim || (n >= Math.ceil(lim * 0.8) && n <= lim);
+    el.outerHTML = colHtml(v,
+      '<div class="ans">' + marked(d.polishedText || '') + '</div>' +
+      '<div class="meta"><span>약 ' + Math.round((lab.usd || 0) * WON) + '원 · AI ' + (lab.n || 0) + '회</span><span>' + Math.round((lab.ms || 0) / 100) / 10 + '초</span>' +
+      '<span' + (inRange ? '' : ' class="warn"') + '>' + n + (lim ? ' / ' + lim : '') + '자</span></div>' +
+      '<details><summary>잘된 점 · 개선점 보기</summary><p><b>잘된 점</b><br>' + esc(text(d.strengths)) + '</p><p><b>개선점</b><br>' + esc(text(d.improvements)) + '</p></details>');
+  }).catch(function () {
+    var el = document.getElementById('col' + v.key);
+    if (el) el.outerHTML = colHtml(v, '<p class="err">연결에 실패했습니다. 다시 시도해 주십시오.</p>');
+  });
+}
+
+runBtn.addEventListener('click', function () {
+  var q = qEl.value.trim(), a = aEl.value.trim(), lim = parseInt(limEl.value, 10) || 0;
+  if (!q || !a) { statusEl.textContent = '문항과 답변을 모두 입력해 주십시오.'; return; }
+  runBtn.disabled = true; statusEl.textContent = '두 가지 첨삭을 받는 중입니다. 1~2분 정도 걸립니다.';
+  out.innerHTML = VARIANTS.map(function (v) { return colHtml(v, '<p class="note">받는 중입니다.</p>'); }).join('');
+  document.getElementById('vote').style.display = 'none';
+  Promise.all(VARIANTS.map(function (v) { return runOne(v, q, a, lim); })).then(function () {
+    runBtn.disabled = false; statusEl.textContent = '완료되었습니다. 형광펜은 AI가 채운 예시 자리이며, 글자 수가 빨간색이면 목표(제한의 80~100%)를 벗어난 것입니다.';
+    showVote(sel.value);
+  });
+});
+
+function getVotes() { try { return JSON.parse(localStorage.getItem('moa_resume_compare_votes') || '{}'); } catch (e) { return {}; } }
+function showVote(key) {
+  var box = document.getElementById('vote'), pick = document.getElementById('pick');
+  box.style.display = 'block';
+  function paint() {
+    var votes = getVotes();
+    pick.innerHTML = VARIANTS.map(function (v) { return '<button type="button" data-k="' + v.key + '" aria-pressed="' + (votes[key] === v.key) + '">' + esc(v.title) + '</button>'; }).join('');
+    var cnt = { A: 0, B: 0 }; Object.keys(votes).forEach(function (k) { cnt[votes[k]] = (cnt[votes[k]] || 0) + 1; });
+    document.getElementById('tally').textContent = '지금까지 선택: A ' + cnt.A + ' · B ' + cnt.B;
+  }
+  pick.onclick = function (e) {
+    var b = e.target.closest('[data-k]'); if (!b) return;
+    var votes = getVotes(); votes[key] = b.getAttribute('data-k');
+    try { localStorage.setItem('moa_resume_compare_votes', JSON.stringify(votes)); } catch (x) {}
+    paint();
+  };
+  paint();
+}
+</script>
+</body>
+</html>
