@@ -1977,10 +1977,19 @@ const PLACE_HOME_URL = 'https://m.place.naver.com/place/2077053527/home'; // 친
 const NAVER_PLACE_URL = 'https://m.place.naver.com/place/2077053527/review/visitor'; // 진로모아 커리어센터 플레이스 리뷰 탭
 const RESUME_SHORT_URL = 'https://go.jinromoa.co.kr/'; // 고객에게 보내는 자소서 앱 짧은 주소 (2026-10-07 연결)
 
+// 특강 문항 유형 (2026-10-24): 허브 입장 코드에 문항 유형을 정해 두면 그 QR로 들어온 학생 주소에 ?qt=유형 이 붙음
+//   → 문항 유형을 그 하나로 고정. 유료 고객은 상품에 정해진 유형(CLIENT.items)을 그대로 따름
+const RESUME_QTYPES = ['성장과정', '성격장단점', '지원동기', '협업갈등', '도전경험', '실패경험', '경력활동', '입사후포부', '에세이'];
+function classQt() {
+  if (CLIENT) return '';
+  const v = new URLSearchParams(location.search).get('qt') || '';
+  return RESUME_QTYPES.includes(v) ? v : '';
+}
 function clientFilterOptions(html) {
-  if (!CLIENT) return html;
+  const allow = CLIENT ? CLIENT.items : (classQt() ? [classQt()] : null);
+  if (!allow) return html;
   return html.replace(/\s*<option value="([^"]+)" data-fw="[^"]*">[^<]*<\/option>/g,
-    (m, v) => CLIENT.items.includes(v) ? m : '');
+    (m, v) => allow.includes(v) ? m : '');
 }
 
 function clientBannerHtml() {
@@ -2769,6 +2778,7 @@ async function renderStudentSubmitForm() {
 
   app.innerHTML = `
     ${studentTabsHtml()}
+    ${classQt() ? `<div class="card" style="border-left:4px solid var(--navy);padding:12px 16px;font-size:14px;line-height:1.6">오늘 특강은 <b>${escapeHtml(CLIENT_ITEM_LABELS[classQt()] || classQt())}</b> 문항으로 진행합니다.</div>` : ''}
     <div class="card">
       <h2>첨삭 요청</h2>
       ${CLIENT ? `<p style="font-size:13px;color:var(--muted);margin:-4px 0 14px;line-height:1.7">첨삭받을 문항을 <b>모두 모아서 한 번에</b> 제출해 주세요. 문항 유형을 눌러 칸마다 쓰면 되고, 최대 ${(CLIENT.maxItems || CLIENT.items.length)}개까지 넣을 수 있어요. <b style="color:var(--text)">제출은 한 번만 가능하고, 제출 후에는 수정할 수 없어요.</b></p>` : `<p style="font-size:13px;color:var(--muted);margin:-4px 0 14px">자소서 문항이 여러 개면 문항 유형을 눌러 칸마다 쓰고, 한 번에 제출해 주세요. ${limitNum === Infinity ? '' : limitNum === 1 ? '이 기기에서는 <b>한 번만</b> 제출할 수 있으니, ' : `이 기기에서는 <b>최대 ${limitNum}번</b>까지만 제출할 수 있으니, `}신중하게 작성한 뒤 제출해 주세요.</p>`}

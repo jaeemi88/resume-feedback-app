@@ -9,6 +9,8 @@
 //   POST { action:'create', label, hours }        → 새 4자리 코드 발급 (hours: 1~168, 기본 12)
 //   POST { action:'delete', code }                → 코드 즉시 사용 종료
 //   POST { action:'create', caseId, slotId }      → 운영보드에서 배정받은 센터 강의 코드 (2026-10-03)
+//   create에 only: { interview: '질문 유형 id', resume: '문항 유형' } 를 함께 보내면 그 코드로 들어온 학생은
+//   그 유형 하나만 씀 (2026-10-24 · 특강별 질문 유형). 비우면 전체. 허브가 앱 주소에 ?qt= 로 붙여 넘김
 //   GET  ?assign=1                                → 나에게 배정된 센터 강의 목록 + 사용 중인 코드
 //
 // [강의별 앱 기록 (2026-10-03)]
@@ -17,7 +19,7 @@
 //   moa_ci:{ci} · moa_ci_by_t:{강사코드} · moa_lect:{강의id}(ci → 반/회차) · moa_assign:{강사코드}(운영보드가 씀)
 //
 // [누구나 — 학생 입장]
-//   POST { action:'verify', code }                → { ok, label, t } (t = 학생 제출이 갈 강사 코드)
+//   POST { action:'verify', code }                → { ok, label, t, ci, only } (t = 학생 제출이 갈 강사 코드)
 //        같은 IP에서 30번 틀리면 15분 차단 (코드 추측 방지 · 학교는 한 반이 같은 IP라 넉넉히)
 //
 // ※ 학생 이름·휴대폰 번호는 이 API로 보내지 않아요. 코드만 확인합니다.
@@ -49,8 +51,19 @@ function readBody(req) {
   if (req.body && typeof req.body === 'object') return req.body;
   try { return JSON.parse(req.body || '{}'); } catch (e) { return {}; }
 }
+// 특강 질문 유형 (2026-10-24) — 모의면접은 질문 유형 id(강사가 만든 유형 포함), 자소서는 정해진 문항 유형 중 하나
+const RESUME_QTYPES = ['성장과정', '성격장단점', '지원동기', '협업갈등', '도전경험', '실패경험', '경력활동', '입사후포부', '에세이'];
+function cleanOnly(o) {
+  o = o && typeof o === 'object' ? o : {};
+  const iv = String(o.interview || '').trim();
+  const rs = String(o.resume || '').trim();
+  const out = {};
+  if (/^[a-z0-9-]{1,30}$/.test(iv)) out.interview = iv;
+  if (RESUME_QTYPES.includes(rs)) out.resume = rs;
+  return Object.keys(out).length ? out : null;
+}
 function publicView(d) {
-  return { code: d.code, label: d.label, t: d.t, ownerName: d.ownerName, createdAt: d.createdAt, expiresAt: d.expiresAt,
+  return { code: d.code, label: d.label, t: d.t, ownerName: d.ownerName, createdAt: d.createdAt, expiresAt: d.expiresAt, only: d.only || null,
     lect: d.lect ? { caseId: d.lect.caseId, slotId: d.lect.slotId, title: d.lect.title, slot: d.lect.slot } : null };
 }
 const CI_TTL = 60 * 60 * 24 * 400;
@@ -84,7 +97,7 @@ export default async function handler(req, res) {
         return res.status(404).json({ ok: false, error: '입장 코드가 맞지 않거나 사용 기간이 끝났어요. 강사님께 확인해 주세요.' });
       }
       const d = JSON.parse(raw);
-      return res.status(200).json({ ok: true, label: d.label, t: d.t, ci: d.ci || '' });
+      return res.status(200).json({ ok: true, label: d.label, t: d.t, ci: d.ci || '', only: d.only || null });
     }
 
     // ── 여기부터 강사·원장님만 ──
@@ -148,16 +161,17 @@ export default async function handler(req, res) {
         label = cleanLabel([a.title, a.slot].filter(Boolean).join(' · ')) || label;
       }
       const now = Date.now();
+      const only = cleanOnly(body.only);
       const ownerName = isMaster ? '원장님' : (who.name || who.code);
       for (let i = 0; i < 30; i++) {
         const code = String(crypto.randomInt(0, 10000)).padStart(4, '0');
         const ci = 'ci_' + crypto.randomBytes(8).toString('hex');
-        const data = { code, label, t: myT, owner: myT, ownerName, createdAt: now, expiresAt: now + hours * 3600 * 1000, ci, lect };
+        const data = { code, label, t: myT, owner: myT, ownerName, createdAt: now, expiresAt: now + hours * 3600 * 1000, ci, lect, only };
         // 같은 번호가 이미 쓰이고 있으면 다른 번호로 (NX = 없을 때만 저장)
         const ok = await client.set(PREFIX + code, JSON.stringify(data), 'EX', hours * 3600, 'NX');
         if (ok) {
           await client.hset(INDEX, code, myT);
-          await client.set('moa_ci:' + ci, JSON.stringify({ ci, code, t: myT, ownerName, label, createdAt: now, expiresAt: data.expiresAt, lect }), 'EX', CI_TTL);
+          await client.set('moa_ci:' + ci, JSON.stringify({ ci, code, t: myT, ownerName, label, createdAt: now, expiresAt: data.expiresAt, lect, only }), 'EX', CI_TTL);
           await client.hset('moa_ci_by_t:' + myT, ci, String(now));
           await client.expire('moa_ci_by_t:' + myT, CI_TTL);
           if (lect) {
