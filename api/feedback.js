@@ -203,8 +203,10 @@ import { withUsage, usageSoFar } from './_usage.js'; // AI 사용 기록 (2026-1
 import Redis from 'ioredis';
 import { whoIs } from './_staff.js';
 
-// ★ 원장님 비교 화면(/compare.html)용 시험 설정 (2026-10-24)
-//   원장님 암호(x-staff-pin)가 맞을 때만 body.lab = { model } 을 받음. 학생·강사 화면 요청은 그대로(claude-sonnet-4-6).
+// ★ 모델 (2026-10-24 원장님 비교 결과 B 채택): 첨삭·글자 수 맞추기 모두 후속 모델 claude-sonnet-5-5
+//   원장님 비교 화면(/compare.html)은 원장님 암호(x-staff-pin)가 맞을 때만 body.lab = { model }로
+//   이전 모델(claude-sonnet-4-6)과 다시 비교할 수 있음
+const MODEL = 'claude-sonnet-5-5';
 const LAB_MODELS = ['claude-sonnet-4-6', 'claude-sonnet-5-5'];
 let redis;
 function getRedis() {
@@ -247,7 +249,7 @@ async function handler(req, res) {
     const who = await whoIs(req, getRedis()).catch(() => null);
     if (!who || who.role !== 'master') return res.status(403).json({ error: '원장님 암호가 필요합니다.' });
     const m = String(req.body.lab.model || '');
-    lab = { model: LAB_MODELS.includes(m) ? m : LAB_MODELS[0] };
+    lab = { model: LAB_MODELS.includes(m) ? m : MODEL };
   }
 
   const fw = FRAMEWORK_KEYS[framework] ? framework : 'STAR';
@@ -375,8 +377,8 @@ async function handler(req, res) {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: lab ? lab.model : 'claude-sonnet-4-6',
-        ...(lab && lab.model === 'claude-sonnet-5-5' ? { thinking: { type: 'between_tools' } } : {}), // 후속 모델의 '생각하는 단계'는 끈 상태로 시험
+        model: lab ? lab.model : MODEL,
+        ...((lab ? lab.model : MODEL) === 'claude-sonnet-5-5' ? { thinking: { type: 'between_tools' } } : {}), // 후속 모델의 '생각하는 단계'는 끈 상태로 사용
         max_tokens: Math.min(8000, 3500 + Math.round((parseInt(charLimit, 10) || 0) * 1.6)), // 글자수가 길수록 여유 있게 (실제 쓴 만큼만 비용 발생)
         system: systemBlocks,
         messages: [
@@ -437,7 +439,7 @@ async function handler(req, res) {
 
     // 글자 수 맞추기: 다듬은 글이 제한의 80% 미만이거나 넘치면 서버가 세어 보고 다시 고쳐 씀 (2026-10-05)
     if (fw !== 'RESUME' && charLimit && feedback.polishedText) {
-      const fx = await fitLength(feedback.polishedText, charLimit, { kind: 'essay', slots: true, deadline, model: lab ? lab.model : undefined });
+      const fx = await fitLength(feedback.polishedText, charLimit, { kind: 'essay', slots: true, deadline, model: lab ? lab.model : MODEL });
       if (fx) {
         feedback.polishedText = fx.text;
         feedback.exampleSlots = (Array.isArray(fx.exampleSlots) ? fx.exampleSlots : []).filter((s) => s && s.example).map((s) => ({ example: String(s.example), hint: String(s.hint || ''), options: (Array.isArray(s.options) ? s.options : []).map(String).filter(Boolean).slice(0, 3) })).slice(0, 8);
