@@ -4,7 +4,7 @@
 //   사용량(usage)을 자동으로 기록함 (_fitlen·_company 처럼 함께 부르는 호출도 같은 기능으로 묶임)
 // - 저장: Redis 해시 moa_ai_usage:YYYY-MM-DD(한국 날짜), 칸 이름 "누구|앱|기능|항목"
 //     누구: t:강사코드(그 강사의 강사 화면·학생 링크) / master(원장님) / client(유료 개인 고객) / free(무료 체험) / etc(구분 불가)
-//     항목: n 횟수, in·out·cw·cr 토큰(입력·출력·캐시 저장·캐시 읽기), ws 웹 검색 횟수
+//     항목: n 횟수, in·out·cw·cr 토큰(입력·출력·캐시 저장·캐시 읽기), ws 웹 검색 횟수, u 예상 비용(백만분의 1달러, 모델별 가격)
 // - 학생 이름·글 내용은 남기지 않음. 400일 뒤 자동 삭제
 // - 강사 구분: 강사 화면은 staff-guard.js가 붙이는 승인 링크 키(x-staff-key)로, 학생 화면은 주소의 t(x-moa-t)로
 // - 운영보드가 읽는 주소: 자소서 앱 /api/teacher-registry?usage=1&days=31 (헤더 x-usage-key = 환경변수 MOA_USAGE_KEY)
@@ -14,8 +14,17 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 
 const KEEP_SEC = 60 * 60 * 24 * 400;
 const FREE_MODES = ['freeCheck', 'blackboxCheck', 'freeInterview'];
-// claude-sonnet-4-6 기준 1백만 토큰당 달러 (캐시 저장 1.25배, 캐시 읽기 0.1배) · 웹 검색 1회 $0.01
-const PRICE = { in: 3, out: 15, cw: 3.75, cr: 0.3, ws: 0.01 };
+// 1백만 토큰당 달러 (캐시 저장 1.25배, 캐시 읽기 0.1배) · 웹 검색 1회 $0.01
+const PRICES = {
+  'claude-sonnet-4-6': { in: 3, out: 15, cw: 3.75, cr: 0.3, ws: 0.01 },
+  'claude-sonnet-5-5': { in: 2, out: 10, cw: 2.5, cr: 0.2, ws: 0.01 }
+};
+const PRICE = PRICES['claude-sonnet-4-6']; // 모델을 모를 때·예전 기록(u 없음) 계산용
+function priceOf(model) {
+  const m = String(model || '');
+  const k = Object.keys(PRICES).find((x) => m.indexOf(x) === 0);
+  return k ? PRICES[k] : PRICE;
+}
 
 let redis;
 function getRedis() {
@@ -64,6 +73,9 @@ async function record(ctx, data) {
     .hincrby(k, base + 'cr', u.cache_read_input_tokens || 0);
   const ws = (u.server_tool_use && u.server_tool_use.web_search_requests) || 0;
   if (ws) m.hincrby(k, base + 'ws', ws);
+  const P = priceOf(data.model);
+  const usd = ((u.input_tokens || 0) * P.in + (u.output_tokens || 0) * P.out + (u.cache_creation_input_tokens || 0) * P.cw + (u.cache_read_input_tokens || 0) * P.cr) / 1e6 + ws * P.ws;
+  m.hincrby(k, base + 'u', Math.round(usd * 1e6));
   m.expire(k, KEEP_SEC);
   await m.exec();
 }
@@ -122,7 +134,7 @@ export async function usageReport(req, res) {
     }
     for (const [base, v] of Object.entries(agg)) {
       const [who, app, route] = base.split('|');
-      const usd = ((v.in || 0) * PRICE.in + (v.out || 0) * PRICE.out + (v.cw || 0) * PRICE.cw + (v.cr || 0) * PRICE.cr) / 1e6 + (v.ws || 0) * PRICE.ws;
+      const usd = v.u != null ? v.u / 1e6 : ((v.in || 0) * PRICE.in + (v.out || 0) * PRICE.out + (v.cw || 0) * PRICE.cw + (v.cr || 0) * PRICE.cr) / 1e6 + (v.ws || 0) * PRICE.ws;
       rows.push({ day, who, app, route, n: v.n || 0, usd: Math.round(usd * 10000) / 10000 });
     }
   });
