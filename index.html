@@ -458,6 +458,8 @@
 <main id="app"></main>
 <script src="/staff-guard.js" data-mode="admin" data-color="#643DF2"></script>
 <script>
+// 쓰임새 기록 (2026-10-24 · 2단계 정리): 화면이 열린 횟수만 운영보드로 보냄 (이름·기기 정보는 보내지 않음)
+function moaUse(s){try{var k=String(s),t=Date.now(),m=window.__moaUse||(window.__moaUse={});if(m[k]&&t-m[k]<600000)return;m[k]=t;var u='https://jinromoa-board.vercel.app/api/usage',b=JSON.stringify({a:'rs',s:k});if(navigator.sendBeacon)navigator.sendBeacon(u,b);else fetch(u,{method:'POST',body:b,keepalive:true,mode:'no-cors'})}catch(e){}}
 // ── 날짜 표시 통일 (2026-09-28, 취업스킬 전 앱 공통 규칙) ──
 // 기본(기록) 2026.10.26 · week(일정) 2026.10.26(월) · short 10.26(월) · time 2026.10.26 14:00 · stime 10.26(월) 14:00 · ym 2000.03 · formal 2026년 9월 27일
 function moaDate(v, kind){
@@ -1748,6 +1750,7 @@ async function route() {
   if (params.get('master') === '1') {
     document.body.classList.add('role-teacher');
     document.getElementById('roleBadge').textContent = '관리자';
+    moaUse('master');
     renderMasterTeacherList();
     return;
   }
@@ -1930,6 +1933,7 @@ function setupResumeCompanyField() {
   async function run() {
     const name = input.value.replace(/\s+/g, ' ').trim();
     if (name.length < 2) { lastErr = '지원 기업명을 먼저 적어 주세요.'; paint(); return; }
+    moaUse('help'); // 쓰기 도움: 기업 요약 카드
     busy = true; lastErr = ''; paint();
     try {
       const r = await fetch('/api/coach', { method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2183,6 +2187,7 @@ async function renderShopJoin(key) {
 }
 
 async function renderClientEntry(rawCode) {
+  moaUse('client');
   document.body.classList.remove('role-teacher');
   document.body.classList.add('role-student');
   document.getElementById('roleBadge').textContent = '개인 고객';
@@ -2502,6 +2507,7 @@ function scaffoldHtml(id, type) {
 // ---------- 재료 인터뷰 창 (2026-10-02) ----------
 // 한 단어만 답해도 그 내용은 '학생 본인 사실'로 첨삭에 들어가서, AI 예시(형광펜) 자리가 줄어듦
 function askMaterialInterview(items) {
+  moaUse('help'); // 쓰기 도움: 재료 더 묻기
   return new Promise(resolve => {
     const bg = document.createElement('div');
     bg.className = 'ex-modal-bg';
@@ -2587,6 +2593,7 @@ async function makeDraftFromMemo(block, id) {
   const box = block.querySelector(`.sc-drafts[data-item-id="${id}"]`);
   const btn = block.querySelector('.sc-draft-btn');
   if (memo.length < 2) { statusEl.textContent = '2칸 이상 채워주세요.'; return; }
+  moaUse('help'); // 쓰기 도움: 메모로 초안
   btn.disabled = true; btn.textContent = '초안 만드는 중...';
   statusEl.textContent = '내 메모로 초안 3가지를 만들고 있어요. 10~20초 정도 걸려요.';
   box.innerHTML = '';
@@ -2748,6 +2755,7 @@ function applyDocTypeToBlock(id, docTypeVal) {
 }
 
 async function renderStudentSubmitForm() {
+  if (!CLIENT) moaUse('submit'); // 유료 고객 입장은 client로 따로 셈
   let retryLimit = 'unlimited';
   let institutions = [];
   try {
@@ -3176,6 +3184,7 @@ const PRESET_LIBRARY = [
 let currentTab = 'reviews';
 
 async function renderTeacherView() {
+  moaUse('teacher');
   const studentLink = location.origin + location.pathname + '?t=' + encodeURIComponent(TEACHER_ID);
   const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=' + encodeURIComponent(studentLink);
   let isPermanentTeacher = false;
@@ -4709,6 +4718,7 @@ function downloadResultAsPdf(studentName) {
 }
 
 async function renderResultView(id) {
+  moaUse('result');
   app.innerHTML = `<div class="card"><div class="empty">결과를 불러오는 중...</div></div>`;
   try {
     const { item } = await api('/api/results?id=' + encodeURIComponent(id) + (isAdmin ? '&admin=1' : ''));
