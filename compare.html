@@ -76,6 +76,9 @@
   </div>
 </div>
 <script>
+// 쓰임새 기록 (2026-10-24 · 2단계 정리): 화면이 열린 횟수만 운영보드로 보냄 (이름·기기 정보는 보내지 않음)
+function moaUse(s){try{var k=String(s),t=Date.now(),m=window.__moaUse||(window.__moaUse={});if(m[k]&&t-m[k]<600000)return;m[k]=t;var u='https://jinromoa-board.vercel.app/api/usage',b=JSON.stringify({a:'rs',s:k});if(navigator.sendBeacon)navigator.sendBeacon(u,b);else fetch(u,{method:'POST',body:b,keepalive:true,mode:'no-cors'})}catch(e){}}
+moaUse('compare');
 var WON = 1400; // 1달러 = 1,400원으로 환산한 추정치
 var VARIANTS = [
   { key: 'A', title: 'A. 이전 모델', sub: 'Sonnet 4.6', lab: { model: 'claude-sonnet-4-6' } },

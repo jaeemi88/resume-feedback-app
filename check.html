@@ -90,6 +90,9 @@ footer{text-align:center;font-size:12px;color:var(--muted);padding:0 20px 40px}
 </main>
 <footer>진로모아커리어센터 · MOA FORMULA<br>참고용 검사예요 · AI 탐지기 판정이 아니에요</footer>
 <script>
+// 쓰임새 기록 (2026-10-24 · 2단계 정리): 화면이 열린 횟수만 운영보드로 보냄 (이름·기기 정보는 보내지 않음)
+function moaUse(s){try{var k=String(s),t=Date.now(),m=window.__moaUse||(window.__moaUse={});if(m[k]&&t-m[k]<600000)return;m[k]=t;var u='https://jinromoa-board.vercel.app/api/usage',b=JSON.stringify({a:'rs',s:k});if(navigator.sendBeacon)navigator.sendBeacon(u,b);else fetch(u,{method:'POST',body:b,keepalive:true,mode:'no-cors'})}catch(e){}}
+moaUse('check');
 // 무료 체험 현황 (2026-10-15): 화면 열기·검사·예약 버튼 누름을 숫자로만 기록 (원장님 화면에서 봄)
 const stat=ev=>{try{if(new URLSearchParams(location.search).has('demo'))return;navigator.sendBeacon('/api/config?scope=freestats',new Blob([JSON.stringify({ev})],{type:'application/json'}))}catch(e){}};
 stat('check_view');document.querySelector('.cta .main').addEventListener('click',()=>stat('check_cta'));
