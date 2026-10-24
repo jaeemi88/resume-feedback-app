@@ -26,5 +26,10 @@
       "source": "/blackbox",
       "destination": "/blackbox.html"
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "claude/**": false
+    }
+  }
 }
