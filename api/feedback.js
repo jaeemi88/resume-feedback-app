@@ -199,7 +199,18 @@ function aiErrorText(status, data) {
   return `AI 호출 중 오류가 발생했습니다. (${status} ${t} ${m.slice(0, 120)})`;
 }
 
-import { withUsage } from './_usage.js'; // AI 사용 기록 (2026-10-24)
+import { withUsage, usageSoFar } from './_usage.js'; // AI 사용 기록 (2026-10-24)
+import Redis from 'ioredis';
+import { whoIs } from './_staff.js';
+
+// ★ 원장님 비교 화면(/compare.html)용 시험 설정 (2026-10-24)
+//   원장님 암호(x-staff-pin)가 맞을 때만 body.lab = { model } 을 받음. 학생·강사 화면 요청은 그대로(claude-sonnet-4-6).
+const LAB_MODELS = ['claude-sonnet-4-6', 'claude-sonnet-5-5'];
+let redis;
+function getRedis() {
+  if (!redis) redis = new Redis(process.env.REDIS_URL);
+  return redis;
+}
 import { fitLength } from './_fitlen.js';
 
 // 시간 안전장치 (2026-10-22): 수업 중 여러 문항이 한꺼번에 몰리면 한 문항이 5분 제한을 넘겨 통째로 끊겼음.
@@ -229,6 +240,14 @@ async function handler(req, res) {
 
   if (!question) {
     return res.status(400).json({ error: '질문(문항) 내용이 없습니다.' });
+  }
+
+  let lab = null; // 비교 화면에서만 채워짐
+  if (req.body && req.body.lab) {
+    const who = await whoIs(req, getRedis()).catch(() => null);
+    if (!who || who.role !== 'master') return res.status(403).json({ error: '원장님 암호가 필요합니다.' });
+    const m = String(req.body.lab.model || '');
+    lab = { model: LAB_MODELS.includes(m) ? m : LAB_MODELS[0] };
   }
 
   const fw = FRAMEWORK_KEYS[framework] ? framework : 'STAR';
@@ -356,7 +375,8 @@ async function handler(req, res) {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
+        model: lab ? lab.model : 'claude-sonnet-4-6',
+        ...(lab && lab.model === 'claude-sonnet-5-5' ? { thinking: { type: 'between_tools' } } : {}), // 후속 모델의 '생각하는 단계'는 끈 상태로 시험
         max_tokens: Math.min(8000, 3500 + Math.round((parseInt(charLimit, 10) || 0) * 1.6)), // 글자수가 길수록 여유 있게 (실제 쓴 만큼만 비용 발생)
         system: systemBlocks,
         messages: [
@@ -417,12 +437,13 @@ async function handler(req, res) {
 
     // 글자 수 맞추기: 다듬은 글이 제한의 80% 미만이거나 넘치면 서버가 세어 보고 다시 고쳐 씀 (2026-10-05)
     if (fw !== 'RESUME' && charLimit && feedback.polishedText) {
-      const fx = await fitLength(feedback.polishedText, charLimit, { kind: 'essay', slots: true, deadline });
+      const fx = await fitLength(feedback.polishedText, charLimit, { kind: 'essay', slots: true, deadline, model: lab ? lab.model : undefined });
       if (fx) {
         feedback.polishedText = fx.text;
         feedback.exampleSlots = (Array.isArray(fx.exampleSlots) ? fx.exampleSlots : []).filter((s) => s && s.example).map((s) => ({ example: String(s.example), hint: String(s.hint || ''), options: (Array.isArray(s.options) ? s.options : []).map(String).filter(Boolean).slice(0, 3) })).slice(0, 8);
       }
     }
+    if (lab) feedback._lab = { model: lab.model, ms: Date.now() - startedAt, ...((await usageSoFar()) || {}) };
     return res.status(200).json(feedback);
   } catch (err) {
     console.error('서버 오류:', err);
