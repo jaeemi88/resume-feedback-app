@@ -4689,16 +4689,211 @@ function buildWordHtml(record) {
   <p style="margin:18pt 0 0;font-size:8.5pt;color:${W.muted};text-align:center;font-family:${W.font}">진로모아커리어센터 · MOA FORMULA 취업의 공식</p>
 </div></body></html>`;
 }
+// ---------- 진짜 워드 파일(.docx)로 저장 (2026-10-25) ----------
+// 예전에는 위 HTML을 .doc 이름으로만 저장해서 MS 워드에서만 열리고, 한컴오피스(한글·한워드)에서는 '파일 읽기 오류'가 났음.
+// buildWordHtml이 만든 표·문단을 워드 표준 형식(OOXML)으로 옮겨 .docx로 묶음 → MS 워드·한컴·구글 문서·폰 모두 열림.
+const DX = { pageW: 11906, pageH: 16838, margin: 1000, font: '맑은 고딕' };
+DX.textW = DX.pageW - DX.margin * 2;
+// 한글(HWP)은 이모지(📝·🎤 등)를 읽다 멈추는 경우가 있고, 문서 어투 원칙상 이모지를 쓰지 않으므로 워드 파일에서는 빼고 ✓·⚠ 같은 기호만 남김
+function dxNoEmoji(t) { return String(t).replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\uFE0F\u200D]/gu, c => (c === '✓' || c === '⚠') ? c : ''); }
+function dxEsc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function dxStyle(el) {
+  const o = {};
+  ((el.getAttribute && el.getAttribute('style')) || '').split(';').forEach(d => { const i = d.indexOf(':'); if (i > 0) o[d.slice(0, i).trim().toLowerCase()] = d.slice(i + 1).trim(); });
+  return o;
+}
+function dxPt(v) { const m = String(v || '').match(/(-?[\d.]+)\s*(pt|px)?/); if (!m) return 0; const n = parseFloat(m[1]); return m[2] === 'px' ? n * 0.75 : n; }
+function dxColor(v) { const m = String(v || '').match(/#([0-9a-f]{6}|[0-9a-f]{3})\b/i); if (!m) return ''; let h = m[1]; if (h.length === 3) h = h.split('').map(c => c + c).join(''); return h.toUpperCase(); }
+function dxBorder(v) {
+  if (!v || /none/.test(v)) return null;
+  return { sz: Math.max(2, Math.round(dxPt(v) * 8)), val: /dotted/.test(v) ? 'dotted' : /dashed/.test(v) ? 'dashed' : 'single', color: dxColor(v) || 'auto' };
+}
+function dxBox(v) { // padding·margin 줄임 표기 → [위, 오른쪽, 아래, 왼쪽] pt
+  const s = String(v || '').trim(); if (!s) return [0, 0, 0, 0];
+  const p = s.split(/\s+/).map(dxPt);
+  return [p[0], p[1] ?? p[0], p[2] ?? p[0], p[3] ?? p[1] ?? p[0]];
+}
+function dxRunFmt(base, st, tag) {
+  const f = Object.assign({}, base);
+  if (tag === 'B' || tag === 'STRONG' || /bold|[6-9]00/.test(st['font-weight'] || '')) f.b = true;
+  if (st['font-size']) f.sz = dxPt(st['font-size']);
+  if (st.color && dxColor(st.color)) f.color = dxColor(st.color);
+  if (tag === 'SPAN' && st.background) f.shd = dxColor(st.background);
+  if (tag === 'SPAN' && st['border-bottom']) { const b = dxBorder(st['border-bottom']); if (b) f.u = { val: b.val === 'dotted' ? 'dotted' : 'single', color: b.color }; }
+  if (tag === 'SUP') f.sup = true;
+  return f;
+}
+function dxRPr(f) {
+  let x = '';
+  if (f.b) x += '<w:b/><w:bCs/>';
+  if (f.color) x += `<w:color w:val="${f.color}"/>`;
+  if (f.sz) { const hp = Math.round(f.sz * 2); x += `<w:sz w:val="${hp}"/><w:szCs w:val="${hp}"/>`; }
+  if (f.u) x += `<w:u w:val="${f.u.val}" w:color="${f.u.color}"/>`;
+  if (f.shd) x += `<w:shd w:val="clear" w:color="auto" w:fill="${f.shd}"/>`;
+  if (f.sup) x += '<w:vertAlign w:val="superscript"/>';
+  return x ? `<w:rPr>${x}</w:rPr>` : '';
+}
+// 문단 안 글자 조각 모으기 (공백은 화면처럼 한 칸으로)
+function dxInline(nodes, fmt, out) {
+  nodes.forEach(n => {
+    if (n.nodeType === 3) { const t = dxNoEmoji(n.nodeValue).replace(/[ \t\r\n]+/g, ' '); if (t) out.push({ t, f: fmt }); }
+    else if (n.nodeType === 1) {
+      if (n.tagName === 'BR') out.push({ br: true });
+      else dxInline(Array.from(n.childNodes), dxRunFmt(fmt, dxStyle(n), n.tagName), out);
+    }
+  });
+  return out;
+}
+function dxRuns(segs) {
+  const firstT = segs.findIndex(s => s.t != null);
+  if (firstT >= 0) segs[firstT].t = segs[firstT].t.replace(/^ +/, '');
+  for (let i = segs.length - 1; i >= 0; i--) if (segs[i].t != null) { segs[i].t = segs[i].t.replace(/ +$/, ''); break; }
+  return segs.map(s => s.br ? '<w:r><w:br/></w:r>' : (s.t ? `<w:r>${dxRPr(s.f)}<w:t xml:space="preserve">${dxEsc(s.t)}</w:t></w:r>` : '')).join('');
+}
+function dxPara(st, fmt, runs) {
+  const m = dxBox(st.margin);
+  let pPr = '';
+  if (/avoid/.test(st['page-break-after'] || '')) pPr += '<w:keepNext/>';
+  const bb = dxBorder(st['border-bottom']);
+  if (bb) pPr += `<w:pBdr><w:bottom w:val="${bb.val}" w:sz="${bb.sz}" w:space="${Math.round(dxPt(st['padding-bottom']))}" w:color="${bb.color}"/></w:pBdr>`;
+  const lh = String(st['line-height'] || '').match(/([\d.]+)%/);
+  pPr += `<w:spacing w:before="${Math.round(m[0] * 20)}" w:after="${Math.round(m[2] * 20)}"${lh ? ` w:line="${Math.round(240 * parseFloat(lh[1]) / 100)}" w:lineRule="auto"` : ''}/>`;
+  if (/center|right/.test(st['text-align'] || '')) pPr += `<w:jc w:val="${/center/.test(st['text-align']) ? 'center' : 'right'}"/>`;
+  return `<w:p><w:pPr>${pPr}${dxRPr(fmt)}</w:pPr>${runs}</w:p>`;
+}
+// 표와 표 사이 띄움 (워드는 붙어 있는 표 두 개를 하나로 합쳐 버림)
+// 한글(HWP)로 바꿔 저장할 때 멈추지 않도록 아주 작은 고정 줄 간격 대신 평범한 4pt 빈 줄을 씀
+function dxGap(pt) { return `<w:p><w:pPr><w:spacing w:before="0" w:after="${Math.round(Math.max(0, pt - 2) * 20)}"/><w:rPr><w:sz w:val="8"/><w:szCs w:val="8"/></w:rPr></w:pPr></w:p>`; }
+function dxBlocks(nodes, ctx) {
+  let xml = '', pend = [];
+  const flush = () => { if (pend.some(s => s.br || (s.t && s.t.trim()))) xml += dxPara({}, ctx.fmt, dxRuns(pend)); pend = []; };
+  nodes.forEach(n => {
+    if (n.nodeType === 3) { if (n.nodeValue.trim()) dxInline([n], ctx.fmt, pend); return; }
+    if (n.nodeType !== 1) return;
+    const tag = n.tagName, st = dxStyle(n);
+    if (tag === 'P' || tag === 'DIV') { flush(); const f = dxRunFmt(ctx.fmt, st, 'P'); xml += dxPara(st, f, dxRuns(dxInline(Array.from(n.childNodes), f, []))); }
+    else if (tag === 'TABLE') { flush(); xml += dxTable(n, ctx); }
+    else if (tag === 'BR' && /always/.test(st['page-break-before'] || '')) { flush(); xml += '<w:p><w:pPr><w:rPr><w:sz w:val="8"/><w:szCs w:val="8"/></w:rPr></w:pPr><w:r><w:rPr><w:sz w:val="8"/><w:szCs w:val="8"/></w:rPr><w:br w:type="page"/></w:r></w:p>'; }
+    else dxInline([n], ctx.fmt, pend);
+  });
+  flush();
+  return xml;
+}
+function dxTable(el, ctx) {
+  const rows = Array.from(el.rows || []);
+  if (!rows.length) return '';
+  const tst = dxStyle(el);
+  const first = Array.from(rows[0].cells);
+  // 쪽 넘김 방지용으로만 감싼 칸 하나짜리 표는 풀어서 안쪽만 옮김
+  if (rows.length === 1 && first.length === 1) {
+    const cst = dxStyle(first[0]);
+    if (!cst.background && !cst.border) return dxBlocks(Array.from(first[0].childNodes), { fmt: dxRunFmt(ctx.fmt, cst, 'TD'), width: ctx.width });
+  }
+  // 왼쪽 색 막대(글자 없는 아주 좁은 색 칸)는 칸으로 두지 않고 옆 칸의 왼쪽 굵은 테두리로 바꿈 (한글이 너무 좁은 칸을 못 다룸)
+  const isBar = (c, i, all) => i < all.length - 1 && !c.textContent.replace(/[\s\u00A0]/g, '') && dxColor(dxStyle(c).background)
+    && (dxPt(dxStyle(c).width) || parseFloat(c.getAttribute('width') || '99')) <= 8;
+  const cellsOf = r => {
+    const all = Array.from(r.cells), out = [];
+    all.forEach((c, i) => { if (isBar(c, i, all)) all[i + 1].dxBar = { color: dxColor(dxStyle(c).background), sz: Math.min(48, Math.max(8, Math.round((dxPt(dxStyle(c).width) || 4) * 8))) }; else out.push(c); });
+    return out;
+  };
+  const firstCells = cellsOf(rows[0]);
+  // 열 너비: % · 고정값 먼저, 나머지는 똑같이 나눔
+  let fixed = 0, free = 0;
+  const widths = firstCells.map(c => {
+    const cs = dxStyle(c), wa = c.getAttribute('width') || '';
+    let w = 0;
+    if (cs.width) w = Math.round(dxPt(cs.width) * 20);
+    else if (/%$/.test(wa)) w = Math.round(ctx.width * parseFloat(wa) / 100);
+    else if (wa) w = Math.round(parseFloat(wa) * 15);
+    if (w) fixed += w; else free++;
+    return w;
+  });
+  const rest = Math.max(400, ctx.width - fixed);
+  for (let i = 0; i < widths.length; i++) if (!widths[i]) widths[i] = Math.round(rest / free);
+  let xml = `<w:tbl><w:tblPr><w:tblW w:w="${widths.reduce((a, b) => a + b, 0)}" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr>`;
+  xml += '<w:tblGrid>' + widths.map(w => `<w:gridCol w:w="${w}"/>`).join('') + '</w:tblGrid>';
+  rows.forEach(r => {
+    xml += '<w:tr>' + (/avoid/.test(dxStyle(r)['page-break-inside'] || '') ? '<w:trPr><w:cantSplit/></w:trPr>' : '');
+    cellsOf(r).forEach((c, i) => {
+      const cs = dxStyle(c), w = widths[i] || widths[widths.length - 1];
+      const pad = dxBox(cs.padding).map(v => Math.round(v * 20));
+      const bd = dxBorder(cs.border);
+      let tcPr = `<w:tcW w:w="${w}" w:type="dxa"/>`;
+      if (bd || c.dxBar) tcPr += '<w:tcBorders>' + ['top', 'left', 'bottom', 'right'].map(s => (s === 'left' && c.dxBar) ? `<w:left w:val="single" w:sz="${c.dxBar.sz}" w:space="0" w:color="${c.dxBar.color}"/>` : bd ? `<w:${s} w:val="${bd.val}" w:sz="${bd.sz}" w:space="0" w:color="${bd.color}"/>` : '').join('') + '</w:tcBorders>';
+      if (dxColor(cs.background)) tcPr += `<w:shd w:val="clear" w:color="auto" w:fill="${dxColor(cs.background)}"/>`;
+      tcPr += `<w:tcMar><w:top w:w="${pad[0]}" w:type="dxa"/><w:left w:w="${pad[3]}" w:type="dxa"/><w:bottom w:w="${pad[2]}" w:type="dxa"/><w:right w:w="${pad[1]}" w:type="dxa"/></w:tcMar>`;
+      if ((c.getAttribute('valign') || '') === 'top') tcPr += '<w:vAlign w:val="top"/>';
+      let inner = dxBlocks(Array.from(c.childNodes), { fmt: dxRunFmt(ctx.fmt, cs, 'TD'), width: Math.max(400, w - pad[1] - pad[3]) });
+      if (!inner || !/<\/w:p>$/.test(inner)) inner += '<w:p/>';
+      xml += `<w:tc><w:tcPr>${tcPr}</w:tcPr>${inner}</w:tc>`;
+    });
+    xml += '</w:tr>';
+  });
+  return xml + '</w:tbl>' + dxGap(dxBox(tst.margin)[2]);
+}
+// docx는 zip 파일. MS 워드처럼 압축(deflate)해서 묶음 — 한글(HWP)은 무압축 zip을 못 읽는 경우가 있음 (압축 기능이 없는 옛 브라우저는 무압축)
+function dxCrc(bytes) {
+  let t = dxCrc.t;
+  if (!t) { t = dxCrc.t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } }
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) c = t[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+async function dxDeflate(data) {
+  if (typeof CompressionStream === 'undefined') return null;
+  try { return new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer()); } catch (e) { return null; }
+}
+async function dxZip(files, type) {
+  const enc = new TextEncoder(), parts = [], central = [];
+  let off = 0;
+  for (const f of files) {
+    const name = enc.encode(f.name), raw = enc.encode(f.text), crc = dxCrc(raw);
+    const z = await dxDeflate(raw), data = z || raw, method = z ? 8 : 0;
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(8, method, true); h.setUint16(12, 0x21, true);
+    h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, raw.length, true); h.setUint16(26, name.length, true);
+    const c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(10, method, true); c.setUint16(14, 0x21, true);
+    c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, raw.length, true); c.setUint16(28, name.length, true); c.setUint32(42, off, true);
+    parts.push(h, name, data); central.push(c, name);
+    off += 30 + name.length + data.length;
+  }
+  const cdSize = central.reduce((n, p) => n + p.byteLength, 0);
+  const e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, cdSize, true); e.setUint32(16, off, true);
+  return new Blob([...parts, ...central, e], { type });
+}
+async function buildWordDocx(record) {
+  const doc = new DOMParser().parseFromString(buildWordHtml(record), 'text/html');
+  const root = doc.querySelector('.WordSection1') || doc.body;
+  const body = dxBlocks(Array.from(root.childNodes), { fmt: { sz: 10.5, color: dxColor(W.text) }, width: DX.textW });
+  const W_NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"';
+  const head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  const fonts = `<w:rFonts w:ascii="${DX.font}" w:hAnsi="${DX.font}" w:eastAsia="${DX.font}" w:cs="${DX.font}"/>`;
+  const files = [
+    { name: '[Content_Types].xml', text: `${head}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/><Override PartName="/word/fontTable.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>` },
+    { name: '_rels/.rels', text: `${head}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>` },
+    { name: 'docProps/core.xml', text: `${head}<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>${record.docType === 'cv' ? '이력서' : '자기소개서'} 첨삭 결과</dc:title><dc:creator>MOA FORMULA</dc:creator></cp:coreProperties>` },
+    { name: 'docProps/app.xml', text: `${head}<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Microsoft Office Word</Application><DocSecurity>0</DocSecurity></Properties>` },
+    { name: 'word/_rels/document.xml.rels', text: `${head}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/fontTable" Target="fontTable.xml"/></Relationships>` },
+    { name: 'word/styles.xml', text: `${head}<w:styles ${W_NS}><w:docDefaults><w:rPrDefault><w:rPr>${fonts}<w:color w:val="${dxColor(W.text)}"/><w:sz w:val="21"/><w:szCs w:val="21"/><w:lang w:val="en-US" w:eastAsia="ko-KR"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:before="0" w:after="0" w:line="264" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style><w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style></w:styles>` },
+    { name: 'word/settings.xml', text: `${head}<w:settings ${W_NS}><w:zoom w:percent="100"/><w:defaultTabStop w:val="800"/><w:characterSpacingControl w:val="doNotCompress"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>` },
+    { name: 'word/fontTable.xml', text: `${head}<w:fonts ${W_NS}><w:font w:name="${DX.font}"><w:altName w:val="Malgun Gothic"/><w:charset w:val="81"/><w:family w:val="swiss"/><w:pitch w:val="variable"/></w:font></w:fonts>` },
+    { name: 'word/document.xml', text: `${head}<w:document ${W_NS}><w:body>${body}<w:sectPr><w:pgSz w:w="${DX.pageW}" w:h="${DX.pageH}"/><w:pgMar w:top="${DX.margin}" w:right="${DX.margin}" w:bottom="${DX.margin}" w:left="${DX.margin}" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr></w:body></w:document>` }
+  ];
+  return dxZip(files, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+}
 function resultFileBase(studentName) { return (studentName || '첨삭결과').replace(/[\\/:*?"<>|']/g, '') + '_첨삭결과'; }
-function downloadResultAsWord(studentName) {
+async function downloadResultAsWord(studentName) {
   if (!CURRENT_RESULT) { alert('저장할 내용을 찾지 못했어요. 잠시 후 다시 시도해 주세요.'); return; }
   const exLeftCount = Object.values(EX_STATE).reduce((n, st) => n + exLeft(st), 0);
   if (exLeftCount && !exLeftWarn(exLeftCount)) return;
-  const blob = new Blob(['﻿', buildWordHtml(CURRENT_RESULT)], { type: 'application/msword' });
+  const blob = await buildWordDocx(CURRENT_RESULT);
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = resultFileBase(studentName) + '.doc';
+  a.download = resultFileBase(studentName) + '.docx';
   document.body.appendChild(a);
   a.click();
   a.remove();
