@@ -4694,6 +4694,8 @@ function buildWordHtml(record) {
 // buildWordHtml이 만든 표·문단을 워드 표준 형식(OOXML)으로 옮겨 .docx로 묶음 → MS 워드·한컴·구글 문서·폰 모두 열림.
 const DX = { pageW: 11906, pageH: 16838, margin: 1000, font: '맑은 고딕' };
 DX.textW = DX.pageW - DX.margin * 2;
+// 한글(HWP)은 이모지(📝·🎤 등)를 읽다 멈추는 경우가 있고, 문서 어투 원칙상 이모지를 쓰지 않으므로 워드 파일에서는 빼고 ✓·⚠ 같은 기호만 남김
+function dxNoEmoji(t) { return String(t).replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\uFE0F\u200D]/gu, c => (c === '✓' || c === '⚠') ? c : ''); }
 function dxEsc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 function dxStyle(el) {
   const o = {};
@@ -4734,7 +4736,7 @@ function dxRPr(f) {
 // 문단 안 글자 조각 모으기 (공백은 화면처럼 한 칸으로)
 function dxInline(nodes, fmt, out) {
   nodes.forEach(n => {
-    if (n.nodeType === 3) { const t = n.nodeValue.replace(/[ \t\r\n]+/g, ' '); if (t) out.push({ t, f: fmt }); }
+    if (n.nodeType === 3) { const t = dxNoEmoji(n.nodeValue).replace(/[ \t\r\n]+/g, ' '); if (t) out.push({ t, f: fmt }); }
     else if (n.nodeType === 1) {
       if (n.tagName === 'BR') out.push({ br: true });
       else dxInline(Array.from(n.childNodes), dxRunFmt(fmt, dxStyle(n), n.tagName), out);
@@ -4820,7 +4822,7 @@ function dxTable(el, ctx) {
   });
   return xml + '</w:tbl>' + dxGap(dxBox(tst.margin)[2]);
 }
-// 압축 없이 묶는 zip (docx는 zip 파일)
+// docx는 zip 파일. MS 워드처럼 압축(deflate)해서 묶음 — 한글(HWP)은 무압축 zip을 못 읽는 경우가 있음 (압축 기능이 없는 옛 브라우저는 무압축)
 function dxCrc(bytes) {
   let t = dxCrc.t;
   if (!t) { t = dxCrc.t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } }
@@ -4828,26 +4830,31 @@ function dxCrc(bytes) {
   for (let i = 0; i < bytes.length; i++) c = t[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
   return (c ^ 0xFFFFFFFF) >>> 0;
 }
-function dxZip(files, type) {
+async function dxDeflate(data) {
+  if (typeof CompressionStream === 'undefined') return null;
+  try { return new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer()); } catch (e) { return null; }
+}
+async function dxZip(files, type) {
   const enc = new TextEncoder(), parts = [], central = [];
   let off = 0;
-  files.forEach(f => {
-    const name = enc.encode(f.name), data = enc.encode(f.text), crc = dxCrc(data);
+  for (const f of files) {
+    const name = enc.encode(f.name), raw = enc.encode(f.text), crc = dxCrc(raw);
+    const z = await dxDeflate(raw), data = z || raw, method = z ? 8 : 0;
     const h = new DataView(new ArrayBuffer(30));
-    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(12, 0x21, true);
-    h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, name.length, true);
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(8, method, true); h.setUint16(12, 0x21, true);
+    h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, raw.length, true); h.setUint16(26, name.length, true);
     const c = new DataView(new ArrayBuffer(46));
-    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(14, 0x21, true);
-    c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true); c.setUint16(28, name.length, true); c.setUint32(42, off, true);
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(10, method, true); c.setUint16(14, 0x21, true);
+    c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, raw.length, true); c.setUint16(28, name.length, true); c.setUint32(42, off, true);
     parts.push(h, name, data); central.push(c, name);
     off += 30 + name.length + data.length;
-  });
+  }
   const cdSize = central.reduce((n, p) => n + p.byteLength, 0);
   const e = new DataView(new ArrayBuffer(22));
   e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, cdSize, true); e.setUint32(16, off, true);
   return new Blob([...parts, ...central, e], { type });
 }
-function buildWordDocx(record) {
+async function buildWordDocx(record) {
   const doc = new DOMParser().parseFromString(buildWordHtml(record), 'text/html');
   const root = doc.querySelector('.WordSection1') || doc.body;
   const body = dxBlocks(Array.from(root.childNodes), { fmt: { sz: 10.5, color: dxColor(W.text) }, width: DX.textW });
@@ -4855,21 +4862,24 @@ function buildWordDocx(record) {
   const head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
   const fonts = `<w:rFonts w:ascii="${DX.font}" w:hAnsi="${DX.font}" w:eastAsia="${DX.font}" w:cs="${DX.font}"/>`;
   const files = [
-    { name: '[Content_Types].xml', text: `${head}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>` },
-    { name: '_rels/.rels', text: `${head}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>` },
+    { name: '[Content_Types].xml', text: `${head}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/><Override PartName="/word/fontTable.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>` },
+    { name: '_rels/.rels', text: `${head}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>` },
     { name: 'docProps/core.xml', text: `${head}<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>${record.docType === 'cv' ? '이력서' : '자기소개서'} 첨삭 결과</dc:title><dc:creator>MOA FORMULA</dc:creator></cp:coreProperties>` },
-    { name: 'word/_rels/document.xml.rels', text: `${head}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>` },
+    { name: 'docProps/app.xml', text: `${head}<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Microsoft Office Word</Application><DocSecurity>0</DocSecurity></Properties>` },
+    { name: 'word/_rels/document.xml.rels', text: `${head}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/fontTable" Target="fontTable.xml"/></Relationships>` },
     { name: 'word/styles.xml', text: `${head}<w:styles ${W_NS}><w:docDefaults><w:rPrDefault><w:rPr>${fonts}<w:color w:val="${dxColor(W.text)}"/><w:sz w:val="21"/><w:szCs w:val="21"/><w:lang w:val="en-US" w:eastAsia="ko-KR"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:before="0" w:after="0" w:line="264" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style><w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style></w:styles>` },
+    { name: 'word/settings.xml', text: `${head}<w:settings ${W_NS}><w:zoom w:percent="100"/><w:defaultTabStop w:val="800"/><w:characterSpacingControl w:val="doNotCompress"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>` },
+    { name: 'word/fontTable.xml', text: `${head}<w:fonts ${W_NS}><w:font w:name="${DX.font}"><w:altName w:val="Malgun Gothic"/><w:charset w:val="81"/><w:family w:val="swiss"/><w:pitch w:val="variable"/></w:font></w:fonts>` },
     { name: 'word/document.xml', text: `${head}<w:document ${W_NS}><w:body>${body}<w:sectPr><w:pgSz w:w="${DX.pageW}" w:h="${DX.pageH}"/><w:pgMar w:top="${DX.margin}" w:right="${DX.margin}" w:bottom="${DX.margin}" w:left="${DX.margin}" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr></w:body></w:document>` }
   ];
   return dxZip(files, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
 }
 function resultFileBase(studentName) { return (studentName || '첨삭결과').replace(/[\\/:*?"<>|']/g, '') + '_첨삭결과'; }
-function downloadResultAsWord(studentName) {
+async function downloadResultAsWord(studentName) {
   if (!CURRENT_RESULT) { alert('저장할 내용을 찾지 못했어요. 잠시 후 다시 시도해 주세요.'); return; }
   const exLeftCount = Object.values(EX_STATE).reduce((n, st) => n + exLeft(st), 0);
   if (exLeftCount && !exLeftWarn(exLeftCount)) return;
-  const blob = buildWordDocx(CURRENT_RESULT);
+  const blob = await buildWordDocx(CURRENT_RESULT);
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
