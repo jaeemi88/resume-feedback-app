@@ -458,6 +458,8 @@
 <main id="app"></main>
 <script src="/staff-guard.js" data-mode="admin" data-color="#643DF2"></script>
 <script>
+// 쓰임새 기록 (2026-10-24 · 2단계 정리): 화면이 열린 횟수만 운영보드로 보냄 (이름·기기 정보는 보내지 않음)
+function moaUse(s){try{var k=String(s),t=Date.now(),m=window.__moaUse||(window.__moaUse={});if(m[k]&&t-m[k]<600000)return;m[k]=t;var u='https://jinromoa-board.vercel.app/api/usage',b=JSON.stringify({a:'rs',s:k});if(navigator.sendBeacon)navigator.sendBeacon(u,b);else fetch(u,{method:'POST',body:b,keepalive:true,mode:'no-cors'})}catch(e){}}
 // ── 날짜 표시 통일 (2026-09-28, 취업스킬 전 앱 공통 규칙) ──
 // 기본(기록) 2026.10.26 · week(일정) 2026.10.26(월) · short 10.26(월) · time 2026.10.26 14:00 · stime 10.26(월) 14:00 · ym 2000.03 · formal 2026년 9월 27일
 function moaDate(v, kind){
@@ -1748,6 +1750,7 @@ async function route() {
   if (params.get('master') === '1') {
     document.body.classList.add('role-teacher');
     document.getElementById('roleBadge').textContent = '관리자';
+    moaUse('master');
     renderMasterTeacherList();
     return;
   }
@@ -1930,6 +1933,7 @@ function setupResumeCompanyField() {
   async function run() {
     const name = input.value.replace(/\s+/g, ' ').trim();
     if (name.length < 2) { lastErr = '지원 기업명을 먼저 적어 주세요.'; paint(); return; }
+    moaUse('help'); // 쓰기 도움: 기업 요약 카드
     busy = true; lastErr = ''; paint();
     try {
       const r = await fetch('/api/coach', { method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2183,6 +2187,7 @@ async function renderShopJoin(key) {
 }
 
 async function renderClientEntry(rawCode) {
+  moaUse('client');
   document.body.classList.remove('role-teacher');
   document.body.classList.add('role-student');
   document.getElementById('roleBadge').textContent = '개인 고객';
@@ -2502,6 +2507,7 @@ function scaffoldHtml(id, type) {
 // ---------- 재료 인터뷰 창 (2026-10-02) ----------
 // 한 단어만 답해도 그 내용은 '학생 본인 사실'로 첨삭에 들어가서, AI 예시(형광펜) 자리가 줄어듦
 function askMaterialInterview(items) {
+  moaUse('help'); // 쓰기 도움: 재료 더 묻기
   return new Promise(resolve => {
     const bg = document.createElement('div');
     bg.className = 'ex-modal-bg';
@@ -2587,6 +2593,7 @@ async function makeDraftFromMemo(block, id) {
   const box = block.querySelector(`.sc-drafts[data-item-id="${id}"]`);
   const btn = block.querySelector('.sc-draft-btn');
   if (memo.length < 2) { statusEl.textContent = '2칸 이상 채워주세요.'; return; }
+  moaUse('help'); // 쓰기 도움: 메모로 초안
   btn.disabled = true; btn.textContent = '초안 만드는 중...';
   statusEl.textContent = '내 메모로 초안 3가지를 만들고 있어요. 10~20초 정도 걸려요.';
   box.innerHTML = '';
@@ -2748,6 +2755,7 @@ function applyDocTypeToBlock(id, docTypeVal) {
 }
 
 async function renderStudentSubmitForm() {
+  if (!CLIENT) moaUse('submit'); // 유료 고객 입장은 client로 따로 셈
   let retryLimit = 'unlimited';
   let institutions = [];
   try {
@@ -3150,6 +3158,22 @@ const PRESET_LIBRARY = [
 - 다른 전공 출신이면 학과 총무·동아리 회계처럼 행정 성격의 경험을 찾아 연결하게 안내한다.`
   },
   {
+    name: '세무회계계열',
+    prompt: `■ 세무회계계열 특화 기준
+- 숫자를 다루는 직무이므로 정확성과 확인·검토 습관이 실제 사례로 드러나면 높게 평가한다. 오류를 발견하고 바로잡은 경험, 대조·재확인 절차를 스스로 만든 경험을 중요하게 본다.
+- 마감 기한을 지킨 경험, 일이 몰리는 시기에 우선순위를 정해 처리한 경험을 긍정적으로 본다.
+- 전산회계·전산세무·FAT·TAT 등 자격증, 회계 프로그램·엑셀 활용은 이름 나열이 아니라 실습·과제·아르바이트에서 실제로 무엇을 처리해 보았는지로 바꾸게 한다.
+- 근거 없는 "꼼꼼한 성격입니다", "숫자에 강합니다", "안정적인 직업이라서" 같은 동기는 감점 요인으로 짚고, 행동과 결과로 증명하게 안내한다.
+- 고객·거래처의 자료를 다루는 직무이므로 정보 보안과 신뢰를 지킨 태도가 드러나면 높게 평가한다.
+- 지원처에 따라 강조점을 달리한다.
+  · 세무사무소·회계법인: 신고 시즌의 업무량을 견디는 꾸준함, 고객 응대와 자료 요청 소통 경험
+  · 일반 기업 회계·재무: 부서 간 협업, 비용·증빙 관리, 결산 지원 경험
+  · 공기업·공공기관: 규정과 절차를 지킨 경험, 공정성과 책임감
+  · 금융권: 고객 응대와 숫자 설명 능력, 신뢰
+- 지원처가 글에 드러나지 않으면 위 공통 기준으로 첨삭하고, 어느 분야에 지원하는지 밝히면 더 정확한 첨삭이 가능하다는 점을 한 번 안내한다.
+- 전공과 다른 직무(사무행정·영업·서비스 등) 지원이면 숫자 감각, 정확성, 기한 관리 경험을 그 직무의 강점으로 연결하게 안내한다.`
+  },
+  {
     name: '방위산업',
     prompt: `■ 방위산업 특화 기준
 - 보안 의식: 정보 취급의 무게를 아는지 본다. 재직·실습 중 알게 된 정보를 구체적으로 적은 답변은 감점 요인이므로 표현 수위를 낮추게 한다.
@@ -3176,6 +3200,7 @@ const PRESET_LIBRARY = [
 let currentTab = 'reviews';
 
 async function renderTeacherView() {
+  moaUse('teacher');
   const studentLink = location.origin + location.pathname + '?t=' + encodeURIComponent(TEACHER_ID);
   const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=' + encodeURIComponent(studentLink);
   let isPermanentTeacher = false;
@@ -4709,6 +4734,7 @@ function downloadResultAsPdf(studentName) {
 }
 
 async function renderResultView(id) {
+  moaUse('result');
   app.innerHTML = `<div class="card"><div class="empty">결과를 불러오는 중...</div></div>`;
   try {
     const { item } = await api('/api/results?id=' + encodeURIComponent(id) + (isAdmin ? '&admin=1' : ''));
