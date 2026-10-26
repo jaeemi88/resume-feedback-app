@@ -90,7 +90,13 @@ function sanitizeJsonString(raw) {
     if (inString) {
       if (escaped) { result += ch; escaped = false; }
       else if (ch === '\\') { result += ch; escaped = true; }
-      else if (ch === '"') { result += ch; inString = false; }
+      else if (ch === '"') {
+        // 글 속에 섞인 큰따옴표(예: 그는 "괜찮아"라고)는 닫는 따옴표가 아님 → 뒤에 , : } ] 가 오지 않으면 글자로 살림 (2026-10-26)
+        let j = i + 1;
+        while (j < raw.length && /\s/.test(raw[j])) j++;
+        if (j >= raw.length || ',:}]'.includes(raw[j])) { result += ch; inString = false; }
+        else result += '\\"';
+      }
       else if (ch === '\n') result += '\\n';
       else if (ch === '\r') result += '\\r';
       else if (ch === '\t') result += '\\t';
@@ -379,7 +385,9 @@ async function handler(req, res) {
       body: JSON.stringify({
         model: lab ? lab.model : MODEL,
         ...((lab ? lab.model : MODEL) === 'claude-sonnet-5-5' ? { thinking: { type: 'between_tools' } } : {}), // 후속 모델의 '생각하는 단계'는 끈 상태로 사용
-        max_tokens: Math.min(8000, 3500 + Math.round((parseInt(charLimit, 10) || 0) * 1.6)), // 글자수가 길수록 여유 있게 (실제 쓴 만큼만 비용 발생)
+        // 글자수가 길수록 여유 있게 (실제 쓴 만큼만 비용 발생). 2026-10-26: 후속 모델은 같은 한글도 토큰을 더 많이 써서
+        // 예전 한도(최대 8000)로는 답이 중간에 잘려 '형식 오류'가 났음 → 한도를 넉넉히, 잘렸으면 다시 만들 때 최대치로
+        max_tokens: lastStop === 'max_tokens' ? 16000 : Math.min(16000, 6000 + Math.round((parseInt(charLimit, 10) || 0) * 3)),
         system: systemBlocks,
         messages: [
           { role: 'user', content: `[문항]\n${question}\n\n[학생 답변]\n${answer || ''}` }
@@ -412,7 +420,8 @@ async function handler(req, res) {
     } // 재시도 끝
 
     if (!feedback) {
-      return res.status(500).json({ error: 'AI 응답 형식이 올바르지 않습니다. 다시 시도해 주세요.', retryable: true, stop: lastStop });
+      const msg = lastStop === 'max_tokens' ? '첨삭 내용이 길어 AI 답변이 중간에 끊겼어요. 잠시 뒤 다시 제출해 주세요.' : 'AI 응답 형식이 올바르지 않습니다. 다시 시도해 주세요.';
+      return res.status(500).json({ error: msg, retryable: true, stop: lastStop });
     }
 
     if (!feedback.frameworkUsed) feedback.frameworkUsed = fw;
