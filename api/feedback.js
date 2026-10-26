@@ -123,7 +123,8 @@ const JSON_SAFETY_RULE = `
 
 [JSON 작성 주의 — 매우 중요]
 - 문자열 값 안에서는 큰따옴표를 절대 쓰지 않는다. 학생 답변을 인용하거나 강조할 때는 작은따옴표(' ')나 「 」를 쓴다.
-- 응답은 { 로 시작해 } 로 끝나는 JSON 객체 하나뿐이다. 앞뒤에 설명 문장을 붙이지 않는다.`;
+- 응답은 { 로 시작해 } 로 끝나는 JSON 객체 하나뿐이다. 앞뒤에 설명 문장을 붙이지 않는다.
+- 학생이 읽는 안내 문장(strengths, improvements, charLimitNote 등)에는 JSON 항목 이름(exampleSlots, improvements 등)이나 {{ }} 기호를 쓰지 않는다. 화면 이름으로 쓴다: 형광펜 예시 자리, 개선할 점, 다듬은 초안.`;
 
 // ───────────────────────────────────────────
 // ★ 결격 신호 체크 (2026-09-26 추가 · 모든 요청에 자동 적용)
@@ -425,6 +426,19 @@ async function handler(req, res) {
     }
 
     if (!feedback.frameworkUsed) feedback.frameworkUsed = fw;
+    // 화면 문구 다듬기 (2026-10-26): AI가 안내 문장에 내부 항목 이름(exampleSlots 등)이나 {{ }} 기호를 그대로 쓰는 일이 있어 학생 말로 바꿈
+    const plainWords = (t) => typeof t !== 'string' ? t : t
+      .replace(/\s*\(\s*\{\{\s*\}\}\s*\)/g, '')
+      .replace(/\{\{\s*\}\}|\{\{|\}\}/g, (m) => (m.replace(/\s/g, '') === '{{}}' ? '형광펜 예시 자리' : ''))
+      .replace(/exampleSlots?/g, '형광펜 예시 자리').replace(/improvements?/g, '개선할 점').replace(/strengths?/g, '잘된 점')
+      .replace(/polishedText/g, '다듬은 초안').replace(/missingElements/g, '빠진 요소').replace(/redFlags/g, '결격 신호')
+      .replace(/aiTracePhrases/g, 'AI 상투어').replace(/defenseQuestions|followUpQuestions/g, '면접 질문').replace(/charLimitNote/g, '글자 수 안내');
+    ['strengths', 'improvements', 'interviewerInference', 'intentGapComment', 'revisionComment', 'charLimitNote'].forEach((k) => { feedback[k] = plainWords(feedback[k]); });
+    if (Array.isArray(feedback.missingElements)) feedback.missingElements = feedback.missingElements.map(plainWords);
+    if (feedback.jobEvidence && typeof feedback.jobEvidence === 'object') feedback.jobEvidence.tip = plainWords(feedback.jobEvidence.tip);
+    // '글자수 초과' 칸은 학생 원문이 제한을 넘었을 때만 보여 줌 (분량이 모자란 안내는 개선할 점에 이미 들어감)
+    const limitN = parseInt(charLimit, 10) || 0;
+    if (!limitN || String(answer || '').length <= limitN) feedback.charLimitNote = null;
     if (!Array.isArray(feedback.redFlags)) feedback.redFlags = [];
     if (!Array.isArray(feedback.defenseQuestions)) feedback.defenseQuestions = [];
     feedback.defenseQuestions = feedback.defenseQuestions.filter((d) => d && d.sentence && d.question).slice(0, 2);
