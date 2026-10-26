@@ -509,11 +509,23 @@ async function api(path, options = {}) {
     const msg = (err.error || ('요청 실패: ' + res.status)) + (err.detail ? ' — 상세: ' + err.detail : '');
     const e = new Error(msg);
     if (err.expired) e.expired = true;
+    e.fromServer = !!err.error; // 서버가 이유를 적어 보냈는지 (없으면 submitFailReason이 상태 번호로 풀어 줌)
     e.status = res.status;
     e.retryable = !!err.retryable || res.status === 429 || res.status >= 500;
     throw e;
   }
   return res.json();
+}
+
+// 제출 실패 이유를 학생이 할 일이 보이는 말로 (2026-10-26)
+function submitFailReason(e) {
+  if (!e) return '이유를 확인하지 못했어요. 잠시 뒤 다시 제출해 주세요.';
+  if (e instanceof TypeError) return '인터넷 연결이 끊겨 첨삭을 받지 못했어요. 와이파이나 데이터 연결을 확인한 뒤 다시 제출해 주세요.';
+  if (e.fromServer || !e.status) return e.message;
+  if (e.status === 504 || e.status === 502) return '첨삭 요청이 몰려 시간이 너무 오래 걸렸어요. 글은 고치지 않으셔도 되고, 잠시 뒤 다시 제출해 주세요.';
+  if (e.status === 413) return '보낸 글이 너무 길어 받을 수 없었어요. 문항별 답변 길이를 줄여 다시 제출해 주세요.';
+  if (e.status === 429) return '지금 첨삭 요청이 한꺼번에 몰려 잠시 대기 중이에요. 1분 뒤 다시 제출해 주세요.';
+  return `첨삭 서버에서 예상하지 못한 문제가 생겼어요(${e.status}). 잠시 뒤 다시 제출해 주시고, 계속되면 담당 강사님께 알려 주세요.`;
 }
 
 const FRAMEWORK_LABELS = {
@@ -3056,9 +3068,11 @@ async function renderStudentSubmitForm() {
       const settled = await Promise.allSettled(rawItems.map(draftOne));
       const failed = settled.map((r, i) => r.status === 'rejected' ? { i, e: r.reason } : null).filter(Boolean);
       if (failed.length) {
-        const names = failed.map(f => `'${rawItems[f.i].question.slice(0, 14)}'`).join(', ');
-        const why = failed[0].e && failed[0].e.message ? failed[0].e.message : '';
-        throw new Error(`${total}문항 중 ${failed.length}문항(${names})의 첨삭이 끝나지 않았어요. ${why} 쓴 글은 그대로 있어요. 잠시 뒤 다시 제출하면 끝난 ${total - failed.length}문항은 기다리지 않고 바로 넘어가요.`);
+        // 문항마다 실패 이유를 따로 보여 줌 (2026-10-26) — '오류'만 보이면 학생이 무엇을 고칠지 알 수 없음
+        const lines = failed.map(f => `· ${f.i + 1}번 '${rawItems[f.i].question.slice(0, 14)}' — ${submitFailReason(f.e)}`);
+        const err = new Error(`${total}문항 중 ${failed.length}문항의 첨삭을 받지 못해 아직 제출되지 않았어요.\n${lines.join('\n')}\n\n쓴 글은 그대로 있어요.${total - failed.length ? ` 다시 제출하면 첨삭이 끝난 ${total - failed.length}문항은 기다리지 않고 바로 넘어가요.` : ''}`);
+        err.itemized = true;
+        throw err;
       }
       const itemsWithDraft = settled.map(r => r.value);
       submitBtn.textContent = '제출 마무리 중이에요...';
@@ -3090,8 +3104,9 @@ async function renderStudentSubmitForm() {
       submitBtn.style.display = 'none';
     } catch (e) {
       if (CLIENT && !/예약 확인|환불 처리|이미 제출/.test(e.message)) { try { fetch('/api/client-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reportError', code: CLIENT.code, where: '자소서 최종 제출', message: e.message }) }); } catch (x) {} }
-      statusMsg.textContent = '오류가 발생했습니다: ' + e.message;
+      statusMsg.textContent = e.itemized ? e.message : '제출하지 못했어요. ' + submitFailReason(e);
       statusMsg.className = 'status-msg error';
+      statusMsg.style.whiteSpace = 'pre-line';
       statusMsg.style.display = 'block';
       submitBtn.disabled = false;
       submitBtn.textContent = CLIENT ? (CLIENT.product === 'set' ? '자기소개서 제출하고 ② 모의면접으로' : '최종 제출하기') : '전체 제출하기';

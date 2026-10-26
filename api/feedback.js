@@ -198,12 +198,14 @@ function trendRules(fw, extraCliches) {
 function aiErrorText(status, data) {
   const t = (data && data.error && (data.error.type || '')) || '';
   const m = String((data && data.error && data.error.message) || '');
-  if (/credit balance|billing|purchase credits/i.test(m)) return `AI 사용 크레딧이 부족해요. 원장님이 Anthropic 콘솔(Plans & Billing)에서 충전해 주세요. (${status})`;
-  if (status === 401 || t === 'authentication_error') return `AI 열쇠(ANTHROPIC_API_KEY)가 맞지 않아요. Vercel 환경변수를 확인해 주세요. (${status})`;
-  if (status === 429 || t === 'rate_limit_error') return `AI 사용량 한도에 잠시 걸렸어요. 1분 뒤 다시 눌러 주세요. (${status})`;
-  if (status === 529 || t === 'overloaded_error' || status >= 500) return `AI 서버가 잠시 붐벼요. 잠시 뒤 다시 눌러 주세요. (${status})`;
-  if (t === 'not_found_error' || /model/i.test(m)) return `AI 모델 설정에 문제가 있어요: ${m.slice(0, 120)} (${status})`;
-  return `AI 호출 중 오류가 발생했습니다. (${status} ${t} ${m.slice(0, 120)})`;
+  // 2026-10-26: 학생이 고칠 수 없는 설정 문제는 '학생 잘못 아님 + 강사님께 알리기'로, 괄호 안은 원장님 확인용
+  const ask = '글 내용과는 관계없는 서비스 설정 문제예요. 담당 강사님께 이 문구를 그대로 알려 주세요.';
+  if (/credit balance|billing|purchase credits/i.test(m)) return `${ask} (관리용: AI 사용 크레딧 부족 — Anthropic 콘솔 Plans & Billing에서 충전, ${status})`;
+  if (status === 401 || t === 'authentication_error') return `${ask} (관리용: AI 열쇠 ANTHROPIC_API_KEY 불일치 — Vercel 환경변수 확인, ${status})`;
+  if (status === 429 || t === 'rate_limit_error') return `지금 첨삭 요청이 한꺼번에 몰려 잠시 대기 중이에요. 글은 고치지 않으셔도 되고, 1분 뒤 다시 제출해 주세요. (${status})`;
+  if (status === 529 || t === 'overloaded_error' || status >= 500) return `AI 서버가 잠시 붐벼 첨삭을 받지 못했어요. 글은 고치지 않으셔도 되고, 2~3분 뒤 다시 제출해 주세요. (${status})`;
+  if (t === 'not_found_error' || /model/i.test(m)) return `${ask} (관리용: AI 모델 설정 오류 — ${m.slice(0, 100)}, ${status})`;
+  return `${ask} (관리용: ${status} ${t} ${m.slice(0, 100)})`;
 }
 
 import { withUsage, usageSoFar } from './_usage.js'; // AI 사용 기록 (2026-10-24)
@@ -248,7 +250,7 @@ async function handler(req, res) {
     .filter((n) => n.a);
 
   if (!question) {
-    return res.status(400).json({ error: '질문(문항) 내용이 없습니다.' });
+    return res.status(400).json({ error: '문항 내용이 비어 있어요. 문항을 입력한 뒤 다시 제출해 주세요.' });
   }
 
   let lab = null; // 비교 화면에서만 채워짐
@@ -398,7 +400,7 @@ async function handler(req, res) {
     } catch (e) {
       if (e && (e.name === 'TimeoutError' || e.name === 'AbortError')) {
         console.error(`첨삭 시간 초과 (${attempt}번째 시도, ${Math.round((Date.now() - startedAt) / 1000)}초)`);
-        return res.status(504).json({ error: '첨삭이 너무 오래 걸렸어요. 잠시 뒤 이 문항만 다시 보내 주세요.', retryable: true });
+        return res.status(504).json({ error: '첨삭 요청이 몰려 시간이 너무 오래 걸렸어요. 글은 고치지 않으셔도 되고, 잠시 뒤 다시 제출해 주세요.', retryable: true });
       }
       throw e;
     }
@@ -410,6 +412,10 @@ async function handler(req, res) {
       return res.status(500).json({ error: aiErrorText(response.status, data), retryable: response.status === 429 || response.status >= 500 });
     }
 
+    if (data.stop_reason === 'refusal') {
+      console.error('첨삭 거절 (안전 기준)', JSON.stringify(data.stop_details || {}));
+      return res.status(422).json({ error: '글 속 일부 표현이 AI 안전 기준(폭력·자해·위험물 등으로 읽힐 수 있는 표현)에 걸려 첨삭을 진행하지 못했어요. 해당 문장을 순화하거나 빼고 다시 제출해 주세요.', retryable: false, reason: 'refusal' });
+    }
     if (data.usage) console.log('첨삭 토큰', JSON.stringify(data.usage)); // cache_read_input_tokens로 캐시 효과 확인
     const raw = (data.content || []).map((c) => c.text || '').join('').trim();
     feedback = parseAIJson(raw);
@@ -421,7 +427,9 @@ async function handler(req, res) {
     } // 재시도 끝
 
     if (!feedback) {
-      const msg = lastStop === 'max_tokens' ? '첨삭 내용이 길어 AI 답변이 중간에 끊겼어요. 잠시 뒤 다시 제출해 주세요.' : 'AI 응답 형식이 올바르지 않습니다. 다시 시도해 주세요.';
+      const msg = lastStop === 'max_tokens'
+        ? '이 문항은 글자 수 제한이 커서 AI 첨삭 결과가 길어지다 중간에 끊겼어요. 글 내용 문제는 아니니 고치지 않으셔도 되고, 잠시 뒤 다시 제출해 주세요.'
+        : 'AI가 첨삭 결과를 정해진 양식으로 만들지 못했어요. 글 내용 문제는 아니니 고치지 않으셔도 되고, 잠시 뒤 다시 제출해 주세요.';
       return res.status(500).json({ error: msg, retryable: true, stop: lastStop });
     }
 
@@ -472,7 +480,7 @@ async function handler(req, res) {
     return res.status(200).json(feedback);
   } catch (err) {
     console.error('서버 오류:', err);
-    return res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+    return res.status(500).json({ error: '첨삭 서버에서 예상하지 못한 문제가 생겼어요. 글 내용 문제는 아니니 잠시 뒤 다시 제출해 주시고, 계속되면 담당 강사님께 알려 주세요.', retryable: true });
   }
 }
 
