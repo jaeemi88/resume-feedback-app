@@ -8,6 +8,8 @@
 //   GET  ?list=1                                  → 사용 중인 코드 목록 (강사는 본인 것만, 원장님은 전체)
 //   POST { action:'create', label, hours }        → 새 4자리 코드 발급 (hours: 1~168, 기본 12)
 //   POST { action:'delete', code }                → 코드 즉시 사용 종료
+//   POST { action:'extend', code, hours }         → 사용 기간 연장 (2026-10-26). 번호·ci·학생 기록은 그대로,
+//        끝나는 시각만 hours만큼 늘림. 지금부터 최대 168시간(7일)까지 · 이미 끝난 코드는 연장 불가
 //   POST { action:'create', caseId, slotId }      → 운영보드에서 배정받은 센터 강의 코드 (2026-10-03)
 //   create에 only: { interview: '질문 유형 id', resume: '문항 유형' } 를 함께 보내면 그 코드로 들어온 학생은
 //   그 유형 하나만 씀 (2026-10-24 · 특강별 질문 유형). 비우면 전체. 허브가 앱 주소에 ?qt= 로 붙여 넘김
@@ -194,6 +196,35 @@ export default async function handler(req, res) {
       }
       await client.hdel(INDEX, code);
       return res.status(200).json({ ok: true });
+    }
+
+    if (req.method === 'POST' && body.action === 'extend') {
+      const code = String(body.code || '').replace(/\D/g, '');
+      let add = parseInt(body.hours, 10);
+      if (!(add >= 1 && add <= 168)) return res.status(400).json({ ok: false, error: '연장할 기간을 다시 골라 주세요.' });
+      const raw = code.length === 4 ? await client.get(PREFIX + code) : null;
+      if (!raw) return res.status(404).json({ ok: false, error: '이미 사용 기간이 끝난 코드예요. 새 코드를 만들어 주세요.' });
+      const d = JSON.parse(raw);
+      if (!isMaster && d.owner !== myT) return res.status(403).json({ ok: false, error: '본인이 만든 코드만 연장할 수 있어요.' });
+      const now = Date.now();
+      const cap = now + 168 * 3600 * 1000;
+      const expiresAt = Math.min(Math.max(d.expiresAt, now) + add * 3600 * 1000, cap);
+      if (expiresAt <= d.expiresAt) return res.status(200).json({ ok: true, capped: true, item: publicView(d) });
+      d.expiresAt = expiresAt;
+      const ttl = Math.ceil((expiresAt - now) / 1000);
+      // XX = 그 사이 끝나서 지워졌으면 되살리지 않음
+      const ok = await client.set(PREFIX + code, JSON.stringify(d), 'EX', ttl, 'XX');
+      if (!ok) return res.status(404).json({ ok: false, error: '이미 사용 기간이 끝난 코드예요. 새 코드를 만들어 주세요.' });
+      // 강의 1회분 기록(ci)·운영보드 강의 카드의 끝나는 시각도 함께
+      if (d.ci) {
+        const cr = await client.get('moa_ci:' + d.ci);
+        if (cr) { const c = JSON.parse(cr); c.expiresAt = expiresAt; const left = await client.ttl('moa_ci:' + d.ci); await client.set('moa_ci:' + d.ci, JSON.stringify(c), 'EX', left > 0 ? left : CI_TTL); }
+        if (d.lect && d.lect.caseId) {
+          const lr = await client.hget('moa_lect:' + d.lect.caseId, d.ci);
+          if (lr) { const l = JSON.parse(lr); l.expiresAt = expiresAt; await client.hset('moa_lect:' + d.lect.caseId, d.ci, JSON.stringify(l)); }
+        }
+      }
+      return res.status(200).json({ ok: true, capped: expiresAt === cap, item: publicView(d) });
     }
 
     return res.status(400).json({ ok: false, error: '알 수 없는 요청이에요.' });
