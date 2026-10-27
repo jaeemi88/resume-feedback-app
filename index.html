@@ -3437,7 +3437,7 @@ function renderGuideTab(content) {
     ['학생용 QR코드', '클릭 시 다운로드 가능, 교실에 인쇄해서 붙여둘 수 있어요. 입장 코드로 관리하려면 앱 QR 대신 허브 QR 하나로 안내하는 것을 추천해요.'],
     ['검수 대기함', '문항별 구조진단·구체성 체크·감점 요인·AI스러운 문구 감지·채용공고 매칭·자가진단 비교·Before→After·면접관 시점 추론·강점/개선점/다듬은 문장/꼬리질문 3종까지 전부 수정 가능. "전체 승인 및 링크 생성" 한 번으로 완료돼요.'],
     ['첨삭 기준 프리셋 관리', '추천 라이브러리(물리치료과·사회복지과·기계과·항공서비스과·사무행정과·방위산업·직업상담사·객실승무원)에서 바로 추가하거나, 직접 추가·수정·기본값 지정·삭제할 수 있어요.'],
-    ['완료된 첨삭 목록', '전공별 필터·그룹핑, 정렬(최신/오래된/이름순), 확인코드 표시, 결과 보기, 학생 링크 복사, 학생에게 다시 보내기, 조회 기간 연장, 삭제가 가능해요.'],
+    ['완료된 첨삭 목록', '전체 한 목록·전공별 묶음·전공 필터, 정렬(최신/오래된/이름순), 확인코드 표시, 결과 보기, 학생 링크 복사, 학생에게 다시 보내기, 조회 기간 연장, 삭제가 가능해요.'],
     ['알림 설정 — 이메일', '강사 알림 이메일은 개별 저장 버튼으로 따로 저장해요. 다른 설정을 바꿔도 사라지지 않아요.'],
     ['알림 설정 — 재도전 범위', '학생 제출 횟수를 자유롭게 / 1회 재도전 / 1회만 중에서 정할 수 있어요.'],
     ['알림 설정 — 트래커 연동', '단일 기관명을 설정하거나, 여러 기관을 등록해서 학생이 직접 소속을 선택하게 할 수 있어요.'],
@@ -3835,7 +3835,7 @@ async function renderResultsTab(content) {
       <div class="btn-row" style="margin-top:0;align-items:center">
         <div style="flex:1;min-width:160px">
           <label style="margin-top:0">전공(첨삭 기준) 필터</label>
-          <select id="filterPreset"><option value="__all__">전체 (전공별로 묶어보기)</option></select>
+          <select id="filterPreset"><option value="__all__">전체 (한 목록으로 보기)</option></select>
         </div>
         <div style="flex:1;min-width:160px">
           <label style="margin-top:0">정렬</label>
@@ -3865,7 +3865,7 @@ async function renderResultsTab(content) {
   if (!allItems.length) { listEl.innerHTML = `<div class="empty">완료된 첨삭이 없습니다.</div>`; return; }
 
   const presetNames = [...new Set(allItems.map(it => it.presetName || '기본'))].sort((a, b) => a.localeCompare(b, 'ko'));
-  filterSelect.innerHTML = `<option value="__all__">전체 (전공별로 묶어보기)</option>` +
+  filterSelect.innerHTML = `<option value="__all__">전체 (한 목록으로 보기)</option><option value="__group__">전체 (전공별로 묶어보기)</option>` +
     presetNames.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
 
   function sortItems(items) {
@@ -3953,6 +3953,8 @@ async function renderResultsTab(content) {
     listEl.innerHTML = '';
 
     if (filterVal === '__all__') {
+      sortItems(allItems).forEach(it => listEl.appendChild(buildResultRow(it)));
+    } else if (filterVal === '__group__') {
       presetNames.forEach(name => {
         const groupItems = sortItems(allItems.filter(it => (it.presetName || '기본') === name));
         if (!groupItems.length) return;
