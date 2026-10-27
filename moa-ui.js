@@ -22,6 +22,7 @@
     'body.moa-ui .moa-basics{margin-bottom:8px}',
     'body.moa-ui .moa-write-head{margin:4px 0 16px}',
     'body.moa-ui #submitBtn{width:100%}',
+    'body.moa-once #addItemBtn{display:none !important}',
     'body.moa-ui .card h2.moa-h1{font-size:24px !important;line-height:1.4}',
     'body.moa-ui .moa-write,body.moa-ui .moa-summary{scroll-margin-top:72px}',
     'body.moa-ui .item-block .moa-chips{flex-wrap:nowrap;overflow-x:auto;margin-right:-18px;padding-right:18px;scrollbar-width:none;-webkit-overflow-scrolling:touch}',
@@ -125,6 +126,66 @@
       } catch (e) {}
       return p;
     };
+  }
+
+  /* ── 학생당 1회 강의 코드 (2026-10-27) ──
+     허브 입장 코드에 [학생당 1회]가 체크되어 있으면 서버(api/_once.js)가 AI 기능을 기능마다 한 번만 통과시킴.
+     여기서는 AI 요청(/api/feedback, /api/coach)에 강의 이름표(ci)와 학생 열쇠(k)를 붙이고, 막혔을 때 안내만 보여 줌.
+     ※ 자소서·모의면접 moa-ui.js에 같은 내용이 있음 */
+  var MOA_ONCE = (function () {
+    try {
+      if (new URLSearchParams(location.search).get('once') === '1') sessionStorage.setItem('moa_once', '1');
+      return !!MOA_CI && sessionStorage.getItem('moa_once') === '1';
+    } catch (e) { return false; }
+  })();
+  function moaOnceNotice(msg, strong) {
+    var el = document.getElementById('moa-once-note');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'moa-once-note';
+      el.setAttribute('role', 'status');
+      el.style.cssText = 'position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:9999;max-width:min(92vw,520px);padding:12px 16px;border-radius:12px;font:500 14px/1.55 "Noto Sans KR",sans-serif;box-shadow:0 6px 20px rgba(20,26,46,.18)';
+      document.body.appendChild(el);
+    }
+    el.style.background = strong ? '#141A2E' : '#F3F5FA';
+    el.style.color = strong ? '#FFFFFF' : '#141A2E';
+    el.textContent = msg;
+    clearTimeout(el._t);
+    el._t = setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, strong ? 7000 : 5000);
+  }
+  if (MOA_CI && window.fetch && !window.__moaOnceWrap) {
+    window.__moaOnceWrap = true;
+    var onceFetch = window.fetch;
+    window.fetch = function (input, init) {
+      var self = this, args = arguments;
+      try {
+        var url = typeof input === 'string' ? input : (input && input.url) || '';
+        var method = String((init && init.method) || 'GET').toUpperCase();
+        if (method === 'POST' && /^(\/|https?:\/\/[^/]*\/)api\/(feedback|coach)(\?|$)/.test(url) && (url.charAt(0) === '/' || url.indexOf(location.origin + '/') === 0) && !document.body.classList.contains('role-teacher')) {
+          return moaKey().then(function (k) {
+            var h = {};
+            var src = (init && init.headers) || {};
+            if (typeof Headers !== 'undefined' && src instanceof Headers) src.forEach(function (v, n) { h[n] = v; });
+            else Object.keys(src).forEach(function (n) { h[n] = src[n]; });
+            h['x-moa-ci'] = MOA_CI;
+            if (k) h['x-moa-k'] = k;
+            var p = onceFetch.call(self, input, Object.assign({}, init, { headers: h }));
+            p.then(function (r) {
+              if (r && r.status === 403) r.clone().json().then(function (j) { if (j && j.once) moaOnceNotice(j.error, true); }).catch(function () {});
+            }).catch(function () {});
+            return p;
+          });
+        }
+      } catch (e) {}
+      return onceFetch.apply(self, args);
+    };
+  }
+  if (MOA_ONCE) {
+    var showOnce = function () {
+      document.body.classList.add('moa-once');
+      moaOnceNotice('이번 강의는 첨삭·피드백과 도움 기능을 각각 한 번씩 이용할 수 있습니다.', false);
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', showOnce); else showOnce();
   }
 
   function isStudent() {
