@@ -209,6 +209,7 @@ function aiErrorText(status, data) {
 }
 
 import { withUsage, usageSoFar } from './_usage.js'; // AI 사용 기록 (2026-10-24)
+import { withOnce } from './_once.js'; // 학생당 1회 강의 코드 (2026-10-27)
 import Redis from 'ioredis';
 import { whoIs } from './_staff.js';
 
@@ -484,4 +485,4 @@ async function handler(req, res) {
   }
 }
 
-export default withUsage('resume', 'feedback', handler);
+export default withUsage('resume', 'feedback', withOnce('rs', () => 'feedback', handler));
