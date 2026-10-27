@@ -23,7 +23,8 @@
 //   moa_ci:{ci} · moa_ci_by_t:{강사코드} · moa_lect:{강의id}(ci → 반/회차) · moa_assign:{강사코드}(운영보드가 씀)
 //
 // [누구나 — 학생 입장]
-//   POST { action:'verify', code }                → { ok, label, t, ci, only, once } (t = 학생 제출이 갈 강사 코드)
+//   POST { action:'verify', code }                → { ok, label, t, ci, only, once, expiresAt }
+//        expiresAt: 허브가 기억해 두고 조립기·STAR 경험카드를 코드 사용 기간에만 열어 줌 (2026-10-27) (t = 학생 제출이 갈 강사 코드)
 //        같은 IP에서 30번 틀리면 15분 차단 (코드 추측 방지 · 학교는 한 반이 같은 IP라 넉넉히)
 //
 // ※ 학생 이름·휴대폰 번호는 이 API로 보내지 않아요. 코드만 확인합니다.
@@ -101,7 +102,7 @@ export default async function handler(req, res) {
         return res.status(404).json({ ok: false, error: '입장 코드가 맞지 않거나 사용 기간이 끝났어요. 강사님께 확인해 주세요.' });
       }
       const d = JSON.parse(raw);
-      return res.status(200).json({ ok: true, label: d.label, t: d.t, ci: d.ci || '', only: d.only || null, once: !!d.once });
+      return res.status(200).json({ ok: true, label: d.label, t: d.t, ci: d.ci || '', only: d.only || null, once: !!d.once, expiresAt: d.expiresAt || 0 });
     }
 
     // ── 여기부터 강사·원장님만 ──
