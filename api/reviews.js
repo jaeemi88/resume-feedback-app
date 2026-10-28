@@ -6,6 +6,7 @@
 import Redis from 'ioredis';
 import { isStaff } from './_staff.js';
 import { CLIENT_T, getClient, useClientPart, releaseClientPart, attachReviewCode, getAdminEmail } from './client-code.js';
+import { saveResult } from './results.js';
 
 let redis;
 function getRedis() {
@@ -19,6 +20,40 @@ function genCode() {
   let code = '';
   for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
   return code;
+}
+
+// 바로 결과 (2026-10-28 대표님 승인): 허브 입장 코드에 [바로 결과]를 체크하면 class-code.js가 moa_ci:{ci}에 direct:true를 남김.
+// 그 코드로 들어온 학생(x-moa-ci)의 제출은 검수 대기함을 거치지 않고, AI 초안을 강사 승인과 같은 모양으로 바로 결과에 저장함
+async function isDirect(client, req) {
+  const ci = String(req.headers['x-moa-ci'] || '');
+  if (!/^ci_[a-z0-9]{8,24}$/.test(ci)) return false;
+  try { const d = JSON.parse((await client.get('moa_ci:' + ci)) || 'null'); return !!(d && d.direct); } catch (e) { return false; }
+}
+// 강사 화면 [전체 승인]과 같은 칸으로 옮김 (강사가 고치지 않은 AI 초안 그대로)
+function draftToResultItem(it) {
+  const d = (it && it.aiDraft) || {};
+  return {
+    questionType: it.questionType, question: it.question, answer: it.answer,
+    frameworkUsed: d.frameworkUsed || it.framework || 'STAR',
+    structure: d.structure, concreteness: d.concreteness,
+    riskFlags: d.riskFlags || [], aiTracePhrases: d.aiTracePhrases || [],
+    reflection: Array.isArray(d.reflection) ? d.reflection : [],
+    jobEvidence: d.jobEvidence || null,
+    redFlags: Array.isArray(d.redFlags) ? d.redFlags : undefined,
+    interviewerInference: d.interviewerInference,
+    defenseQuestions: (Array.isArray(d.defenseQuestions) ? d.defenseQuestions : []).filter(dq => dq && dq.sentence && dq.question),
+    jobMatch: d.jobMatch || null, intentGapComment: d.intentGapComment || null,
+    previousAnswer: it.previousAnswer || null, revisionComment: d.revisionComment || null,
+    charLimit: it.charLimit || null, charLimitNote: d.charLimitNote || null,
+    missingElements: d.missingElements || [],
+    strengths: d.strengths || '', improvements: d.improvements || '', polishedText: d.polishedText || '',
+    exampleSlots: Array.isArray(d.exampleSlots) ? d.exampleSlots : [],
+    followUpQuestions: {
+      reasonType: (d.followUpQuestions || {}).reasonType || '',
+      alternativeType: (d.followUpQuestions || {}).alternativeType || '',
+      quantifyType: (d.followUpQuestions || {}).quantifyType || ''
+    }
+  };
 }
 
 function safeTeacherId(raw) {
@@ -87,6 +122,22 @@ export default async function handler(req, res) {
       item.clientProduct = used.data.product;
       if (!item.studentEmail && used.data.email) item.studentEmail = used.data.email; // 예약 때 받은 이메일
       if (used.data.memo && !item.clientMemo) item.clientMemo = used.data.memo;
+    }
+
+    if (!clientCode && await isDirect(client, req)) {
+      let presetName = '기본';
+      try {
+        const cr = await client.get(`resume_app_config:${t}`);
+        const p = cr && (JSON.parse(cr).presets || []).find(x => x.id === item.presetId);
+        if (p && p.name) presetName = p.name;
+      } catch (e) { /* 이름을 못 찾으면 '기본' */ }
+      const resultId = await saveResult(client, t, {
+        studentName: item.studentName || '', studentEmail: item.studentEmail || '', code,
+        presetName, docType: item.docType || 'resume', jobPosting: item.jobPosting || '',
+        studentInstitution: item.studentInstitution || '', clientCode: '', direct: true,
+        items: (Array.isArray(item.items) ? item.items : []).map(draftToResultItem)
+      }, req.headers.host);
+      return res.status(200).json({ ok: true, code, resultId, direct: true });
     }
 
     try {

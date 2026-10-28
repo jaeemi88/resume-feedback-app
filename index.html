@@ -3079,13 +3079,23 @@ async function renderStudentSubmitForm() {
 
       const studentInstitution = institutions.length ? document.getElementById('institutionSelect').value : '';
 
+      // 바로 결과 강의 코드 (2026-10-28): 허브 입장 코드의 강의 이름표(ci)를 함께 보내면 서버가 바로 결과로 저장
+      let moaCi = ''; try { moaCi = sessionStorage.getItem('moa_ci') || ''; } catch (e) {}
       const reviewRes = await api('/api/reviews', {
         method: 'POST',
+        headers: !CLIENT && /^ci_[a-z0-9]{8,24}$/.test(moaCi) ? { 'x-moa-ci': moaCi } : {},
         body: JSON.stringify({ studentName, studentEmail, presetId: presetSelect.value, docType: docTypeSelect.value, jobPosting, studentInstitution: CLIENT ? '개인 고객' : studentInstitution, items: itemsWithDraft, ...(CLIENT ? { clientCode: CLIENT.code, refundAgreedAt: Date.now() } : {}) })
       });
 
       if (CLIENT) { CLIENT.used = Object.assign({}, CLIENT.used, { resume: { at: Date.now(), reviewCode: reviewRes.code || "" } }); renderClientDone(reviewRes.code, true); return; }
       localStorage.setItem(countKey, String(usedCount + 1));
+      if (reviewRes.resultId) {
+        // 검수 없이 바로 결과: 확인 코드를 남겨 두고 결과 화면으로 이동
+        STUDENT_DRAFT = null; stuDraftClear(); AI_DRAFT_KEEP.clear();
+        try { sessionStorage.setItem('moa_direct_code', reviewRes.code || ''); } catch (e) {}
+        location.hash = '#result=' + reviewRes.resultId;
+        return;
+      }
 
       statusMsg.innerHTML = `
         제출이 완료되었습니다. 강사님 검수 후 결과를 확인하실 수 있어요.<br>
@@ -3886,7 +3896,7 @@ async function renderResultsTab(content) {
     const row = document.createElement('div');
     row.className = 'preset-item';
     row.innerHTML = `
-      <div><b>${escapeHtml(it.studentName) || '(이름 없음)'}</b> — 문항 ${it.itemCount || 1}개${it.clientCode ? '<span class="star-tag" style="margin-left:6px;background:#FFF4DC;color:#9A6200">👤 개인 고객</span>' : ''}${expiredBadge}<div style="font-size:12px;color:var(--muted)">${moaDate(it.approvedAt, 'time')}${it.code ? ' · 확인코드 <b style="color:var(--green);letter-spacing:1px">' + escapeHtml(it.code) + '</b>' : ''}</div></div>
+      <div><b>${escapeHtml(it.studentName) || '(이름 없음)'}</b> — 문항 ${it.itemCount || 1}개${it.direct ? '<span class="star-tag ok" style="margin-left:6px">바로 결과</span>' : ''}${it.clientCode ? '<span class="star-tag" style="margin-left:6px;background:#FFF4DC;color:#9A6200">👤 개인 고객</span>' : ''}${expiredBadge}<div style="font-size:12px;color:var(--muted)">${moaDate(it.approvedAt, 'time')}${it.code ? ' · 확인코드 <b style="color:var(--green);letter-spacing:1px">' + escapeHtml(it.code) + '</b>' : ''}</div></div>
       <div class="btn-row" style="margin:8px 0 0;flex-wrap:wrap;gap:6px;width:100%">
         <a href="${link}" target="_blank" class="btn-secondary" style="text-decoration:none;padding:8px 14px;border-radius:8px">결과 보기</a>
         <button class="btn-secondary copy-student-btn" style="padding:8px 12px;font-size:13px">학생 링크 복사</button>
@@ -4951,6 +4961,17 @@ async function renderResultView(id) {
   try {
     const { item } = await api('/api/results?id=' + encodeURIComponent(id) + (isAdmin ? '&admin=1' : ''));
     app.innerHTML = resultContentHtml(item);
+    if (item.direct && !isAdmin) {
+      // 바로 결과 강의 (2026-10-28): 강사 검수 없이 바로 보여 준 AI 첨삭임을 알리고 확인 코드를 남겨 줌
+      let dc = ''; try { dc = sessionStorage.getItem('moa_direct_code') || ''; } catch (e) {}
+      if (!dc || dc !== item.code) dc = '';
+      const note = document.createElement('div');
+      note.className = 'card';
+      note.style.cssText = 'background:#F3F0FF;border:0;margin-bottom:12px;font-size:14px;line-height:1.7';
+      note.innerHTML = 'AI 첨삭 결과입니다. 강의 중 강사님 설명과 함께 확인해 주세요.' +
+        (dc ? `<br>확인 코드 <b style="letter-spacing:2px">${escapeHtml(dc)}</b> · 나중에 첨삭 화면의 "내 결과 확인"에서 이 코드로 다시 볼 수 있어요.` : '');
+      app.insertBefore(note, app.firstChild);
+    }
   } catch (e) {
     if (e.expired) {
       app.innerHTML = `<div class="card"><div class="empty">⏰ 조회 가능한 기간이 지났어요. 결과가 다시 필요하시면 강사님께 문의해 주세요.</div></div>`;

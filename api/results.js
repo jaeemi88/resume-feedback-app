@@ -131,6 +131,56 @@ async function upsertStudentConsultLog(client, t, studentEmail, kind) {
   }
 }
 
+// 결과 저장 (강사 승인 · 바로 결과 공통, 2026-10-28): 트래커 집계·조회 기간·학생 메일까지 함께 처리
+export async function saveResult(client, t, data, host) {
+  const indexKey = `resume_results_index:${t}`;
+  const itemKey = (id) => `resume_result:${t}:${id}`;
+  const id = 'res_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+  const item = { id, teacherId: t, ...data, approvedAt: Date.now() };
+
+  let institutionNameForSurvey = null;
+  let groupCodeExpiryDays = 5;
+  try {
+    const configRaw = await client.get(`resume_app_config:${t}`);
+    const config = configRaw ? JSON.parse(configRaw) : null;
+    const orgName = (item.studentInstitution && item.studentInstitution.trim()) || (config && config.institutionName) || null;
+    if (orgName) {
+      institutionNameForSurvey = orgName;
+      item.trackerProgramId = `auto_resume_${slugPart(orgName)}_${slugPart(item.presetName || '(전공 미지정)')}`;
+    }
+    if (config && config.groupCodeExpiryDays) groupCodeExpiryDays = parseInt(config.groupCodeExpiryDays, 10) || 5;
+  } catch (err) {
+    console.error('트래커 연동용 설정 조회 실패:', err);
+  }
+
+  const isIndividualCoaching = await upsertStudentConsultLog(client, t, item.studentEmail, 'resume');
+  if (!isIndividualCoaching) {
+    const approvedDate = new Date(item.approvedAt);
+    item.expiresAt = new Date(approvedDate.getFullYear(), approvedDate.getMonth(), approvedDate.getDate() + groupCodeExpiryDays).getTime();
+  }
+
+  // 개인 고객(네이버 예약)은 결과를 승인일부터 30일간 볼 수 있게 (2026-10-01)
+  if (item.clientCode) {
+    const d0 = new Date(item.approvedAt);
+    item.expiresAt = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() + 30).getTime();
+  }
+
+  await client.set(itemKey(id), JSON.stringify(item));
+
+  const indexRaw = await client.get(indexKey);
+  const index = indexRaw ? JSON.parse(indexRaw) : [];
+  index.push({ id, code: item.code || '', studentName: item.studentName || '', presetName: item.presetName || '기본', itemCount: (item.items || []).length, docType: item.docType || 'resume', approvedAt: item.approvedAt, expiresAt: item.expiresAt || null, clientCode: item.clientCode || '', direct: !!item.direct });
+  await client.set(indexKey, JSON.stringify(index));
+
+  await notifyStudentByEmail(t, id, item, host); // 서버리스 환경에서는 응답 전에 완료를 기다려야 중간에 끊기지 않음
+
+  if (institutionNameForSurvey) {
+    upsertTrackerStat(client, t, institutionNameForSurvey, item.presetName);
+  }
+
+  return id;
+}
+
 export default async function handler(req, res) {
   const client = getRedis();
   const t = safeTeacherId(req.query.t);
@@ -145,49 +195,7 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST') {
     if (!staff) return denied();
-    const id = 'res_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-    const item = { id, teacherId: t, ...req.body, approvedAt: Date.now() };
-
-    let institutionNameForSurvey = null;
-    let groupCodeExpiryDays = 5;
-    try {
-      const configRaw = await client.get(`resume_app_config:${t}`);
-      const config = configRaw ? JSON.parse(configRaw) : null;
-      const orgName = (item.studentInstitution && item.studentInstitution.trim()) || (config && config.institutionName) || null;
-      if (orgName) {
-        institutionNameForSurvey = orgName;
-        item.trackerProgramId = `auto_resume_${slugPart(orgName)}_${slugPart(item.presetName || '(전공 미지정)')}`;
-      }
-      if (config && config.groupCodeExpiryDays) groupCodeExpiryDays = parseInt(config.groupCodeExpiryDays, 10) || 5;
-    } catch (err) {
-      console.error('트래커 연동용 설정 조회 실패:', err);
-    }
-
-    const isIndividualCoaching = await upsertStudentConsultLog(client, t, item.studentEmail, 'resume');
-    if (!isIndividualCoaching) {
-      const approvedDate = new Date(item.approvedAt);
-      item.expiresAt = new Date(approvedDate.getFullYear(), approvedDate.getMonth(), approvedDate.getDate() + groupCodeExpiryDays).getTime();
-    }
-
-    // 개인 고객(네이버 예약)은 결과를 승인일부터 30일간 볼 수 있게 (2026-10-01)
-    if (item.clientCode) {
-      const d0 = new Date(item.approvedAt);
-      item.expiresAt = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() + 30).getTime();
-    }
-
-    await client.set(itemKey(id), JSON.stringify(item));
-
-    const indexRaw = await client.get(indexKey);
-    const index = indexRaw ? JSON.parse(indexRaw) : [];
-    index.push({ id, code: item.code || '', studentName: item.studentName || '', presetName: item.presetName || '기본', itemCount: (item.items || []).length, docType: item.docType || 'resume', approvedAt: item.approvedAt, expiresAt: item.expiresAt || null, clientCode: item.clientCode || '' });
-    await client.set(indexKey, JSON.stringify(index));
-
-    await notifyStudentByEmail(t, id, item, req.headers.host); // 서버리스 환경에서는 응답 전에 완료를 기다려야 중간에 끊기지 않음
-
-    if (institutionNameForSurvey) {
-      upsertTrackerStat(client, t, institutionNameForSurvey, item.presetName);
-    }
-
+    const id = await saveResult(client, t, req.body || {}, req.headers.host);
     return res.status(200).json({ ok: true, id });
   }
 
