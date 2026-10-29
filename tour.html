@@ -112,7 +112,11 @@ h2{font-size:26px}
 .ctas{display:flex;flex-direction:column;gap:10px;position:relative;z-index:2}
 .ctas a{display:block;text-decoration:none;border-radius:14px;padding:14px 16px;font-weight:900;font-size:16px;text-align:center}
 .ctas small{display:block;font-size:12px;font-weight:500;margin-top:2px;opacity:.85}
-.cta1{background:var(--app);color:#fff}
+.cta1{background:var(--app);color:#fff;transform-origin:50% 60%}
+/* [직접 체험하기] 눈길 끌기: 마지막 장면에서 2.4초마다 살짝 흔들림 */
+.card.last.on .cta1{animation:jiggle 2.4s ease-in-out .6s infinite}
+@keyframes jiggle{0%,70%,100%{transform:none}74%{transform:rotate(-2.5deg) scale(1.03)}78%{transform:rotate(2.5deg) scale(1.03)}82%{transform:rotate(-2deg) scale(1.03)}86%{transform:rotate(1.5deg) scale(1.02)}90%{transform:rotate(0) scale(1)}}
+@media (prefers-reduced-motion:reduce){.card.last.on .cta1{animation:glow 2.4s ease-in-out .6s infinite}@keyframes glow{0%,60%,100%{box-shadow:none}80%{box-shadow:0 0 0 6px var(--app-soft)}}}
 .cta2{background:#fff;color:var(--ink);border:1.5px solid var(--ink)}
 .again{background:none;border:0;font:inherit;font-size:13px;font-weight:700;color:var(--muted);padding:6px;cursor:pointer}
 .ctas a:focus-visible,.again:focus-visible{outline:3px solid var(--lime);outline-offset:2px}
