@@ -126,6 +126,24 @@ h2{font-size:26px}
 .num{color:var(--app);font-variant-numeric:tabular-nums}
 .phone .cnt{font-size:15px;font-weight:900;color:var(--app)}
 
+/* 카드 4: 분량 */
+.meter{display:flex;flex-direction:column;gap:9px}
+.mrow{display:grid;grid-template-columns:74px 1fr 52px;align-items:center;gap:8px;font-size:13px}
+.ml{font-weight:700;color:var(--ink2)}
+.mrow b{text-align:right;font-variant-numeric:tabular-nums}
+.mrow b.hi{color:var(--app);font-size:15px}
+.track{position:relative;height:12px;border-radius:6px;background:var(--surface)}
+.track i{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:6px;background:#B9BECB;transition:width .9s ease}
+.track i.full{background:var(--app)}
+.on .track i{width:var(--w)}
+.on .track i.full{transition-delay:.7s}
+.track .lim{position:absolute;right:0;top:-17px;font-style:normal;font-size:10.5px;color:var(--muted)}
+.track::after{content:"";position:absolute;right:0;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
+.fin{background:var(--ink);color:#fff;border-radius:16px;padding:14px 16px;font-size:13px;line-height:1.7;max-height:190px;overflow:hidden;position:relative;-webkit-mask-image:linear-gradient(#000 70%,transparent);mask-image:linear-gradient(#000 70%,transparent)}
+.fin p+p{margin-top:8px}
+.fin-in{transition:transform 3.2s ease-in-out}
+.fin mark,.src mark{background:var(--lime);color:var(--olive);border-radius:3px;padding:0 3px;font-weight:700}
+
 /* 키 작은 휴대폰 (아이폰 SE 등) */
 @media (max-height:700px){
   .card{gap:11px}
@@ -139,6 +157,7 @@ h2{font-size:26px}
   .sum3{gap:5px}.sum3 li{padding:8px 12px;font-size:12px}.sum3 b{font-size:14px}
   .ctas{gap:7px}.ctas a{padding:10px 14px;font-size:15px}
   .phone .ta{min-height:0;font-size:13.5px}
+  .fin{max-height:120px;font-size:12px}.mrow{font-size:12px}
   .hint{display:none}
 }
 .card{overflow-y:auto;scrollbar-width:none}
@@ -157,7 +176,7 @@ h2{font-size:26px}
       <div class="step">학생이 쓴 자소서 답변</div>
       <h2>한 단락, <span class="num" id="n195">0</span>자면<br>충분합니다</h2>
       <div class="phone">
-        <div class="lab">지원동기 답변</div>
+        <div class="lab">지원동기 답변 · 문항 500자 이내</div>
         <div class="ta" id="typer"></div>
         <div class="row"><span class="fakebtn go">무료 진단 받기</span><span class="cnt" id="tcnt">0자</span></div>
       </div>
@@ -188,15 +207,15 @@ h2{font-size:26px}
       <p class="src">※ 앞의 예시 답변을 실제로 진단한 결과에서 옮겼습니다.</p>
     </section>
 
-    <section class="card" data-dur="5500" aria-label="4. 강사 검수 후 학생이 완성">
-      <div class="step">강사 검수 후, 학생이 직접</div>
-      <h2>같은 경험이<br>이렇게 달라집니다</h2>
-      <div class="ba">
-        <div class="before"><span class="tg">고치기 전</span><p>저는 <u class="v">열정적인 자세로 최선을 다하는</u> 사람입니다. 실습 4주 동안 환자분들의 변화를 기록하며 <u class="o">어떤 일이든 잘할 수 있다</u>는 자신감을 얻었습니다.</p></div>
-        <div class="down" aria-hidden="true"></div>
-        <div class="after"><span class="tg">고친 후</span><p>저는 <em>환자분의 작은 변화를 놓치지 않는</em> 사람입니다. 실습 4주 동안 매일 보행 기록을 남겨, <em>운동 강도 조정을 제안</em>했습니다.</p></div>
+    <section class="card" data-dur="7000" aria-label="4. 문항 분량에 맞춘 완성본">
+      <div class="step">강사 검수 후, 학생이 직접 완성</div>
+      <h2>195자 초안이<br>500자 문항 분량으로</h2>
+      <div class="meter" id="meter">
+        <div class="mrow"><span class="ml">처음 쓴 답변</span><div class="track"><i style="--w:39%"></i><em class="lim">문항 500자</em></div><b>195자</b></div>
+        <div class="mrow"><span class="ml">완성본</span><div class="track"><i class="full" style="--w:91.8%"></i></div><b class="hi">459자</b></div>
       </div>
-      <p class="src">※ 이해를 돕기 위한 예시 문장입니다. 고친 글은 강사가 검수합니다.</p>
+      <div class="fin"><div class="fin-in" id="finIn"><p>저는 환자분의 작은 변화를 놓치지 않는 사람입니다. 재활병원 실습 4주 동안 매일 보행 기록을 남겼습니다. 단순히 걸음 수를 적는 데 그치지 않고, 시간대별 보행 속도와 표정 변화까지 함께 메모했습니다. 어느 날 평소보다 걸음 수가 눈에 띄게 줄어든 환자분을 발견했고, 전날 수면 시간과 식사량을 함께 검토한 뒤 운동 강도 조정을 담당 치료사님께 제안했습니다. 치료사님은 제안을 받아들여 강도를 낮추었고, 3일 후 그 환자분은 다시 이전 수준의 보행 거리를 회복했습니다. 작은 숫자 하나가 회복의 실마리가 될 수 있다는 것을 그때 몸으로 배웠습니다.</p><p>귀 기관에 지원한 이유는 <mark>지역 어르신 대상 재활 프로그램</mark>을 운영하고 있기 때문입니다. 지역사회와 밀착된 환경에서 꾸준한 관찰과 기록이 더욱 빛을 발할 수 있다고 생각했습니다. 입사 후에는 기록하는 습관으로 환자분 한 분 한 분의 회복 속도에 맞는 돌봄을 이어가겠습니다.</p></div></div>
+      <p class="src">※ 앞의 예시 답변으로 실제 완성 기능을 실행한 결과입니다. 문항 글자 수의 80~100%로 맞추고, <mark>형광펜</mark> 부분은 학생이 자기 경험으로 바꿉니다.</p>
     </section>
 
     <section class="card" data-dur="6000" aria-label="5. 면접 방어 테스트">
@@ -214,7 +233,7 @@ h2{font-size:26px}
       <div class="step">MOA FORMULA 자소서·면접 AI 코칭</div>
       <h2>교육 시간 안에,<br>학생마다 완성본을</h2>
       <ul class="sum3">
-        <li><b>AI 진단 + 강사 검수</b>모든 학생의 결과를 강사가 확인합니다</li>
+        <li><b>짧은 초안도 문항 분량의 완성본으로</b>AI 진단 후 모든 학생의 결과를 강사가 확인합니다</li>
         <li><b>자소서에서 면접까지</b>쓴 글을 면접 연습으로 이어 갑니다</li>
         <li><b>결과보고서 제출</b>참여·만족도·전후 변화를 정리합니다</li>
       </ul>
@@ -248,6 +267,7 @@ moaUse('tour');
     0(){const ta=document.getElementById('typer'),c=document.getElementById('tcnt'),n=document.getElementById('n195');ta.textContent='';let k=0;const put=()=>{ta.textContent=ANSWER.slice(0,k);c.textContent=k+'자';n.textContent=k};put();const step=()=>{k=Math.min(ANSWER.length,k+5);put();if(k<ANSWER.length)later(step,45)};later(step,300)},
     1(){const li=[...document.querySelectorAll('#checks li')];li.forEach(l=>l.classList.remove('lit'));li.forEach((l,i)=>later(()=>l.classList.add('lit'),300+i*650))},
     2(){const b=[...document.querySelectorAll('#badges span')];b.forEach(x=>x.classList.remove('lit'));b.forEach((x,i)=>later(()=>x.classList.add('lit'),400+i*300))},
+    3(){const f=document.getElementById('finIn'),box=f.parentElement;f.style.transition='none';f.style.transform='none';later(()=>{const d=Math.max(0,f.scrollHeight-box.clientHeight+24);f.style.transition='';f.style.transform='translateY(-'+d+'px)'},2000)},
     4(){const l=[...document.querySelectorAll('#chat .ln')];l.forEach(x=>x.classList.remove('lit'));l.forEach((x,i)=>later(()=>x.classList.add('lit'),300+i*1200))}
   };
 
