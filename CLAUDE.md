@@ -69,3 +69,7 @@
   - 한 작업 = 한 줄, 결과만 (고친 과정·다시 올리기는 남기지 않음). 학생 개인정보·암호·열쇠·claude.ai 주소는 넣지 않음
 - 가상 사무실(/office.html) '최근 작업 소식' 카드와 본부 채팅이 이 파일을 읽음 (https://jinromoa-board.vercel.app/worklog.js)
 - 이 저장소가 jinromoa-board가 아니면 이어서 그 저장소에도 반영하고, 완료 보고 때 함께 알린다
+
+## 대표 사진 (2026-10-29 대표님 지시)
+- 대표님 사진이 필요한 곳(제안서·리플릿·강사 프로필·교안 표지·홍보물·앱 화면 등)에는 이 사진만 사용: https://jinromoa-board.vercel.app/brand/ceo.jpg (1080×1080 정사각) · 작은 크기 https://jinromoa-board.vercel.app/brand/ceo-600.jpg
+- 원본 파일: jinromoa-board 저장소 public/brand/ (ceo.jpg, ceo-600.jpg). 다른 사진을 새로 만들거나 바꿔 넣지 않음
