@@ -2669,6 +2669,7 @@ function itemBlockHtml(id) {
       <textarea class="item-question" data-item-id="${id}"></textarea>
       <label class="item-answer-label">작성한 답변</label>
       <div class="item-a-hint" style="font-size:12px;color:var(--muted);line-height:1.6;margin:-2px 0 6px"></div>
+      <div class="item-print-tip" style="font-size:13px;color:var(--navy);background:var(--navy-light);border-radius:8px;padding:8px 12px;line-height:1.6;margin:0 0 8px"><b>프린트로 가져오셨나요?</b> 휴대폰 카메라로 종이를 비추고 글자 인식(아이폰: 글자 모양 아이콘, 갤럭시: T 아이콘)으로 복사해 아래 칸에 붙여 넣어 주세요.</div>
       <button type="button" class="btn-secondary sc-toggle-btn" data-item-id="${id}" style="font-size:13px;padding:7px 12px;margin-bottom:6px">💡 막막하면 눌러보세요 — 재료 꺼내기</button>
       <div class="sc-panel" data-item-id="${id}" style="display:none"></div>
       <div class="write-order">✍️ <b>초안은 직접</b> 쓰고, AI는 <b>다듬기·글자 수 조정</b>에만 쓰세요. 내 경험·내 말투가 남아야 면접에서 흔들리지 않아요.</div>
@@ -2748,6 +2749,8 @@ function applyDocTypeToBlock(id, docTypeVal) {
     if (qh) qh.textContent = q; if (ah) ah.textContent = a;
   };
   if (scToggle) scToggle.style.display = docTypeVal === 'cv' ? 'none' : '';
+  const printTip = block.querySelector('.item-print-tip');
+  if (printTip) printTip.style.display = docTypeVal === 'cv' ? 'none' : '';
   if (scPanel && docTypeVal === 'cv') scPanel.style.display = 'none';
   if (docTypeVal === 'cv') {
     typeRow.style.display = 'none';
@@ -2759,7 +2762,7 @@ function applyDocTypeToBlock(id, docTypeVal) {
   } else {
     typeRow.style.display = 'none';
     qLabel.textContent = '자소서 문항';
-    setHints('회사가 준 문항을 그대로 붙여 넣어 주세요. 글자 수(예: 500자)까지 넣으면 분량도 맞춰 드려요. 비워 두면 문항 유형 이름으로 제출돼요.', '답변이 있어야 첨삭을 받아요. 답변이 비어 있는 칸은 제출에서 빠져요. 프린트로 가져오셨다면 휴대폰 카메라의 글자 인식으로 복사해 붙여 넣을 수 있어요.');
+    setHints('회사가 준 문항을 그대로 붙여 넣어 주세요. 글자 수(예: 500자)까지 넣으면 분량도 맞춰 드려요. 비워 두면 문항 유형 이름으로 제출돼요.', '답변이 있어야 첨삭을 받아요. 답변이 비어 있는 칸은 제출에서 빠져요.');
     questionInput.placeholder = QUESTION_EXAMPLES[questionTypeSelect.value] || '';
     aLabel.textContent = '작성한 답변';
     answerInput.placeholder = '여기에 답변을 붙여넣거나 작성해 주세요.';
