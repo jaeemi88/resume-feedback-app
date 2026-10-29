@@ -231,7 +231,7 @@
     if (header && isTeacher() && !header.querySelector('.moa-head-right')) {
       var hub = document.querySelector('.moa-hubbar a');
       var right = el('div', { class: 'moa-head-right' });
-      if (hub && hub.style.display !== 'none') right.appendChild(el('a', { class: 'moa-lock', href: hub.getAttribute('href') }, '허브'));
+      if (hub && hub.style.display !== 'none') right.appendChild(el('a', { class: 'moa-lock moa-lock-hub', href: hub.getAttribute('href') }, '허브'));
       header.appendChild(right);
     }
     var h1 = document.getElementById('header-title');
