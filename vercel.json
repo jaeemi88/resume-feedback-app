@@ -24,6 +24,10 @@
       "destination": "/free.html"
     },
     {
+      "source": "/tour",
+      "destination": "/tour.html"
+    },
+    {
       "source": "/blackbox",
       "destination": "/blackbox.html"
     }

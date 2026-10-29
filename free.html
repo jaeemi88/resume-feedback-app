@@ -142,6 +142,8 @@ $('ex').onclick=()=>{
   $('a').scrollTop=0;
   $('a').scrollIntoView({behavior:'smooth',block:'center'});
 };
+// 투어(/tour) 마지막 [직접 체험하기]로 들어오면 예시를 미리 채움
+if(new URLSearchParams(location.search).has('ex'))$('ex').click();
 $('go').onclick=async()=>{
   const q=$('q').value.trim(),a=$('a').value.trim(),R=$('result'),B=$('go');
   const msg=(t,p)=>{R.hidden=false;R.innerHTML=`<div class="score bad"><b>${esc(t)}</b><p>${esc(p)}</p></div>`};
