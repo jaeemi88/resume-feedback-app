@@ -14,7 +14,7 @@ html,body{height:100%}
 body{font-family:'Noto Sans KR',system-ui,sans-serif;color:var(--ink);background:#fff;-webkit-tap-highlight-color:transparent;overflow:hidden}
 .stage{position:fixed;inset:0;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 12px) max(20px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 16px) max(20px,env(safe-area-inset-left,0px));max-width:520px;margin:0 auto}
 .bars{display:flex;gap:4px}
-.bars i{flex:1;height:3px;border-radius:2px;background:var(--line);overflow:hidden;position:relative}
+.bars i{flex:1;height:4px;border-radius:2px;background:var(--line);overflow:hidden;position:relative}
 .bars i b{position:absolute;inset:0;width:0;background:var(--app)}
 .bars i.done b{width:100%}
 .top{display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:13px;font-weight:700}
@@ -22,8 +22,8 @@ body{font-family:'Noto Sans KR',system-ui,sans-serif;color:var(--ink);background
 .brand::before{content:"";width:10px;height:10px;border-radius:3px;background:var(--lime)}
 .skip{background:none;border:0;font:inherit;font-size:13px;font-weight:700;color:var(--muted);padding:6px 0 6px 12px;cursor:pointer}
 .cards{position:relative;flex:1;margin-top:8px}
-.card{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:18px;opacity:0;visibility:hidden;transform:translateY(12px);transition:opacity .45s ease,transform .45s ease,visibility 0s .45s}
-.card.on{opacity:1;visibility:visible;transform:none;transition:opacity .45s ease,transform .45s ease}
+.card{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:18px;opacity:0;visibility:hidden;transform:translateY(12px);transition:opacity .18s ease,transform .18s ease,visibility 0s .18s}
+.card.on{opacity:1;visibility:visible;transform:none;transition:opacity .35s ease .18s,transform .35s ease .18s}
 .step{font-size:13px;font-weight:900;color:var(--app);letter-spacing:.04em}
 h1,h2{font-weight:900;letter-spacing:-.02em;line-height:1.3;text-wrap:balance}
 h2{font-size:26px}
@@ -60,8 +60,10 @@ h2{font-size:26px}
 .spin{width:22px;height:22px;border-radius:50%;border:3px solid var(--app-soft);border-top-color:var(--app);animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 .checks{list-style:none;display:flex;flex-direction:column;gap:10px}
-.checks li{display:flex;gap:12px;align-items:center;background:var(--surface);border-radius:14px;padding:13px 14px;opacity:.35;transition:opacity .3s,background .3s}
-.checks li.lit{opacity:1;background:var(--app-soft)}
+.checks li{display:flex;gap:12px;align-items:center;background:var(--app-soft);border-radius:14px;padding:13px 14px;opacity:0;transform:translateX(-14px);transition:opacity .35s,transform .35s}
+.checks li.lit{opacity:1;transform:none}
+.checks li .ok{margin-left:auto;font-size:12px;font-weight:900;color:var(--app);opacity:0;transition:opacity .3s .25s}
+.checks li.lit .ok{opacity:1}
 .checks .n{flex:none;width:28px;height:28px;border-radius:50%;background:#fff;color:var(--app);font-weight:900;font-size:14px;display:flex;align-items:center;justify-content:center}
 .checks li.lit .n{background:var(--app);color:#fff}
 .checks b{display:block;font-size:15.5px}
@@ -92,7 +94,7 @@ h2{font-size:26px}
 .after{background:var(--ink);color:#fff;border-radius:16px;padding:14px}
 .after .tg{background:var(--lime);color:var(--olive)}
 .after em{font-style:normal;font-weight:900;color:var(--lime)}
-.on .after,.on .down{animation:rise .6s ease 1.6s both}
+.on .after,.on .down{animation:rise .5s ease 1.1s both}
 @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 /* 카드 6: 방어 테스트 */
 .chat{display:flex;flex-direction:column;gap:9px}
@@ -115,7 +117,14 @@ h2{font-size:26px}
 .again{background:none;border:0;font:inherit;font-size:13px;font-weight:700;color:var(--muted);padding:6px;cursor:pointer}
 .ctas a:focus-visible,.again:focus-visible{outline:3px solid var(--lime);outline-offset:2px}
 .card.last.on~.tapnav{display:none}
-@media (prefers-reduced-motion:reduce){.chat .ln{opacity:1;transform:none;transition:none}.on .after,.on .down{animation:none}}
+@media (prefers-reduced-motion:reduce){.chat .ln,.checks li{transform:none}.on .after,.on .down{animation:none}}
+
+.rt{display:flex;align-items:center;gap:6px}
+.pg{font-size:12px;font-weight:900;color:var(--app);background:var(--app-soft);border-radius:999px;padding:2px 9px;font-variant-numeric:tabular-nums}
+.autoplay{align-self:flex-start;display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:var(--app);background:var(--app-soft);border-radius:999px;padding:5px 12px}
+.autoplay .dot{width:8px;height:8px;border-radius:50%;background:var(--app);animation:blink 1s steps(1) infinite}
+.num{color:var(--app);font-variant-numeric:tabular-nums}
+.phone .cnt{font-size:15px;font-weight:900;color:var(--app)}
 
 /* 키 작은 휴대폰 (아이폰 SE 등) */
 @media (max-height:700px){
@@ -140,40 +149,34 @@ h2{font-size:26px}
 <body>
 <div class="stage">
   <div class="bars" id="bars"></div>
-  <div class="top"><span class="brand">MOA FORMULA · 자소서 첨삭 1분 투어</span><button class="skip" id="skip" type="button">건너뛰기</button></div>
+  <div class="top"><span class="brand">MOA FORMULA · 자소서 첨삭 1분 투어</span><span class="rt"><span class="pg" id="pg">1 / 6</span><button class="skip" id="skip" type="button">건너뛰기</button></span></div>
 
   <div class="cards" id="cards">
-    <section class="card" data-dur="5000" aria-label="1. 짧은 답변으로 시작">
-      <div class="step">한 단락이면 충분합니다</div>
-      <div class="big"><span id="n195">0</span><small>자</small></div>
-      <div class="para" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-      <p class="lead">자소서 1문항의 <b>짧은 답변 한 단락</b>. 이 정도 분량으로도 AI 진단과 강사 첨삭이 시작됩니다.</p>
-    </section>
-
-    <section class="card" data-dur="6500" aria-label="2. 쓴 그대로 붙여 넣기">
-      <div class="step">학생이 하는 일</div>
-      <h2>쓴 그대로<br>붙여 넣습니다</h2>
+    <section class="card" data-dur="5200" aria-label="1. 학생이 쓴 답변 한 단락">
+      <div class="autoplay" aria-hidden="true"><span class="dot"></span>자동으로 넘어갑니다</div>
+      <div class="step">학생이 쓴 자소서 답변</div>
+      <h2>한 단락, <span class="num" id="n195">0</span>자면<br>충분합니다</h2>
       <div class="phone">
-        <div class="lab">내 답변 · 지원동기</div>
+        <div class="lab">지원동기 답변</div>
         <div class="ta" id="typer"></div>
-        <div class="row"><span class="fakebtn go">무료 진단 받기</span><span class="cnt" id="tcnt">0 / 1,500자</span></div>
+        <div class="row"><span class="fakebtn go">무료 진단 받기</span><span class="cnt" id="tcnt">0자</span></div>
       </div>
+      <p class="lead">이 정도 분량으로도 <b>AI 진단과 강사 첨삭</b>이 시작됩니다.</p>
     </section>
 
-    <section class="card" data-dur="6500" aria-label="3. AI가 다섯 가지를 점검">
-      <div class="step">약 20초 동안</div>
-      <h2>AI가 다섯 가지를<br>점검합니다</h2>
-      <div class="wait"><span class="spin" aria-hidden="true"></span>AI가 읽고 있어요</div>
+    <section class="card" data-dur="5000" aria-label="2. AI가 다섯 가지를 점검">
+      <div class="step">버튼을 누르면 약 20초 동안</div>
+      <h2>AI가 다섯 가지를<br>차례로 점검합니다</h2>
       <ul class="checks" id="checks">
-        <li><span class="n">1</span><div><b>구조</b><span>묻는 말에 순서대로 답했는가</span></div></li>
-        <li><span class="n">2</span><div><b>구체성</b><span>숫자와 내 행동이 보이는가</span></div></li>
-        <li><span class="n">3</span><div><b>직무 연결</b><span>왜 이 기관·이 직무인가</span></div></li>
-        <li><span class="n">4</span><div><b>감점 표현</b><span>면접관이 걸릴 문장은 없는가</span></div></li>
-        <li><span class="n">5</span><div><b>상투어</b><span>누구나 쓰는 말은 없는가</span></div></li>
+        <li><span class="n">1</span><div><b>구조</b><span>묻는 말에 순서대로 답했는가</span></div><span class="ok">점검</span></li>
+        <li><span class="n">2</span><div><b>구체성</b><span>숫자와 내 행동이 보이는가</span></div><span class="ok">점검</span></li>
+        <li><span class="n">3</span><div><b>직무 연결</b><span>왜 이 기관·이 직무인가</span></div><span class="ok">점검</span></li>
+        <li><span class="n">4</span><div><b>감점 표현</b><span>면접관이 걸릴 문장은 없는가</span></div><span class="ok">점검</span></li>
+        <li><span class="n">5</span><div><b>상투어</b><span>누구나 쓰는 말은 없는가</span></div><span class="ok">점검</span></li>
       </ul>
     </section>
 
-    <section class="card" data-dur="7500" aria-label="4. 실제 진단 결과">
+    <section class="card" data-dur="6000" aria-label="3. 실제 진단 결과">
       <div class="step">실제 AI 진단 결과</div>
       <h2>195자에서도 고칠 곳을<br>정확히 짚어 냅니다</h2>
       <div class="res">
@@ -185,7 +188,7 @@ h2{font-size:26px}
       <p class="src">※ 앞의 예시 답변을 실제로 진단한 결과에서 옮겼습니다.</p>
     </section>
 
-    <section class="card" data-dur="7500" aria-label="5. 강사 검수 후 학생이 완성">
+    <section class="card" data-dur="5500" aria-label="4. 강사 검수 후 학생이 완성">
       <div class="step">강사 검수 후, 학생이 직접</div>
       <h2>같은 경험이<br>이렇게 달라집니다</h2>
       <div class="ba">
@@ -196,7 +199,7 @@ h2{font-size:26px}
       <p class="src">※ 이해를 돕기 위한 예시 문장입니다. 고친 글은 강사가 검수합니다.</p>
     </section>
 
-    <section class="card" data-dur="8000" aria-label="6. 면접 방어 테스트">
+    <section class="card" data-dur="6000" aria-label="5. 면접 방어 테스트">
       <div class="step">면접 방어 테스트</div>
       <h2>쓴 문장을<br>말로 증명합니다</h2>
       <p class="lead">AI가 자소서 문장으로 면접 질문을 만들고, 학생의 답변이 자소서 내용과 맞는지 판정합니다.</p>
@@ -207,7 +210,7 @@ h2{font-size:26px}
       </div>
     </section>
 
-    <section class="card last" data-dur="0" aria-label="7. 직접 체험하기">
+    <section class="card last" data-dur="0" aria-label="6. 직접 체험하기">
       <div class="step">MOA FORMULA 자소서·면접 AI 코칭</div>
       <h2>교육 시간 안에,<br>학생마다 완성본을</h2>
       <ul class="sum3">
@@ -242,16 +245,17 @@ moaUse('tour');
   const later=(f,ms)=>timers.push(setTimeout(f,ms));
   const ANSWER='저는 어릴 때부터 사람을 돕는 일에 관심이 많았고, 열정적인 자세로 최선을 다하는 사람입니다. 재활병원 실습 4주 동안 환자분들의 변화를 기록하며 어떤 일이든 잘할 수 있다는 자신감을 얻었습니다. 귀 기관은 지역에서 가장 신뢰받는 병원이라고 생각하여 지원하게 되었습니다. 입사 후에는 항상 배우는 자세로 귀 기관의 발전에 기여하는 인재가 되겠습니다.';
   const scenes={
-    0(){const el=document.getElementById('n195');if(reduce){el.textContent=195;return}let t0=null;const run=t=>{t0=t0||t;const p=Math.min(1,(t-t0)/1400);el.textContent=Math.round(195*(1-Math.pow(1-p,3)));if(p<1&&cur===0)requestAnimationFrame(run)};requestAnimationFrame(run)},
-    1(){const ta=document.getElementById('typer'),c=document.getElementById('tcnt');if(reduce){ta.textContent=ANSWER;c.textContent='195 / 1,500자';return}ta.textContent='';let k=0;const step=()=>{k=Math.min(ANSWER.length,k+6);ta.textContent=ANSWER.slice(0,k);c.textContent=k+' / 1,500자';if(k<ANSWER.length)later(step,40)};later(step,400)},
-    2(){const li=[...document.querySelectorAll('#checks li')];li.forEach(l=>l.classList.remove('lit'));li.forEach((l,i)=>later(()=>l.classList.add('lit'),reduce?0:600+i*900))},
-    3(){const b=[...document.querySelectorAll('#badges span')];b.forEach(x=>x.classList.remove('lit'));b.forEach((x,i)=>later(()=>x.classList.add('lit'),reduce?0:500+i*350))},
-    5(){const l=[...document.querySelectorAll('#chat .ln')];l.forEach(x=>x.classList.remove('lit'));l.forEach((x,i)=>later(()=>x.classList.add('lit'),reduce?0:400+i*1600))}
+    0(){const ta=document.getElementById('typer'),c=document.getElementById('tcnt'),n=document.getElementById('n195');ta.textContent='';let k=0;const put=()=>{ta.textContent=ANSWER.slice(0,k);c.textContent=k+'자';n.textContent=k};put();const step=()=>{k=Math.min(ANSWER.length,k+5);put();if(k<ANSWER.length)later(step,45)};later(step,300)},
+    1(){const li=[...document.querySelectorAll('#checks li')];li.forEach(l=>l.classList.remove('lit'));li.forEach((l,i)=>later(()=>l.classList.add('lit'),300+i*650))},
+    2(){const b=[...document.querySelectorAll('#badges span')];b.forEach(x=>x.classList.remove('lit'));b.forEach((x,i)=>later(()=>x.classList.add('lit'),400+i*300))},
+    4(){const l=[...document.querySelectorAll('#chat .ln')];l.forEach(x=>x.classList.remove('lit'));l.forEach((x,i)=>later(()=>x.classList.add('lit'),300+i*1200))}
   };
+
   function show(i){
     if(i<0||i>=cards.length)return;
     clearT();cur=i;
     cards.forEach((c,k)=>c.classList.toggle('on',k===i));
+    document.getElementById('pg').textContent=(i+1)+' / '+cards.length;
     nav.style.display=i===cards.length-1?'none':'';document.getElementById('hint').style.visibility=i===cards.length-1?'hidden':'';
     [...bars.children].forEach((b,k)=>{b.classList.toggle('done',k<i);const f=b.firstChild;f.style.transition='none';f.style.width=k<i?'100%':'0';});
     const dur=+cards[i].dataset.dur;
