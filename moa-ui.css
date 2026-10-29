@@ -47,6 +47,13 @@ body.moa-ui header h1{font-size:13px !important;font-weight:700 !important;color
 body.moa-ui header h1::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--moa-app);flex-shrink:0}
 body.moa-ui header .progress-track{order:3;flex-basis:100%;margin:0 0 12px !important;gap:4px !important}
 body.moa-ui header .swipe-hint{display:none !important}
+/* 학생 화면 '허브' 버튼 (2026-10-29 · 허브 STAR 경험카드·조립기와 모양 통일) */
+.moa-hub-link{order:2;flex-shrink:0;display:inline-flex;align-items:center;min-height:30px;padding:0 12px;border:1.5px solid var(--moa-ink);border-radius:999px;background:#FFFFFF;color:var(--moa-ink);font:700 12.5px 'Noto Sans KR',sans-serif;text-decoration:none;white-space:nowrap}
+.moa-hub-link:focus-visible{outline:3px solid var(--moa-lime);outline-offset:2px}
+body.moa-ui header:has(.moa-hub-link) .moa-wordmark{margin-right:auto}
+body.moa-ui header:has(.moa-hub-link) h1{max-width:46vw}
+body.moa-ui.moa-stage .moa-hub-link{background:transparent;color:#FFFFFF;border-color:rgba(255,255,255,.45)}
+@media print{.moa-hub-link{display:none!important}}
 body.moa-ui .progress-seg{height:4px !important;border-radius:2px;background:#E6E8EE !important}
 body.moa-ui .progress-seg.done{background:var(--moa-ink) !important}
 body.moa-ui .progress-seg.active{background:var(--moa-lime) !important}

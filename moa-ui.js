@@ -219,6 +219,14 @@
     if (header && !header.querySelector('.moa-wordmark')) {
       header.insertBefore(el('div', { class: 'moa-wordmark', 'aria-label': 'MOA FORMULA' }, '<i></i>MOA FORMULA'), header.firstChild);
     }
+    // 학생 화면: 오른쪽 끝 '허브' 버튼 (허브의 STAR 경험카드·조립기와 같은 테두리 모양). 개인 고객 화면처럼 허브 링크를 숨긴 곳에는 두지 않음
+    if (header && !isTeacher()) {
+      var hubS = document.querySelector('.moa-hubbar a');
+      var hubOn = !!(hubS && hubS.style.display !== 'none');
+      var hubLink = header.querySelector('.moa-hub-link');
+      if (hubOn && !hubLink) header.appendChild(el('a', { class: 'moa-hub-link', href: hubS.getAttribute('href') }, '허브'));
+      else if (!hubOn && hubLink) hubLink.remove();
+    }
     // 강사 화면: 오른쪽에 테두리+자물쇠 '허브' 버튼 (허브 링크가 살아 있을 때만)
     if (header && isTeacher() && !header.querySelector('.moa-head-right')) {
       var hub = document.querySelector('.moa-hubbar a');
