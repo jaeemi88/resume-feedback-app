@@ -4583,6 +4583,30 @@ function resolveCssVarsForExport(html) {
 // PDF는 결과지 화면을 그대로 인쇄 창으로 보내 저장(디자인 100% 동일).
 let CURRENT_RESULT = null;
 const W = { purple: '#643DF2', navy: '#3A1F9E', light: '#EFEAFE', light2: '#F1EDFE', text: '#1a2130', muted: '#6b7280', line: '#E2E5EA', green: '#1F7A4D', greenBg: '#E8F5EE', warn: '#B45309', warnBg: '#FEF3E2', yellow: '#FFF1A8', font: "'맑은 고딕','Malgun Gothic',sans-serif" };
+// 내려받는 파일 끝 센터 안내 (2026-10-30 대표님 승인 · 1차: Word·PDF에만, 화면에는 넣지 않음)
+const CENTER_LINKS = [
+  ['1:1 상담 예약', '네이버 예약 · 진로모아커리어센터', 'https://booking.naver.com/booking/5/bizes/1748919'],
+  ['면접·자소서 팁', '인스타그램 @jinromoa', 'https://www.instagram.com/jinromoa'],
+  ['문의', '카카오톡 채널 · 진로모아', 'https://pf.kakao.com/_kxaUaX']
+];
+const CENTER_TITLE = '자소서 준비를 이어가고 싶다면';
+const CENTER_LEAD = '진로모아커리어센터에서 1:1 첨삭과 모의면접으로 다음 단계를 함께 준비합니다.';
+function wCenterBox() {
+  return `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:16pt 0 0"><tr style="page-break-inside:avoid">
+    <td width="4" style="background:${W.purple};width:4pt">&nbsp;</td>
+    <td style="background:${W.light2};padding:9pt 12pt;font-family:${W.font}">
+      <p style="page-break-after:avoid;margin:0 0 3pt;font-size:10.5pt;font-weight:bold;color:${W.navy}">${CENTER_TITLE}</p>
+      <p style="page-break-after:avoid;margin:0 0 5pt;font-size:9.5pt;color:${W.text}">${CENTER_LEAD}</p>
+      ${CENTER_LINKS.map(([k, t, u], i) => `<p style="${i < CENTER_LINKS.length - 1 ? 'page-break-after:avoid;' : ''}margin:0 0 2pt;font-size:9.5pt;color:${W.text}"><b>${k}</b>  ·  <a href="${u}" style="color:${W.purple}">${t}</a></p>`).join('')}
+    </td></tr></table>`;
+}
+function centerBoxPrintHtml() {
+  return `<div style="break-inside:avoid;page-break-inside:avoid;margin-top:22px;padding:12px 16px;border-top:3px solid #643DF2;border-radius:6px;background:#F1EDFE;font-size:12.5px;line-height:1.7;color:#1a2130">
+    <div style="font-weight:800;color:#3A1F9E;font-size:13.5px">${CENTER_TITLE}</div>
+    <div style="margin:2px 0 6px">${CENTER_LEAD}</div>
+    ${CENTER_LINKS.map(([k, t, u]) => `<div><b>${k}</b> · <a href="${u}" style="color:#643DF2">${t}</a> <span style="color:#6b7280;font-size:11px">${u.replace('https://', '')}</span></div>`).join('')}
+  </div>`;
+}
 function wEsc(t) { return escapeHtml(String(t || '')).replace(/\n/g, '<br>'); }
 function wBox(label, body, bg, bar) {
   return `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 8pt"><tr style="page-break-inside:avoid">
@@ -4716,6 +4740,7 @@ function buildWordHtml(record) {
     </td></tr></table>
   ${record.jobPosting ? wBox('지원 채용공고 핵심 내용', wEsc(record.jobPosting), W.light2, W.navy) : ''}
   ${items.map((it, i) => wItemHtml(it, i, items.length)).join('')}
+  ${wCenterBox()}
   <p style="margin:18pt 0 0;font-size:8.5pt;color:${W.muted};text-align:center;font-family:${W.font}">진로모아커리어센터 · MOA FORMULA 취업의 공식</p>
 </div></body></html>`;
 }
@@ -4769,6 +4794,7 @@ function dxInline(nodes, fmt, out) {
     if (n.nodeType === 3) { const t = dxNoEmoji(n.nodeValue).replace(/[ \t\r\n]+/g, ' '); if (t) out.push({ t, f: fmt }); }
     else if (n.nodeType === 1) {
       if (n.tagName === 'BR') out.push({ br: true });
+      else if (n.tagName === 'A' && /^https:\/\//.test(n.getAttribute('href') || '')) dxInline(Array.from(n.childNodes), Object.assign(dxRunFmt(fmt, dxStyle(n), 'A'), { href: n.getAttribute('href'), u: { val: 'single', color: 'auto' } }), out);
       else dxInline(Array.from(n.childNodes), dxRunFmt(fmt, dxStyle(n), n.tagName), out);
     }
   });
@@ -4778,8 +4804,15 @@ function dxRuns(segs) {
   const firstT = segs.findIndex(s => s.t != null);
   if (firstT >= 0) segs[firstT].t = segs[firstT].t.replace(/^ +/, '');
   for (let i = segs.length - 1; i >= 0; i--) if (segs[i].t != null) { segs[i].t = segs[i].t.replace(/ +$/, ''); break; }
-  return segs.map(s => s.br ? '<w:r><w:br/></w:r>' : (s.t ? `<w:r>${dxRPr(s.f)}<w:t xml:space="preserve">${dxEsc(s.t)}</w:t></w:r>` : '')).join('');
+  return segs.map(s => {
+    if (s.br) return '<w:r><w:br/></w:r>';
+    if (!s.t) return '';
+    const r = `<w:r>${dxRPr(s.f)}<w:t xml:space="preserve">${dxEsc(s.t)}</w:t></w:r>`;
+    return s.f.href ? `<w:hyperlink r:id="${dxLinkId(s.f.href)}" w:history="1">${r}</w:hyperlink>` : r;
+  }).join('');
 }
+// 누르면 열리는 링크: 문서 관계(rels)에 주소를 등록하고 번호를 돌려줌
+function dxLinkId(href) { const L = DX.links || (DX.links = []); let i = L.indexOf(href); if (i < 0) { L.push(href); i = L.length - 1; } return 'rIdL' + (i + 1); }
 function dxPara(st, fmt, runs) {
   const m = dxBox(st.margin);
   let pPr = '';
@@ -4897,8 +4930,9 @@ async function dxZip(files, type) {
 async function buildWordDocx(record) {
   const doc = new DOMParser().parseFromString(buildWordHtml(record), 'text/html');
   const root = doc.querySelector('.WordSection1') || doc.body;
+  DX.links = [];
   const body = dxBlocks(Array.from(root.childNodes), { fmt: { sz: 10.5, color: dxColor(W.text) }, width: DX.textW });
-  const W_NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"';
+  const W_NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
   const head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
   const fonts = `<w:rFonts w:ascii="${DX.font}" w:hAnsi="${DX.font}" w:eastAsia="${DX.font}" w:cs="${DX.font}"/>`;
   const files = [
@@ -4906,7 +4940,7 @@ async function buildWordDocx(record) {
     { name: '_rels/.rels', text: `${head}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>` },
     { name: 'docProps/core.xml', text: `${head}<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>${record.docType === 'cv' ? '이력서' : '자기소개서'} 첨삭 결과</dc:title><dc:creator>MOA FORMULA</dc:creator></cp:coreProperties>` },
     { name: 'docProps/app.xml', text: `${head}<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Microsoft Office Word</Application><DocSecurity>0</DocSecurity></Properties>` },
-    { name: 'word/_rels/document.xml.rels', text: `${head}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/fontTable" Target="fontTable.xml"/></Relationships>` },
+    { name: 'word/_rels/document.xml.rels', text: `${head}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/fontTable" Target="fontTable.xml"/>${DX.links.map((u, i) => `<Relationship Id="rIdL${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="${dxEsc(u)}" TargetMode="External"/>`).join('')}</Relationships>` },
     { name: 'word/styles.xml', text: `${head}<w:styles ${W_NS}><w:docDefaults><w:rPrDefault><w:rPr>${fonts}<w:color w:val="${dxColor(W.text)}"/><w:sz w:val="21"/><w:szCs w:val="21"/><w:lang w:val="en-US" w:eastAsia="ko-KR"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:before="0" w:after="0" w:line="264" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style><w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style></w:styles>` },
     { name: 'word/settings.xml', text: `${head}<w:settings ${W_NS}><w:zoom w:percent="100"/><w:defaultTabStop w:val="800"/><w:characterSpacingControl w:val="doNotCompress"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>` },
     { name: 'word/fontTable.xml', text: `${head}<w:fonts ${W_NS}><w:font w:name="${DX.font}"><w:altName w:val="Malgun Gothic"/><w:charset w:val="81"/><w:family w:val="swiss"/><w:pitch w:val="variable"/></w:font></w:fonts>` },
@@ -4951,7 +4985,7 @@ function downloadResultAsPdf(studentName) {
     .ex-slot{cursor:default}
   </style></head><body><div class="card" style="border:none;box-shadow:none;max-width:none;padding:0">
     <div style="font-size:11px;font-weight:800;color:#141A2E;letter-spacing:1px;margin-bottom:6px">MOA FORMULA · 진로모아커리어센터</div>
-    ${(() => { const cl = area.cloneNode(true); cl.querySelectorAll('details').forEach(d => d.setAttribute('open', '')); cl.querySelectorAll('.rs-jump').forEach(n => n.remove()); return cl.innerHTML; })()}</div></body></html>`);
+    ${(() => { const cl = area.cloneNode(true); cl.querySelectorAll('details').forEach(d => d.setAttribute('open', '')); cl.querySelectorAll('.rs-jump').forEach(n => n.remove()); return cl.innerHTML; })()}${centerBoxPrintHtml()}</div></body></html>`);
   doc.close();
   const go = () => { try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch (e) { window.print(); } setTimeout(() => frame.remove(), 60000); };
   // 글꼴이 다 불러와진 뒤 인쇄
