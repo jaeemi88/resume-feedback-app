@@ -417,7 +417,7 @@
   .ex-final{border-color:#3D4500 !important;border-radius:14px !important}
   .ex-final h4{color:#3D4500 !important}
   @media print{ .rs-dock,.rs-jump{display:none !important} }
-/* 🔎 기업 심화 분석 카드 (2026-10-05, 모의면접 앱과 세트) */
+/*  기업 심화 분석 카드 (2026-10-05, 모의면접 앱과 세트) */
 .cb-card{border:1px solid #E3DBFB;border-radius:12px;padding:12px 14px;margin-top:10px;background:#F8F6FF;display:flex;flex-direction:column;gap:8px}
 .cb-card .cb-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .cb-card .cb-name{font-size:15px;font-weight:700}
@@ -562,14 +562,14 @@ function riskFlagsHtml(flags) {
     근거부족나열형: '근거 부족 주장 나열형'
   };
   return `<div style="margin:10px 0">${flags.map(f =>
-    `<span class="star-tag miss" style="background:var(--warn-bg);color:var(--warn)">⚠ ${labelMap[f] || f}</span>`
+    `<span class="star-tag miss" style="background:var(--warn-bg);color:var(--warn)"> ${labelMap[f] || f}</span>`
   ).join(' ')}</div>`;
 }
 
 function aiTracePhrasesHtml(phrases) {
   if (!phrases || !phrases.length) return '';
   return `<div class="field-block" style="background:var(--miss-bg);padding:10px 12px;border-radius:8px">
-    <div class="fb-label">🤖 AI스러운 문구 콕 집어보기</div>
+    <div class="fb-label"> AI스러운 문구 콕 집어보기</div>
     ${phrases.map(p => `
       <div style="margin-top:8px">
         <span style="text-decoration:underline wavy var(--miss);font-weight:700">"${escapeHtml(p.phrase)}"</span>
@@ -586,10 +586,10 @@ function reviewTrendHtml(d, item) {
   const dict = item.questionType === '이력서항목' ? [] : clicheUnique(clicheScan(item.answer));
   if (!refl.length && !j && !dict.length) return '';
   return `<div class="field-block" style="background:var(--navy-light);padding:10px 12px;border-radius:8px">
-    <div class="fb-label">📌 2026 채용 기준 — 성찰 · 직무 증거 · 상투어</div>
-    ${refl.map(r => `<p style="margin:4px 0;font-size:13px">${r.hasReflection ? '✅' : '💭'} <b>${escapeHtml(r.experience)}</b> ${r.hasReflection ? (r.quote ? '— "' + escapeHtml(r.quote) + '"' : '') : '— 보완 질문: ' + escapeHtml(r.question || '')}</p>`).join('')}
-    ${j ? `<p style="margin:4px 0;font-size:13px">${j.linked && j.hasResult ? '✅' : '🎯'} 직무 증거: ${j.linked ? '연결 경험 있음' : '연결 경험 없음'}${j.linked ? (j.hasResult ? ' · 숫자·결과 있음' : ' · 숫자·결과 없음') : ''}${j.experience ? ' (' + escapeHtml(j.experience) + ')' : ''}${j.tip ? '<br>→ ' + escapeHtml(j.tip) : ''}</p>` : ''}
-    ${dict.length ? `<p style="margin:4px 0;font-size:13px">🤖 상투어 목록 일치: ${dict.map(h => '「' + escapeHtml(h.w) + '」').join(' ')}</p>` : ''}
+    <div class="fb-label"> 2026 채용 기준 — 성찰 · 직무 증거 · 상투어</div>
+    ${refl.map(r => `<p style="margin:4px 0;font-size:13px">${r.hasReflection ? '' : ''} <b>${escapeHtml(r.experience)}</b> ${r.hasReflection ? (r.quote ? '— "' + escapeHtml(r.quote) + '"' : '') : '— 보완 질문: ' + escapeHtml(r.question || '')}</p>`).join('')}
+    ${j ? `<p style="margin:4px 0;font-size:13px">${j.linked && j.hasResult ? '' : ''} 직무 증거: ${j.linked ? '연결 경험 있음' : '연결 경험 없음'}${j.linked ? (j.hasResult ? ' · 숫자·결과 있음' : ' · 숫자·결과 없음') : ''}${j.experience ? ' (' + escapeHtml(j.experience) + ')' : ''}${j.tip ? '<br>→ ' + escapeHtml(j.tip) : ''}</p>` : ''}
+    ${dict.length ? `<p style="margin:4px 0;font-size:13px"> 상투어 목록 일치: ${dict.map(h => '「' + escapeHtml(h.w) + '」').join(' ')}</p>` : ''}
   </div>`;
 }
 
@@ -598,16 +598,16 @@ function redFlagsHtml(flags) {
   if (!Array.isArray(flags)) return ''; // 예전 결과(이 기능 이전)는 아무것도 표시하지 않음
   const list = flags.filter(f => f && (f.quote || f.why));
   if (!list.length) {
-    return `<p style="background:var(--ok-bg);color:var(--ok);padding:12px;border-radius:8px;margin:0">✅ <b>결격 신호 없음</b> — "일 잘할 것 같은 인상 + 큰 흠 없음" 기준을 통과했어요</p>`;
+    return `<p style="background:var(--ok-bg);color:var(--ok);padding:12px;border-radius:8px;margin:0"> <b>결격 신호 없음</b> — "일 잘할 것 같은 인상 + 큰 흠 없음" 기준을 통과했어요</p>`;
   }
   return `<div style="background:var(--warn-bg);border:1px solid #F5C26B;padding:12px;border-radius:8px">
-    <div style="font-weight:700;color:var(--warn);margin-bottom:4px">⚠️ 면접관이 멈칫할 수 있는 표현 (${list.length}개)</div>
+    <div style="font-weight:700;color:var(--warn);margin-bottom:4px"> 면접관이 멈칫할 수 있는 표현 (${list.length}개)</div>
     ${list.map(f => `
       <div style="border-top:1px dashed #F5C26B;padding-top:8px;margin-top:8px;font-size:14px;line-height:1.6">
         ${f.type ? `<span class="star-tag miss" style="background:#fff;color:var(--warn);border:1px solid #F5C26B">${escapeHtml(f.type)}</span>` : ''}
         ${f.quote ? `<div style="font-weight:700">"${escapeHtml(f.quote)}"</div>` : ''}
         ${f.why ? `<div>→ ${escapeHtml(f.why)}</div>` : ''}
-        ${f.fix ? `<div>✏️ 이렇게: ${escapeHtml(f.fix)}</div>` : ''}
+        ${f.fix ? `<div> 이렇게: ${escapeHtml(f.fix)}</div>` : ''}
       </div>`).join('')}
   </div>`;
 }
@@ -616,14 +616,14 @@ function redFlagsHtml(flags) {
 function reviewRedFlagsHtml(flags, idx) {
   if (!Array.isArray(flags)) return '';
   if (!flags.length) {
-    return `<div class="field-block" style="background:var(--ok-bg);padding:10px 12px;border-radius:8px"><div class="fb-label">⚠️ 결격 신호</div><p style="color:var(--ok)">✅ 없음</p></div>`;
+    return `<div class="field-block" style="background:var(--ok-bg);padding:10px 12px;border-radius:8px"><div class="fb-label"> 결격 신호</div><p style="color:var(--ok)"> 없음</p></div>`;
   }
   return `<div class="field-block" style="background:var(--warn-bg);padding:10px 12px;border-radius:8px">
-    <div class="fb-label">⚠️ 결격 신호 (체크를 풀면 학생에게 안 보여요)</div>
+    <div class="fb-label"> 결격 신호 (체크를 풀면 학생에게 안 보여요)</div>
     ${flags.map((f, k) => `
       <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;font-size:13px;line-height:1.5;margin:6px 0;cursor:pointer">
         <input type="checkbox" class="rf-keep" data-idx="${idx}" data-k="${k}" checked style="margin-top:3px;width:auto">
-        <span><b>[${escapeHtml(f.type || '')}]</b> "${escapeHtml(f.quote || '')}"<br>→ ${escapeHtml(f.why || '')}${f.fix ? `<br>✏️ ${escapeHtml(f.fix)}` : ''}</span>
+        <span><b>[${escapeHtml(f.type || '')}]</b> "${escapeHtml(f.quote || '')}"<br>→ ${escapeHtml(f.why || '')}${f.fix ? `<br> ${escapeHtml(f.fix)}` : ''}</span>
       </label>`).join('')}
   </div>`;
 }
@@ -637,13 +637,13 @@ function defenseHtml(item) {
   const list = Array.isArray(item.defenseQuestions) ? item.defenseQuestions.filter(d => d && d.sentence && d.question) : [];
   if (!list.length) return '';
   return `<div class="result-block">
-    <h3>🛡️ 이 문장, 면접에서 말할 수 있나요?</h3>
+    <h3> 이 문장, 면접에서 말할 수 있나요?</h3>
     <p style="font-size:13px;color:var(--muted);margin:-4px 0 8px">면접관은 자소서 문장을 짚어서 물어봐요. 30초 분량으로 <b>내 말로</b> 답해보세요. 설명하지 못하는 문장은 빼거나 경험을 보충해야 해요.</p>
     ${list.map(d => {
       const key = 'df' + (defenseSeq++);
       DEFENSE_CTX[key] = { sentence: exPlain(d.sentence), question: d.question, essay: exPlain(item.polishedText || item.answer || '') };
       return `<div style="border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:10px">
-        <div style="font-weight:700;font-size:14px">📌 "${escapeHtml(exPlain(d.sentence))}"</div>
+        <div style="font-weight:700;font-size:14px"> "${escapeHtml(exPlain(d.sentence))}"</div>
         <div style="font-size:14px;margin-top:6px;color:var(--navy)">면접관: ${escapeHtml(d.question)}</div>
         <div class="def-interactive">
           <textarea class="def-reply" data-key="${key}" maxlength="800" placeholder="말하듯이 적어보세요 (30초 ≈ 150~200자)" style="margin-top:8px;min-height:80px"></textarea>
@@ -669,10 +669,10 @@ document.addEventListener('click', async (e) => {
   try {
     const r = await api('/api/coach', { method: 'POST', body: JSON.stringify({ mode: 'defend', sentence: ctx.sentence, question: ctx.question, essay: ctx.essay, reply: reply.trim() }) });
     const look = {
-      ok:      { icon: '✅', label: '자소서와 일치 — 이대로 말하면 돼요', bg: 'var(--ok-bg)', color: 'var(--ok)' },
-      caution: { icon: '⚠️', label: '새 내용 주의 — 자소서와 맞춰주세요', bg: 'var(--warn-bg)', color: 'var(--warn)' },
-      weak:    { icon: '🔁', label: '설명이 약해요 — 문장을 빼거나 경험을 보충하세요', bg: 'var(--miss-bg)', color: 'var(--miss)' }
-    }[r.verdict] || { icon: '⚠️', label: '확인 필요', bg: 'var(--warn-bg)', color: 'var(--warn)' };
+      ok:      { icon: '', label: '자소서와 일치 — 이대로 말하면 돼요', bg: 'var(--ok-bg)', color: 'var(--ok)' },
+      caution: { icon: '', label: '새 내용 주의 — 자소서와 맞춰주세요', bg: 'var(--warn-bg)', color: 'var(--warn)' },
+      weak:    { icon: '', label: '설명이 약해요 — 문장을 빼거나 경험을 보충하세요', bg: 'var(--miss-bg)', color: 'var(--miss)' }
+    }[r.verdict] || { icon: '', label: '확인 필요', bg: 'var(--warn-bg)', color: 'var(--warn)' };
     out.innerHTML = `<div style="background:${look.bg};color:${look.color};border-radius:8px;padding:10px 12px;margin-top:8px;font-size:14px;line-height:1.6"><b>${look.icon} ${look.label}</b><br><span style="color:#333">${escapeHtml(r.comment || '')}</span></div>`;
   } catch (err) {
     out.innerHTML = `<p style="font-size:13px;color:var(--miss);margin:6px 0 0">판정하지 못했어요: ${escapeHtml(err.message)}</p>`;
@@ -761,7 +761,7 @@ function renderTeacherSetup() {
         const hubLink = MOA_HUB_URL + '?k=' + encodeURIComponent(data.hubKey);
         app.innerHTML = `
           <div class="card">
-            <h2>✅ 등록 완료!</h2>
+            <h2> 등록 완료!</h2>
             <p style="font-size:14px;line-height:1.7">지금 보고 계신 카톡 링크는 <b>1회용 초대 링크</b>라 앞으로는 못 써요. 아래가 <b>${escapeHtml(name || code)}님만의 승인 링크</b>예요 — 꼭 복사해서 카톡 "나에게 보내기"로 저장해두세요.</p>
             <p style="font-size:13px;color:var(--muted);line-height:1.7;margin-top:6px">이 링크를 누르면 <b>암호 없이</b> MOA FORMULA 허브가 열리고, 자소서 첨삭·모의면접 강사용 화면을 바로 쓸 수 있어요. 다른 사람에게는 공유하지 마세요.</p>
             <div class="link-box" style="margin-top:10px">
@@ -781,7 +781,7 @@ function renderTeacherSetup() {
       const permanentLink = location.origin + location.pathname + '?' + p.toString();
       app.innerHTML = `
         <div class="card">
-          <h2>✅ 등록 완료!</h2>
+          <h2> 등록 완료!</h2>
           <p style="font-size:14px;line-height:1.7">지금 보고 계신 카톡 링크는 <b>1회용 초대 링크</b>라 앞으로는 못 써요. 아래가 <b>${escapeHtml(name || code)}님만의 고정 주소</b>예요 — 꼭 복사해서 카톡 "나에게 보내기"로 저장해두시고, 다음부터는 이 주소로 들어와 주세요.</p>
           <div class="link-box" style="margin-top:10px">
             <span style="word-break:break-all">${permanentLink}</span>
@@ -817,7 +817,7 @@ async function moaShare(text) {
   try { await navigator.clipboard.writeText(text); return 'copied'; }
   catch (e) { prompt('아래 내용을 길게 눌러 복사해 주세요', text); return 'copied'; }
 }
-const SHARE_LABEL = IS_MOBILE ? '💬 카톡으로 보내기' : '💬 카톡용 복사';
+const SHARE_LABEL = IS_MOBILE ? ' 카톡으로 보내기' : ' 카톡용 복사';
 // 친구 소개 문구 (2026-10-10): 결과 화면 리뷰 카드의 버튼 — 친구는 플레이스 쿠폰 5,000원, 소개한 분은 AI 모의면접 1회 (원장님이 직접 발급)
 document.addEventListener('click', async e => {
   const b = e.target.closest && e.target.closest('#rsReferBtn');
@@ -825,7 +825,7 @@ document.addEventListener('click', async e => {
   const name = b.dataset.name || '';
   const text = `나 진로모아에서 자소서 첨삭 받아 봤는데, 강사님이 문항마다 직접 봐 주셔서 도움 많이 됐어.\n` +
     `네이버 플레이스에서 '친구 소개 쿠폰' 받고 예약하면 5,000원 할인돼!\n` +
-    `예약하고 입장할 때 '어디서 알게 되셨어요?'에 '지인 소개' 고르고 ${name ? `'${name}'` : '내 이름'} 적어 줘 🙂\n` + PLACE_HOME_URL;
+    `예약하고 입장할 때 '어디서 알게 되셨어요?'에 '지인 소개' 고르고 ${name ? `'${name}'` : '내 이름'} 적어 줘 \n` + PLACE_HOME_URL;
   const r = await moaShare(text);
   if (r === 'copied') { const o = b.textContent; b.textContent = '복사됐어요! 카톡에 붙여 넣어 주세요'; setTimeout(() => { b.textContent = o; }, 2500); }
 });
@@ -844,7 +844,7 @@ document.addEventListener('toggle', e => {
   else if (r.right > window.innerWidth - 8) { menu.style.right = '0'; menu.style.left = 'auto'; }
 }, true);
 function shareResultMsg(r) {
-  return r === 'shared' ? '✅ 보냈어요.' : r === 'cancel' ? '보내기를 취소했어요.' : '✅ 복사했어요. PC 카톡 대화창에 Ctrl+V로 붙여넣어 보내 주세요.';
+  return r === 'shared' ? ' 보냈어요.' : r === 'cancel' ? '보내기를 취소했어요.' : ' 복사했어요. PC 카톡 대화창에 Ctrl+V로 붙여넣어 보내 주세요.';
 }
 
 function renderMasterTeacherList() {
@@ -921,10 +921,10 @@ function renderMasterTeacherList() {
     </div>
     <div class="card" id="rbBook" style="display:none">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-        <h2 style="margin:0">👥 강사 명부</h2>
+        <h2 style="margin:0"> 강사 명부</h2>
         <button class="btn-primary" id="rbAddToggle">+ 강사 추가</button>
       </div>
-      <p style="font-size:12.5px;color:var(--muted);margin:6px 0 12px;line-height:1.6">강사님께는 <b>📤 링크 보내기</b>로 승인 링크만 보내면 돼요. 링크를 누르면 암호 없이 허브에서 <b>자소서·모의면접</b>만 쓸 수 있어요.</p>
+      <p style="font-size:12.5px;color:var(--muted);margin:6px 0 12px;line-height:1.6">강사님께는 <b> 링크 보내기</b>로 승인 링크만 보내면 돼요. 링크를 누르면 암호 없이 허브에서 <b>자소서·모의면접</b>만 쓸 수 있어요.</p>
       <div class="rb-add" id="rbAdd" style="display:none">
         <div class="grid">
           <div><label>강사 이름</label><input type="text" id="rbAddName" placeholder="예: 김민지"></div>
@@ -937,7 +937,7 @@ function renderMasterTeacherList() {
       </div>
       <div id="rbDone"></div>
       <div class="rb-sum" id="rbChips"></div>
-      <input type="text" id="rbSearch" placeholder="🔍 이름·코드 검색" style="margin-bottom:10px" aria-label="강사 검색">
+      <input type="text" id="rbSearch" placeholder=" 이름·코드 검색" style="margin-bottom:10px" aria-label="강사 검색">
       <div id="rbList"></div>
       <div id="rbRemoved"></div>
     </div>
@@ -975,7 +975,7 @@ function renderMasterTeacherList() {
   // 한 사람의 상태: [필터 이름, 배지 class, 배지 글자]
   function statusOf(t) {
     if (t.expired) return ['temp', 'b-end', '⌛ 기간 끝남'];
-    if (!t.hubKey) return ['wait', 'b-need', '🔗 링크 필요'];
+    if (!t.hubKey) return ['wait', 'b-need', ' 링크 필요'];
     if (!t.lastSeen) return ['wait', 'b-wait', '🟡 접속 전'];
     if (t.expiresAt) { const n = dLeft(t.expiresAt); return ['temp', 'b-temp', '⏳ 임시 ' + (n <= 0 ? 'D-day' : 'D-' + n)]; }
     return ['active', 'b-active', '🟢 활동중'];
@@ -1009,7 +1009,7 @@ function renderMasterTeacherList() {
     if (!key) key = (await registryPost({ action: 'makeHubLink', code: t.code })).hubKey;
     const { link, msg } = hubMsg(t.name, key);
     PENDING_MSG = msg;
-    showDone(`✅ <b>${escapeHtml(t.name)}</b> 강사님 승인 링크가 준비됐어요.
+    showDone(` <b>${escapeHtml(t.name)}</b> 강사님 승인 링크가 준비됐어요.
       <div class="rb-btns" style="margin-top:8px"><button class="btn-primary" id="rbShareNow" data-code="${escapeHtml(t.code)}">${SHARE_LABEL}</button></div>
       <span style="color:var(--muted);font-size:12px">${escapeHtml(link)}</span>`);
     await load();
@@ -1018,11 +1018,11 @@ function renderMasterTeacherList() {
   function moreMenu(t, withSend) {
     const c = escapeHtml(t.code);
     return `<details class="rb-more"><summary aria-label="더보기">⋯</summary><div class="rb-menu">
-            ${withSend ? `<button data-act="send" data-code="${c}">💬 링크 다시 보내기</button>` : ''}
+            ${withSend ? `<button data-act="send" data-code="${c}"> 링크 다시 보내기</button>` : ''}
             <button data-act="expiry" data-code="${c}">${t.expired ? '⏳ 기간 연장' : t.expiresAt ? '⏳ 기간 변경' : '⏳ 기간 정하기'}</button>
-            ${t.expiresAt ? `<button data-act="perm" data-code="${c}">♾️ 영구로 바꾸기</button>` : ''}
-            ${t.hubKey ? `<button data-act="rekey" data-code="${c}">🔄 링크 재발급 (옛 링크 막기)</button>` : ''}
-            <button class="danger" data-act="del" data-code="${c}">⛔ 사용 중지</button>
+            ${t.expiresAt ? `<button data-act="perm" data-code="${c}"> 영구로 바꾸기</button>` : ''}
+            ${t.hubKey ? `<button data-act="rekey" data-code="${c}"> 링크 재발급 (옛 링크 막기)</button>` : ''}
+            <button class="danger" data-act="del" data-code="${c}"> 사용 중지</button>
           </div></details>`;
   }
   // 조치 필요 카드 — 상태에 맞는 버튼 하나 + ⋯
@@ -1037,7 +1037,7 @@ function renderMasterTeacherList() {
     const c = escapeHtml(t.code);
     const main = t.expired
       ? `<button class="btn-primary rb-main" data-act="expiry" data-code="${c}">⏳ 기간 연장</button>`
-      : `<button class="btn-primary rb-main" data-act="send" data-code="${c}">${t.linkSentAt || t.lastSeen ? '💬 링크 다시 보내기' : SHARE_LABEL}</button>`;
+      : `<button class="btn-primary rb-main" data-act="send" data-code="${c}">${t.linkSentAt || t.lastSeen ? ' 링크 다시 보내기' : SHARE_LABEL}</button>`;
     return `
       <div class="rb-row">
         <div class="rb-top">
@@ -1066,7 +1066,7 @@ function renderMasterTeacherList() {
       <div class="rb-row" style="background:#FAFBFD">
         <div class="rb-top">
           <div class="rb-name">${escapeHtml(v.label || '이름 메모 없음')}<span class="rb-code">초대코드 ${escapeHtml(v.code)}</span></div>
-          <span class="rb-badge b-inv">${v.isExpired ? '✉️ 초대 기간 끝남' : '✉️ 초대만 보냄'}</span>
+          <span class="rb-badge b-inv">${v.isExpired ? ' 초대 기간 끝남' : ' 초대만 보냄'}</span>
         </div>
         <div class="rb-sub">예전 방식 초대코드예요. 아직 등록 전이에요 · 발급 ${escapeHtml(moaDate(v.createdAt))}${v.expiresAt ? ' · ~' + escapeHtml(moaDate(v.expiresAt)) : ''}</div>
         <div class="rb-btns">
@@ -1098,11 +1098,11 @@ function renderMasterTeacherList() {
 
     let html = `
       <details class="rb-sec todo" data-sec="todo"${isOpen('todo')}>
-        <summary><span class="t">🔔 조치 필요 <em>${todoRows.length + invRows.length}</em></span><span class="h"></span></summary>
+        <summary><span class="t"> 조치 필요 <em>${todoRows.length + invRows.length}</em></span><span class="h"></span></summary>
         <div class="rb-body">${todoRows.map(row).join('') + invRows.map(inviteRow).join('') || '<div class="empty">지금 처리할 일이 없어요.</div>'}</div>
       </details>
       <details class="rb-sec" data-sec="active"${isOpen('active')}>
-        <summary><span class="t">✅ 활동 중 ${actRows.length}</span><span class="h"></span></summary>
+        <summary><span class="t"> 활동 중 ${actRows.length}</span><span class="h"></span></summary>
         <div class="rb-body">
           ${actRows.length ? `<div class="rb-lines">${actRows.map(line).join('')}</div>
           <div class="rb-legend"><span><i class="rb-dot g"></i>7일 이내 접속</span><span><i class="rb-dot y"></i>30일 이내</span><span><i class="rb-dot n"></i>30일 넘음</span></div>` : '<div class="empty">해당하는 강사가 없어요.</div>'}
@@ -1168,7 +1168,7 @@ function renderMasterTeacherList() {
         busy('저장 중...');
         await registryPost({ action: 'setExpiry', code, expiryDays: days });
         await load();
-        showDone(`✅ <b>${escapeHtml(t.name)}</b> 강사님 사용 기간을 ${days ? days + '일(~' + moaDate(Date.now() + (days - 1) * 86400000) + ')' : '영구'}로 정했어요.`);
+        showDone(` <b>${escapeHtml(t.name)}</b> 강사님 사용 기간을 ${days ? days + '일(~' + moaDate(Date.now() + (days - 1) * 86400000) + ')' : '영구'}로 정했어요.`);
       }
       else if (act === 'perm') { busy('저장 중...'); await registryPost({ action: 'setExpiry', code, expiryDays: 0 }); await load(); }
       else if (act === 'rekey') {
@@ -1253,7 +1253,7 @@ function renderMasterTeacherList() {
   $('rbDone').addEventListener('click', async e => {
     const b = e.target.closest('#rbShareNow'); if (!b || !PENDING_MSG) return;
     const r = await moaShare(PENDING_MSG);
-    if (r !== 'cancel') { registryPost({ action: 'markLinkSent', code: b.dataset.code }).catch(() => {}); b.textContent = r === 'shared' ? '✅ 보냈어요' : '✅ 복사됨 — 카톡에 Ctrl+V'; load(); }
+    if (r !== 'cancel') { registryPost({ action: 'markLinkSent', code: b.dataset.code }).catch(() => {}); b.textContent = r === 'shared' ? ' 보냈어요' : ' 복사됨 — 카톡에 Ctrl+V'; load(); }
   });
 
   // 같은 창에서 다시 들어오면 비밀번호를 다시 묻지 않음 (창을 닫으면 지워짐)
@@ -1261,7 +1261,7 @@ function renderMasterTeacherList() {
   if (saved) { $('masterPasswordInput').value = saved; open(); }
 }
 
-// ---------- 🤖 AI 상투어 목록 (원장님 · 2026-10-05) ----------
+// ----------  AI 상투어 목록 (원장님 · 2026-10-05) ----------
 // 자소서 앱이 학생 글에서 회색 밑줄로 표시하고, AI 첨삭에도 함께 알려 주는 단어 목록. 코드 수정 없이 여기서 고쳐요.
 // 무료 체험 현황 (2026-10-15): 블랙박스·1문항 진단·AI 티 검사기를 몇 명이 써 보는지 숫자로만 봄 (글·이름은 저장 안 함)
 //   api/config?scope=freestats {master} → { stats: {'<도구>_<지표>:YYYY-MM-DD': 숫자} }
@@ -1276,7 +1276,7 @@ function initFreeStats(box, masterPw) {
     const cols = [['오늘', (d) => d === today], ['최근 7일', (d) => last7.includes(d)], ['이번 달', (d) => d.startsWith(month)], ['전체', () => true]];
     const fullDays = (tool) => Object.keys(S).filter((k) => k.startsWith(tool + '_full:') && k.slice(-10).startsWith(month) && +S[k] > 0).length;
     box.innerHTML = `
-      <h2 style="margin:0">📊 무료 체험 현황</h2>
+      <h2 style="margin:0"> 무료 체험 현황</h2>
       <p style="font-size:12.5px;color:var(--muted);margin:6px 0 12px;line-height:1.6">숫자만 세요. 입력한 글·이름·연락처는 저장하지 않아요. <b style="white-space:nowrap">2026-10-15부터</b> 기록돼요.</p>
       ${TOOLS.map(([k, name, url]) => `
         <div style="margin-bottom:14px">
@@ -1293,13 +1293,13 @@ function initFreeStats(box, masterPw) {
     box.querySelector('#fsReload').onclick = load;
   };
   async function load() {
-    box.innerHTML = '<h2 style="margin:0">📊 무료 체험 현황</h2><div class="empty">불러오는 중...</div>';
+    box.innerHTML = '<h2 style="margin:0"> 무료 체험 현황</h2><div class="empty">불러오는 중...</div>';
     try {
       const r = await fetch('/api/config?scope=freestats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ master: masterPw }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || '불러오지 못했어요');
       draw(d.stats || {});
-    } catch (e) { box.innerHTML = `<h2 style="margin:0">📊 무료 체험 현황</h2><div class="empty">${escapeHtml(e.message)}</div>`; }
+    } catch (e) { box.innerHTML = `<h2 style="margin:0"> 무료 체험 현황</h2><div class="empty">${escapeHtml(e.message)}</div>`; }
   }
   load();
 }
@@ -1309,7 +1309,7 @@ function initClicheManager(box, masterPw) {
   const draw = () => {
     box.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-        <h2 style="margin:0">🤖 AI 상투어 목록</h2>
+        <h2 style="margin:0"> AI 상투어 목록</h2>
         <span style="font-size:12.5px;color:var(--muted)">${LIST.length}개</span>
       </div>
       <p style="font-size:12.5px;color:var(--muted);margin:6px 0 12px;line-height:1.6">학생 자소서에서 <b>회색 밑줄</b>로 표시하고 '내 말투' 대체 표현을 보여 주는 단어예요. 새 유행어가 보이면 여기에 추가하세요. 모든 강사·학생 화면에 바로 적용돼요.</p>
@@ -1353,14 +1353,14 @@ function initClicheManager(box, masterPw) {
       if (!r.ok) throw new Error(d.error || '저장하지 못했어요.');
       await loadCliches(true);
       LIST = CLICHES.map(c => ({ w: c.w, alt: (c.alt || []).slice() }));
-      draw(); msg('✅ 저장했어요. 모든 화면에 바로 적용돼요.');
+      draw(); msg(' 저장했어요. 모든 화면에 바로 적용돼요.');
     } catch (e) { msg('저장하지 못했어요: ' + e.message); }
   }
   loadCliches(true).then(() => { LIST = CLICHES.map(c => ({ w: c.w, alt: (c.alt || []).slice() })); draw(); });
 }
 
 // 삭제(사용 중지)된 강사 코드인지 확인 — 확인에 실패하면 막지 않고 통과시킴
-// ---------- 👤 개인 고객 코드 관리 (원장님 · 2026-10-01) ----------
+// ----------  개인 고객 코드 관리 (원장님 · 2026-10-01) ----------
 // 네이버 예약 고객마다 입장 코드 발급 → 링크 복사해서 보내기. 강사 명단과는 따로 저장돼요.
 const CLIENT_ITEM_LABELS = { 성장과정: '성장과정', 성격장단점: '성격 장단점', 지원동기: '지원동기', 협업갈등: '협업·갈등', 도전경험: '도전·성과', 실패경험: '실패 경험', 경력활동: '경력·활동', 입사후포부: '입사 후 포부', 에세이: '에세이' };
 
@@ -1370,9 +1370,9 @@ function initClientManager(box, masterPw) {
   const allItems = Object.keys(CLIENT_ITEM_LABELS);
   box.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-      <h2 style="margin:0">👤 개인 고객 (네이버 예약)</h2>
+      <h2 style="margin:0"> 개인 고객 (네이버 예약)</h2>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn-secondary" id="clExcel">📥 엑셀로 받기</button>
+        <button class="btn-secondary" id="clExcel"> 엑셀로 받기</button>
         <button class="btn-primary" id="clAddToggle">+ 고객 코드 만들기</button>
       </div>
     </div>
@@ -1399,12 +1399,12 @@ function initClientManager(box, masterPw) {
     <div id="clDone"></div>
     <div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:14px">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-        <b style="font-size:15px">🔗 네이버 예약 자동 입장 링크</b>
+        <b style="font-size:15px"> 네이버 예약 자동 입장 링크</b>
         <button class="btn-secondary" id="shAddToggle" style="font-size:13px;padding:7px 12px">+ 링크 만들기</button>
       </div>
-      <p style="font-size:12.5px;color:var(--muted);margin:6px 0 10px;line-height:1.6">상품별 링크를 <b>네이버 예약 안내 문구에 한 번만</b> 넣어두면, 고객이 결제 후 스스로 등록하고 <b>바로 시작</b>해요. 등록한 고객은 아래 목록에 <b>🤖 자동</b>으로 쌓여요 — 예약번호만 네이버 예약 내역과 맞춰 보세요.</p>
+      <p style="font-size:12.5px;color:var(--muted);margin:6px 0 10px;line-height:1.6">상품별 링크를 <b>네이버 예약 안내 문구에 한 번만</b> 넣어두면, 고객이 결제 후 스스로 등록하고 <b>바로 시작</b>해요. 등록한 고객은 아래 목록에 <b> 자동</b>으로 쌓여요 — 예약번호만 네이버 예약 내역과 맞춰 보세요.</p>
       <div id="shLimits" style="background:var(--navy-light);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:13px;line-height:1.7">
-        <b>🛡 하루 자동 등록 상한</b> <span style="color:var(--muted)">— 네이버 예약의 하루 예약 수와 <b>같은 숫자</b>로 맞춰 주세요. 넘게 들어온 고객은 <b>🟠 예약번호 대조 필요</b>로 표시되고, 원장님이 확인할 때까지 제출(AI 첨삭)이 보류돼요. (0 = 상한 없음)</span>
+        <b> 하루 자동 등록 상한</b> <span style="color:var(--muted)">— 네이버 예약의 하루 예약 수와 <b>같은 숫자</b>로 맞춰 주세요. 넘게 들어온 고객은 <b>🟠 예약번호 대조 필요</b>로 표시되고, 원장님이 확인할 때까지 제출(AI 첨삭)이 보류돼요. (0 = 상한 없음)</span>
         <div style="display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin-top:6px">
           <label style="display:flex;align-items:center;gap:4px;margin:0;font-weight:400">자소서 <input type="text" id="lmResume" inputmode="numeric" style="width:46px;margin:0;padding:5px 6px;text-align:center"> <span id="tdResume" style="color:var(--muted);font-size:12px"></span></label>
           <label style="display:flex;align-items:center;gap:4px;margin:0;font-weight:400">모의면접 <input type="text" id="lmInterview" inputmode="numeric" style="width:46px;margin:0;padding:5px 6px;text-align:center"> <span id="tdInterview" style="color:var(--muted);font-size:12px"></span></label>
@@ -1449,13 +1449,13 @@ function initClientManager(box, masterPw) {
     const left = Math.ceil((d.expiresAt - Date.now()) / 86400000);
     const items = (d.maxItems && d.maxItems < allItems.length) ? `문항 ${d.maxItems}개` : d.items.length === allItems.length ? '전 문항' : d.items.map(k => CLIENT_ITEM_LABELS[k]).join('·');
     return `<div class="rb-row"${d.refundedAt ? ' style="background:#FAFBFD"' : ''}>
-      <div class="rb-top"><div class="rb-name">${d.auto ? '🤖 ' + escapeHtml(d.name || '') + ' · 예약 ' + escapeHtml(d.bookingNo || '') : escapeHtml(d.memo || '(메모 없음)')}<span class="rb-code">${d.code}</span></div><span>${d.hold ? '<span class="rb-badge" style="margin-right:4px;background:#FFF4DC;color:#9A6200">🟠 예약번호 대조 필요</span>' : ''}${d.refundedAt ? `<span class="rb-badge b-end" style="margin-right:4px">↩ 환불 ${won(d.refundAmount != null ? d.refundAmount : d.price)}</span>` : ''}<span class="rb-badge ${cls}">${label}</span></span></div>
-      <div class="rb-sub">${escapeHtml(CLIENT_PRODUCT_NAMES[d.product])} · ${escapeHtml(items)}${d.job ? ' · ' + escapeHtml(d.job) : ''}${d.company ? ' · ' + escapeHtml(d.company) : ''}${d.source ? ' · 📍 ' + escapeHtml(d.source) : ''}${d.referrer ? ' · 🎁 소개: ' + escapeHtml(d.referrer) : ''}<br>
+      <div class="rb-top"><div class="rb-name">${d.auto ? ' ' + escapeHtml(d.name || '') + ' · 예약 ' + escapeHtml(d.bookingNo || '') : escapeHtml(d.memo || '(메모 없음)')}<span class="rb-code">${d.code}</span></div><span>${d.hold ? '<span class="rb-badge" style="margin-right:4px;background:#FFF4DC;color:#9A6200">🟠 예약번호 대조 필요</span>' : ''}${d.refundedAt ? `<span class="rb-badge b-end" style="margin-right:4px">↩ 환불 ${won(d.refundAmount != null ? d.refundAmount : d.price)}</span>` : ''}<span class="rb-badge ${cls}">${label}</span></span></div>
+      <div class="rb-sub">${escapeHtml(CLIENT_PRODUCT_NAMES[d.product])} · ${escapeHtml(items)}${d.job ? ' · ' + escapeHtml(d.job) : ''}${d.company ? ' · ' + escapeHtml(d.company) : ''}${d.source ? ' ·  ' + escapeHtml(d.source) : ''}${d.referrer ? ' ·  소개: ' + escapeHtml(d.referrer) : ''}<br>
         ${left > 0 ? `${moaDate(d.expiresAt - 1, 'short')}까지 (D-${left})` : '이용 기간 끝남'} · ${d.price ? won(d.price) : '<b style="color:#B42318">금액 없음</b>'} · 이메일 ${d.email ? '있음' : '<b style="color:#B42318">없음</b>'}${d.used && d.used.resume ? ' · 자소서 확인코드 ' + escapeHtml(d.used.resume.reviewCode || '-') : ''}${d.hold ? `<br><b style="color:#9A6200">⏳ 제출 보류 중</b> — ${escapeHtml(d.hold.reason || '')}. 네이버 예약 내역에서 예약번호를 찾아 확인되면 아래 버튼을 눌러 주세요. (작성은 지금도 할 수 있고, 확인 전에는 AI 첨삭이 돌지 않아요)` : ''}</div>
       <div class="rb-btns">
-        ${d.hold ? `<button class="btn-primary" data-cl="holdOff" data-code="${d.code}">✅ 예약 확인 완료</button>` : ''}
-        ${d.email ? `<button class="btn-secondary" data-cl="mail" data-code="${d.code}">📧 입장 메일 다시 보내기</button>` : ''}
-        <button class="btn-secondary" data-cl="copytext" data-code="${d.code}">📋 안내문 복사</button>
+        ${d.hold ? `<button class="btn-primary" data-cl="holdOff" data-code="${d.code}"> 예약 확인 완료</button>` : ''}
+        ${d.email ? `<button class="btn-secondary" data-cl="mail" data-code="${d.code}"> 입장 메일 다시 보내기</button>` : ''}
+        <button class="btn-secondary" data-cl="copytext" data-code="${d.code}"> 안내문 복사</button>
         <button class="btn-secondary" data-cl="extend" data-code="${d.code}">⏳ +7일</button>
         <details class="rb-more"><summary>⋯</summary><div class="rb-menu">
           <button data-cl="copy" data-code="${d.code}">${SHARE_LABEL}</button>
@@ -1491,7 +1491,7 @@ function initClientManager(box, masterPw) {
     const hit = PRESETS.find(p => p.id !== 'default' && (job.includes(p.name.replace(/\s|과$/g, '')) || p.name.replace(/\s/g, '').includes(job)));
     if (hit) $('clPreset').value = hit.id;
   });
-  // ── 📥 엑셀로 받기: 누를 때마다 서버의 최신 목록으로 새 파일을 만들어요 ──
+  // ──  엑셀로 받기: 누를 때마다 서버의 최신 목록으로 새 파일을 만들어요 ──
   function loadXlsxLib() {
     if (window.XLSX) return Promise.resolve();
     return new Promise((ok, no) => {
@@ -1583,7 +1583,7 @@ function initClientManager(box, masterPw) {
       const t = new Date(); const ymd = String(t.getFullYear()).slice(2) + ('0' + (t.getMonth() + 1)).slice(-2) + ('0' + t.getDate()).slice(-2);
       XLSX.writeFile(wb, `진로모아_개인고객_${ymd}.xlsx`);
     } catch (e) { alert(e.message); }
-    btn.disabled = false; btn.textContent = '📥 엑셀로 받기';
+    btn.disabled = false; btn.textContent = ' 엑셀로 받기';
   });
 
   $('clAddToggle').addEventListener('click', () => { const a = $('clAdd'); a.style.display = a.style.display === 'none' ? 'block' : 'none'; });
@@ -1594,7 +1594,7 @@ function initClientManager(box, masterPw) {
     $('clAddBtn').disabled = true;
     try {
       const { item } = await post({ action: 'create', memo: $('clMemo').value, product: $('clProduct').value, days: $('clDays').value, job: $('clJob').value, company: $('clCompany').value, presetId: $('clPreset').value, email: $('clEmail').value, price: $('clPrice').value, items });
-      $('clDone').innerHTML = `<div class="rb-done">✅ 코드 <b>${item.code}</b> 를 만들었어요.
+      $('clDone').innerHTML = `<div class="rb-done"> 코드 <b>${item.code}</b> 를 만들었어요.
         <div class="rb-btns" style="margin-top:8px"><button class="btn-primary" data-cl="copy" data-code="${item.code}">${SHARE_LABEL}</button></div>
         <span style="color:var(--muted);font-size:12px">${escapeHtml((item.product === 'interview' ? INTERVIEW_APP_URL : RESUME_SHORT_URL) + '?c=' + item.code)}</span></div>`;
       ['clMemo', 'clJob', 'clCompany', 'clEmail'].forEach(id => $(id).value = '');
@@ -1603,21 +1603,21 @@ function initClientManager(box, masterPw) {
     } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
     $('clAddBtn').disabled = false;
   });
-  $('clDone').addEventListener('click', ev => { const b = ev.target.closest('[data-cl="copy"]'); if (!b) return; const d = LIST.find(x => x.code === b.dataset.code); if (d) moaShare(msgOf(d)).then(r => { if (r !== 'cancel') b.textContent = r === 'shared' ? '✅ 보냈어요' : '✅ 복사됨'; }); });
+  $('clDone').addEventListener('click', ev => { const b = ev.target.closest('[data-cl="copy"]'); if (!b) return; const d = LIST.find(x => x.code === b.dataset.code); if (d) moaShare(msgOf(d)).then(r => { if (r !== 'cancel') b.textContent = r === 'shared' ? ' 보냈어요' : ' 복사됨'; }); });
   $('clList').addEventListener('click', async ev => {
     const b = ev.target.closest('[data-cl]'); if (!b) return;
     const d = LIST.find(x => x.code === b.dataset.code); if (!d) return;
     const act = b.dataset.cl;
     try {
-      if (act === 'copy') { const m = b.closest('details'); if (m) m.open = false; const r = await moaShare(msgOf(d)); if (r !== 'cancel') { b.textContent = r === 'shared' ? '✅ 보냈어요' : '✅ 복사됨'; setTimeout(() => b.textContent = SHARE_LABEL, 2000); } return; }
+      if (act === 'copy') { const m = b.closest('details'); if (m) m.open = false; const r = await moaShare(msgOf(d)); if (r !== 'cancel') { b.textContent = r === 'shared' ? ' 보냈어요' : ' 복사됨'; setTimeout(() => b.textContent = SHARE_LABEL, 2000); } return; }
       // 공유 창 없이 바로 복사 → 네이버 톡톡·문자 창에 붙여넣기 (2026-10-08)
-      if (act === 'copytext') { const t = msgOf(d); try { await navigator.clipboard.writeText(t); } catch (e) { prompt('아래 내용을 길게 눌러 복사해 주세요', t); } b.textContent = '✅ 복사됨 · 톡톡/문자에 붙여넣기'; setTimeout(() => b.textContent = '📋 안내문 복사', 2500); return; }
+      if (act === 'copytext') { const t = msgOf(d); try { await navigator.clipboard.writeText(t); } catch (e) { prompt('아래 내용을 길게 눌러 복사해 주세요', t); } b.textContent = ' 복사됨 · 톡톡/문자에 붙여넣기'; setTimeout(() => b.textContent = ' 안내문 복사', 2500); return; }
       if (act === 'mail') {
         if (!confirm(`${d.name || d.memo || '고객'}님(${d.code})에게 입장 링크 메일을 다시 보낼까요?`)) return;
         b.disabled = true; b.textContent = '보내는 중...';
-        try { await post({ action: 'resendMail', code: d.code }); b.textContent = '✅ 메일 보냈어요'; }
-        catch (e) { b.textContent = '📧 입장 메일 다시 보내기'; alert(e.message); }
-        b.disabled = false; setTimeout(() => { b.textContent = '📧 입장 메일 다시 보내기'; }, 2500); return;
+        try { await post({ action: 'resendMail', code: d.code }); b.textContent = ' 메일 보냈어요'; }
+        catch (e) { b.textContent = ' 입장 메일 다시 보내기'; alert(e.message); }
+        b.disabled = false; setTimeout(() => { b.textContent = ' 입장 메일 다시 보내기'; }, 2500); return;
       }
       if (act === 'extend') { await post({ action: 'extend', code: d.code, days: 7 }); }
       if (act === 'holdOff') { if (!confirm(`예약번호 ${d.bookingNo || ''}가 네이버 예약 내역에 있는 걸 확인하셨나요?\n\n확인 완료를 누르면 고객이 최종 제출할 수 있고, 고객에게 "이제 제출할 수 있어요" 메일이 가요.\n(내역에 없으면 누르지 말고 ⋯ → 코드 삭제)`)) return; await post({ action: 'setHold', code: d.code, hold: false }); }
@@ -1632,7 +1632,7 @@ function initClientManager(box, masterPw) {
           let guide, amt;
           if (!doneN) { guide = '최종 제출 전 → 규정상 전액 환불'; amt = d.price || 0; }
           else if (d.product === 'set' && doneN === 1) { guide = '세트 · 자소서만 제출 → 규정상 40,000원 환불'; amt = 40000; }
-          else { guide = '⚠️ 최종 제출 완료 → 규정상 환불 불가\n(시스템 오류 등 당사 사정으로 결과를 못 드린 경우에만 전액 환불)'; amt = d.price || 0; }
+          else { guide = ' 최종 제출 완료 → 규정상 환불 불가\n(시스템 오류 등 당사 사정으로 결과를 못 드린 경우에만 전액 환불)'; amt = d.price || 0; }
           const v = prompt(`${guide}\n\n환불 금액(원)을 확인하고 확인을 눌러 주세요.\n· 고객 링크가 막히고, 작성 중 자동 저장 내용은 삭제돼요.\n· 엑셀 정산 요약에 환불로 따로 세어져요.\n· 네이버 환불은 네이버 예약 관리에서 따로 처리해 주세요.`, amt);
           if (v === null) return;
           await post({ action: 'refund', code: d.code, refunded: true, amount: v });
@@ -1655,8 +1655,8 @@ function initClientManager(box, masterPw) {
       <div class="rb-top"><div class="rb-name">${escapeHtml(sh.label)}</div><span class="rb-badge ${sh.active ? 'b-active' : 'b-inv'}">${sh.active ? '🟢 사용 중' : '⏸ 꺼짐'}</span></div>
       <div class="rb-sub">${escapeHtml(CLIENT_PRODUCT_NAMES[sh.product])} · ${sh.product === 'interview' ? '' : (sh.maxItems >= allItems.length ? '전 문항 · ' : '자소서 ' + sh.maxItems + '문항 · ')}${sh.days}일 · <b>${sh.price ? won(sh.price) : '<span style="color:#B42318">가격 미입력</span>'}</b><br><span style="word-break:break-all">${escapeHtml(shopLink(sh))}</span></div>
       <div class="rb-btns">
-        <button class="btn-primary" data-sh="notice" data-id="${sh.id}">📋 안내 문구 복사</button>
-        <button class="btn-secondary" data-sh="link" data-id="${sh.id}">🔗 링크만 복사</button>
+        <button class="btn-primary" data-sh="notice" data-id="${sh.id}"> 안내 문구 복사</button>
+        <button class="btn-secondary" data-sh="link" data-id="${sh.id}"> 링크만 복사</button>
         <details class="rb-more"><summary>⋯</summary><div class="rb-menu">
           <button data-sh="price" data-id="${sh.id}">판매 가격 바꾸기</button>
           <button data-sh="days" data-id="${sh.id}">이용 기간 바꾸기</button>
@@ -1687,7 +1687,7 @@ function initClientManager(box, masterPw) {
     try {
       if (b.dataset.sh === 'notice' || b.dataset.sh === 'link') {
         await copy(b.dataset.sh === 'notice' ? shopNotice(sh) : shopLink(sh));
-        const t = b.textContent; b.textContent = '✅ 복사됨'; setTimeout(() => b.textContent = t, 1500); return;
+        const t = b.textContent; b.textContent = ' 복사됨'; setTimeout(() => b.textContent = t, 1500); return;
       }
       if (b.dataset.sh === 'price') {
         const v = prompt(`${sh.label} 판매 가격(원)을 입력해 주세요.\n앞으로 이 링크로 등록하는 고객부터 적용돼요. (이미 등록한 고객은 고객 카드의 ⋯에서 바꿔요)`, sh.price || '');
@@ -1695,7 +1695,7 @@ function initClientManager(box, masterPw) {
         await post({ action: 'shopPrice', id: sh.id, price: v }); await loadShops(); return;
       }
       if (b.dataset.sh === 'days') {
-        const v = prompt(`${sh.label} 이용 기간(일)을 입력해 주세요. (지금 ${sh.days}일, 추천: 자소서 7 · 모의면접 7 · 세트 10)\n링크 주소는 그대로이고, 앞으로 이 링크로 등록하는 고객부터 적용돼요.\n바꾼 뒤 "📋 안내 문구 복사"로 네이버 상품 안내 문구의 이용 기간도 꼭 같이 고쳐 주세요.`, PRODUCT_DAYS[sh.product] || sh.days);
+        const v = prompt(`${sh.label} 이용 기간(일)을 입력해 주세요. (지금 ${sh.days}일, 추천: 자소서 7 · 모의면접 7 · 세트 10)\n링크 주소는 그대로이고, 앞으로 이 링크로 등록하는 고객부터 적용돼요.\n바꾼 뒤 " 안내 문구 복사"로 네이버 상품 안내 문구의 이용 기간도 꼭 같이 고쳐 주세요.`, PRODUCT_DAYS[sh.product] || sh.days);
         if (v === null) return;
         await post({ action: 'shopDays', id: sh.id, days: v }); await loadShops(); return;
       }
@@ -1717,7 +1717,7 @@ function initClientManager(box, masterPw) {
   }
   $('lmSave').addEventListener('click', async () => {
     const b = $('lmSave'); b.disabled = true;
-    try { const d = await post({ action: 'setLimits', limits: { resume: $('lmResume').value, interview: $('lmInterview').value, set: $('lmSet').value } }); await loadLimits(d); b.textContent = '✅ 저장됨'; setTimeout(() => b.textContent = '저장', 1500); }
+    try { const d = await post({ action: 'setLimits', limits: { resume: $('lmResume').value, interview: $('lmInterview').value, set: $('lmSet').value } }); await loadLimits(d); b.textContent = ' 저장됨'; setTimeout(() => b.textContent = '저장', 1500); }
     catch (e) { alert(e.message); }
     b.disabled = false;
   });
@@ -1847,7 +1847,7 @@ function aspirationExtra(questionType, company) {
 }
 
 // ---------- 개인 고객(네이버 예약) 화면 (2026-10-01) ----------
-// 원장님이 강사 명부 화면의 "👤 개인 고객"에서 만든 링크(?c=코드)로 들어오는 고객 전용 흐름
+// 원장님이 강사 명부 화면의 " 개인 고객"에서 만든 링크(?c=코드)로 들어오는 고객 전용 흐름
 // - 열어준 문항 유형만 고를 수 있고, 모아서 "한 번" 제출 (서버 api/client-code.js가 1회로 잠금)
 // - 제출물은 원장님(jinromoa) 검수 대기함으로 들어가고, 강사 승인 후에만 결과가 보여요
 // ---------- 취소·환불 규정 (2026-10-02 수익화 랩 확정 · 자소서·모의면접 앱 같은 문구) ----------
@@ -1889,7 +1889,7 @@ function refundSubmitConfirm(opts) {
   });
 }
 
-// ---------- 🔎 기업 분석 수준 (2026-10-05, 모의면접 앱과 세트) ----------
+// ----------  기업 분석 수준 (2026-10-05, 모의면접 앱과 세트) ----------
 // 강사 '알림 설정' 탭: off(끔: 고등학생·1회성) / basic(기본, 검색 없음) / deep(심화, 실시간 검색). 유료 개인 고객은 항상 심화
 let RESUME_COMPANY_DEPTH = 'basic';
 let RESUME_COMPANY_BRIEF = null;
@@ -1912,7 +1912,7 @@ function resumeBriefHtml(b) {
   return `<div class="cb-head"><span class="cb-name">${escapeHtml(b.name)}</span><span class="cb-badge">심화 분석</span></div>
     ${b.industry ? `<p class="cb-ind">${escapeHtml(b.industry)}</p>` : ''}
     ${kw}${issues}
-    ${b.tip ? `<p class="cb-tip">💡 ${escapeHtml(b.tip)}</p>` : ''}
+    ${b.tip ? `<p class="cb-tip"> ${escapeHtml(b.tip)}</p>` : ''}
     ${b.thin ? '<p class="cb-thin">검색된 정보가 적어요. 채용공고와 회사 홈페이지를 꼭 함께 확인하세요.</p>' : ''}
     ${src ? `<details class="cb-src"><summary style="font-weight:400;color:var(--muted)">출처 ${b.sources.length}곳 · ${escapeHtml(b.searchedAt || '')} 검색</summary>${src}</details>` : ''}`;
 }
@@ -1938,7 +1938,7 @@ function setupResumeCompanyField() {
     areas.forEach(a => {
       if (briefMatches(b, name)) { a.innerHTML = `<div class="cb-card">${resumeBriefHtml(b)}</div>`; return; }
       if (a === top && !name) { a.innerHTML = ''; return; }
-      a.innerHTML = `<button type="button" class="cb-btn" ${busy ? 'disabled' : ''}>${busy ? '기업 정보를 검색하는 중... (30초 정도)' : '🔎 ' + (name ? escapeHtml(name) + ' ' : '이 기업 ') + '분석하기'}</button><p class="cb-err" role="alert">${escapeHtml(lastErr)}</p>`;
+      a.innerHTML = `<button type="button" class="cb-btn" ${busy ? 'disabled' : ''}>${busy ? '기업 정보를 검색하는 중... (30초 정도)' : ' ' + (name ? escapeHtml(name) + ' ' : '이 기업 ') + '분석하기'}</button><p class="cb-err" role="alert">${escapeHtml(lastErr)}</p>`;
       a.querySelector('.cb-btn').onclick = run;
     });
   }
@@ -2065,7 +2065,7 @@ function clientWireDraft(presetSelect, docTypeSelect) {
     const hr = document.querySelector(`input[name="hiringType"][value="${d.hiring === 'blind' ? 'blind' : 'general'}"]`);
     if (hr) hr.checked = true;
     fillItemBlocks(d.items);
-    if (state) state.textContent = '✅ 저장해 둔 내용을 불러왔어요.';
+    if (state) state.textContent = ' 저장해 둔 내용을 불러왔어요.';
   }
   let timer = null, saving = false;
   const save = () => {
@@ -2075,8 +2075,8 @@ function clientWireDraft(presetSelect, docTypeSelect) {
       try {
         const r = await fetch('/api/client-code', { method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'saveDraft', code: CLIENT.code, part: 'resume', data: clientCollectResume() }) });
-        if (state) state.textContent = r.ok ? '💾 자동 저장됨 ' + moaDate(Date.now(), 'stime') : '⚠️ 저장하지 못했어요. 인터넷 연결을 확인해 주세요.';
-      } catch (e) { if (state) state.textContent = '⚠️ 저장하지 못했어요. 인터넷 연결을 확인해 주세요.'; }
+        if (state) state.textContent = r.ok ? ' 자동 저장됨 ' + moaDate(Date.now(), 'stime') : ' 저장하지 못했어요. 인터넷 연결을 확인해 주세요.';
+      } catch (e) { if (state) state.textContent = ' 저장하지 못했어요. 인터넷 연결을 확인해 주세요.'; }
       saving = false;
     }, 1200);
   };
@@ -2237,7 +2237,7 @@ async function renderClientDone(reviewCode, justNow) {
   app.innerHTML = `
     ${clientBannerHtml()}
     <div class="card">
-      <h2>${justNow ? '제출이 완료됐어요 ✅' : '이미 제출을 마치셨어요'}</h2>
+      <h2>${justNow ? '제출이 완료됐어요 ' : '이미 제출을 마치셨어요'}</h2>
       <p style="font-size:14px;color:var(--muted);line-height:1.7">강사가 AI 첨삭을 직접 검토하고 코멘트를 더한 뒤 결과를 보내드려요. 결과가 준비되면 이메일로 알려드리고, 이 링크를 다시 열어도 확인할 수 있어요.</p>
       ${reviewCode ? `
       <div style="margin-top:10px;padding:12px;background:#fff;border:2px dashed var(--green);border-radius:8px;text-align:center">
@@ -2373,7 +2373,7 @@ function refreshItemTabs(showType) {
     const b = blocks.find(x => x.dataset.type === c.dataset.type);
     c.setAttribute('aria-pressed', String(c.dataset.type === activeItemType));
     c.classList.toggle('tab-filled', !!(b && blockFilled(b))); // 쓴 칸은 회색으로 짙어짐 (2026-10-09)
-    c.querySelector('.tab-done').textContent = b && blockFilled(b) ? ' ✓' : '';
+    c.querySelector('.tab-done').textContent = b && blockFilled(b) ? ' ' : '';
   });
   const sum = document.getElementById('itemFilledSummary');
   if (sum) {
@@ -2498,17 +2498,17 @@ function scaffoldHtml(id, type) {
     <div style="background:var(--navy-light);border-radius:10px;padding:12px 14px;margin:6px 0 10px">
       <div style="font-size:13px;color:var(--navy);line-height:1.6;margin-bottom:6px">
         칸마다 <b>단어·짧은 메모</b>만 적어요. 2칸 이상 채우면 내 메모로 초안을 만들어 드려요.<br>
-        <span class="sc-tip" style="font-size:12px;color:var(--muted)">${blind ? escapeHtml(BLIND_TIP) : '✅ ' + escapeHtml(PROPER_NOUN_TIP)}</span>
+        <span class="sc-tip" style="font-size:12px;color:var(--muted)">${blind ? escapeHtml(BLIND_TIP) : ' ' + escapeHtml(PROPER_NOUN_TIP)}</span>
       </div>
       ${sc.rows.map((r, k) => `
         <div style="margin-top:10px">
           <div style="font-size:13px;font-weight:700;color:var(--navy)">${escapeHtml(r.label)} <span style="font-weight:400;color:#333">— ${escapeHtml(r.q)}</span></div>
           ${r.hint && !blind ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">${escapeHtml(r.hint)}</div>` : ''}
-          ${r.warn ? `<div style="font-size:12px;color:var(--warn);margin-top:2px">⚠ ${escapeHtml(r.warn)}</div>` : ''}
+          ${r.warn ? `<div style="font-size:12px;color:var(--warn);margin-top:2px"> ${escapeHtml(r.warn)}</div>` : ''}
           <input type="text" class="sc-memo" data-item-id="${id}" data-k="${k}" maxlength="150" placeholder="짧게 메모" style="margin-top:4px">
         </div>`).join('')}
       <div class="btn-row">
-        <button type="button" class="btn-primary sc-draft-btn" data-item-id="${id}" disabled>✏️ 내 메모로 초안 만들기</button>
+        <button type="button" class="btn-primary sc-draft-btn" data-item-id="${id}" disabled> 내 메모로 초안 만들기</button>
       </div>
       <div class="sc-status" data-item-id="${id}" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
       <div class="sc-drafts" data-item-id="${id}"></div>
@@ -2528,7 +2528,7 @@ function askMaterialInterview(items) {
       return (it.questionType === '에세이' ? rows.slice(1, 4) : rows.slice(0, 3));
     };
     bg.innerHTML = `<div class="ex-modal" role="dialog" aria-modal="true">
-      <h3>📝 잠깐! 재료 3개만 더 알려 주세요</h3>
+      <h3> 잠깐! 재료 3개만 더 알려 주세요</h3>
       <p style="font-size:13px;color:var(--muted);margin:0">답변이 글자수 제한의 절반보다 짧아요. 아래 질문에 <b>한두 단어</b>만 적어도 첨삭이 훨씬 내 이야기에 가까워져요. 모르는 칸은 비워 두셔도 돼요.</p>
       ${items.map((it, j) => `<div class="iv-item">
         <div style="font-size:12px;color:var(--muted);font-weight:700">${escapeHtml((CLIENT_ITEM_LABELS && CLIENT_ITEM_LABELS[it.questionType]) || (it.questionType === '에세이' ? '에세이' : it.questionType))} · 지금 ${it.answer.length}자 / ${it.charLimit}자</div>
@@ -2584,7 +2584,7 @@ function wireScaffold(block, id) {
 
   toggle.addEventListener('click', () => {
     const open = panel.style.display !== 'none';
-    if (open) { panel.style.display = 'none'; toggle.textContent = '💡 막막하면 눌러보세요 — 재료 꺼내기'; return; }
+    if (open) { panel.style.display = 'none'; toggle.textContent = ' 막막하면 눌러보세요 — 재료 꺼내기'; return; }
     if (!panel.innerHTML.trim()) render();
     panel.style.display = 'block';
     toggle.textContent = '▲ 재료 꺼내기 접기';
@@ -2641,7 +2641,7 @@ async function makeDraftFromMemo(block, id) {
   } catch (e) {
     statusEl.textContent = '초안을 만들지 못했어요: ' + e.message;
   }
-  btn.disabled = false; btn.textContent = '✏️ 내 메모로 초안 만들기';
+  btn.disabled = false; btn.textContent = ' 내 메모로 초안 만들기';
 }
 
 let itemCounter = 0;
@@ -2649,7 +2649,7 @@ let itemCounter = 0;
 function itemBlockHtml(id) {
   return clientFilterOptions(`
     <div class="item-block" data-item-id="${id}" style="border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px;position:relative">
-      <button type="button" class="item-remove-btn" data-item-id="${id}" title="이 칸 비우기" style="position:absolute;top:12px;right:12px;background:none;border:none;color:var(--miss);font-size:18px;cursor:pointer;line-height:1">✕</button>
+      <button type="button" class="item-remove-btn" data-item-id="${id}" title="이 칸 비우기" style="position:absolute;top:12px;right:12px;background:none;border:none;color:var(--miss);font-size:18px;cursor:pointer;line-height:1"></button>
       <div class="item-questionType-row" data-item-id="${id}" style="display:none">
         <label>문항 유형 (진단 기준이 자동으로 적용됩니다)</label>
         <select class="item-questionType" data-item-id="${id}">
@@ -2670,9 +2670,9 @@ function itemBlockHtml(id) {
       <label class="item-answer-label">작성한 답변</label>
       <div class="item-a-hint" style="font-size:12px;color:var(--muted);line-height:1.6;margin:-2px 0 6px"></div>
       <div class="item-print-tip" style="font-size:13px;color:var(--navy);background:var(--navy-light);border-radius:8px;padding:8px 12px;line-height:1.6;margin:0 0 8px"><b>프린트로 가져오셨나요?</b> 휴대폰 카메라로 종이를 비추고 글자 인식(아이폰: 글자 모양 아이콘, 갤럭시: T 아이콘)으로 복사해 아래 칸에 붙여 넣어 주세요.</div>
-      <button type="button" class="btn-secondary sc-toggle-btn" data-item-id="${id}" style="font-size:13px;padding:7px 12px;margin-bottom:6px">💡 막막하면 눌러보세요 — 재료 꺼내기</button>
+      <button type="button" class="btn-secondary sc-toggle-btn" data-item-id="${id}" style="font-size:13px;padding:7px 12px;margin-bottom:6px"> 막막하면 눌러보세요 — 재료 꺼내기</button>
       <div class="sc-panel" data-item-id="${id}" style="display:none"></div>
-      <div class="write-order">✍️ <b>초안은 직접</b> 쓰고, AI는 <b>다듬기·글자 수 조정</b>에만 쓰세요. 내 경험·내 말투가 남아야 면접에서 흔들리지 않아요.</div>
+      <div class="write-order"> <b>초안은 직접</b> 쓰고, AI는 <b>다듬기·글자 수 조정</b>에만 쓰세요. 내 경험·내 말투가 남아야 면접에서 흔들리지 않아요.</div>
       <textarea class="item-answer" data-item-id="${id}" style="min-height:140px" placeholder="여기에 답변을 붙여넣거나 작성해 주세요."></textarea>
       <div class="counter item-char-counter" data-item-id="${id}"><span class="item-char-count">0</span>자 작성됨</div>
       <div class="trend-live" data-item-id="${id}" aria-live="polite"></div>
@@ -2848,8 +2848,8 @@ async function renderStudentSubmitForm() {
       <div id="itemFilledSummary" style="font-size:13px;line-height:1.7;background:var(--navy-light);border-radius:8px;padding:10px 14px;margin:0 0 12px"></div>
 
       ${CLIENT ? `<div style="background:var(--navy-light);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.7;margin:4px 0 10px">
-        ${CLIENT.product === 'set' ? '📌 <b>제출하면 끝이 아니에요!</b> 자기소개서를 제출하면 바로 <b>② 모의면접</b>으로 이어서 진행할 수 있어요. 모의면접도 같은 링크(코드)로 들어가요.<br>' : ''}
-        💾 쓰는 내용은 <b>자동 저장</b>돼요. 이용 기간 안에는 <b>나갔다가 다시 들어와도 이어서</b> 쓸 수 있어요 (다른 기기도 OK).
+        ${CLIENT.product === 'set' ? ' <b>제출하면 끝이 아니에요!</b> 자기소개서를 제출하면 바로 <b>② 모의면접</b>으로 이어서 진행할 수 있어요. 모의면접도 같은 링크(코드)로 들어가요.<br>' : ''}
+         쓰는 내용은 <b>자동 저장</b>돼요. 이용 기간 안에는 <b>나갔다가 다시 들어와도 이어서</b> 쓸 수 있어요 (다른 기기도 OK).
         <div id="clientSaveState" style="color:var(--muted);font-size:12px;margin-top:4px"></div>
       </div>` : ''}
       <div class="btn-row">
@@ -2867,7 +2867,7 @@ async function renderStudentSubmitForm() {
   // 유형마다 칸 하나씩 만들고, 위에 유형 단추(탭)를 둠
   itemsContainer.insertAdjacentHTML('beforeend', `<div id="itemTypeTabs" style="margin-bottom:12px">
     <label style="margin-top:0">문항 유형 <span style="font-weight:400;color:var(--muted);font-size:12px">— 누르면 그 유형 칸으로 바뀌어요.</span></label>
-    <div style="font-size:12px;color:var(--muted);margin:-2px 0 8px;line-height:1.6">✍️ 다 쓴 문항은 단추 색이 <b style="background:#DDE1E8;color:#141A2E;padding:0 5px;border-radius:4px">짙어지고 ✓</b>가 붙어요. 짙어진 문항은 모두 함께 제출돼요.</div>
+    <div style="font-size:12px;color:var(--muted);margin:-2px 0 8px;line-height:1.6"> 다 쓴 문항은 단추 색이 <b style="background:#DDE1E8;color:#141A2E;padding:0 5px;border-radius:4px">짙어지고 </b>가 붙어요. 짙어진 문항은 모두 함께 제출돼요.</div>
     <div class="moa-chips" role="tablist" style="display:flex;flex-wrap:wrap;gap:6px"></div>
     <div style="font-size:12px;color:var(--muted);margin-top:6px">같은 유형 문항이 2개면(예: 협업 경험 + 갈등 경험) 한 칸에 묶어 글자 수를 늘려 쓰고, 실제 제출 때 나눠 내세요.</div>
   </div>`);
@@ -2992,7 +2992,7 @@ async function renderStudentSubmitForm() {
         : { title: `${names} 칸에 자소서 문항이 비어 있어요`, body: '회사가 준 문항을 적으면 글자 수 제한까지 맞춰 첨삭해 드려서 더 정확해져요. 이대로 내면 문항 자리에 유형 이름이 들어가요.', stay: '문항 적으러 가기', leave: '이대로 제출' });
       if (!go) { goTo(noQuestion[0]); const q = noQuestion[0].querySelector('.item-question'); if (q) q.focus(); return; }
     }
-    if (CLIENT && blocks.length > (CLIENT.maxItems || CLIENT.items.length)) { failMsg(`이 상품은 문항을 최대 ${(CLIENT.maxItems || CLIENT.items.length)}개까지 제출할 수 있어요. 지금 ${blocks.length}개를 쓰셨어요. 빼실 칸은 ✕로 비워 주세요.`); return; }
+    if (CLIENT && blocks.length > (CLIENT.maxItems || CLIENT.items.length)) { failMsg(`이 상품은 문항을 최대 ${(CLIENT.maxItems || CLIENT.items.length)}개까지 제출할 수 있어요. 지금 ${blocks.length}개를 쓰셨어요. 빼실 칸은 로 비워 주세요.`); return; }
     const rawItems = blocks.map(b => ({
       question: qOf(b) || (isCv ? '경력·활동' : blockTypeLabel(b)),
       answer: b.querySelector('.item-answer').value.trim(),
@@ -3329,7 +3329,7 @@ async function renderNotifyTab(content) {
       <div id="groupExpirySavedMsg" style="font-size:13px;color:var(--green);margin-top:8px;display:none">저장됐어요.</div>
     </div>
     <div class="card">
-      <h2>🔒 기업 분석 수준<a class="moa-q" target="_blank" rel="noopener" title="기업 분석 수준 안내" href="https://moa-hub.vercel.app/manual.html#h-depth">?</a></h2>
+      <h2> 기업 분석 수준<a class="moa-q" target="_blank" rel="noopener" title="기업 분석 수준 안내" href="https://moa-hub.vercel.app/manual.html#h-depth">?</a></h2>
       <p style="font-size:13px;color:var(--muted);margin-bottom:10px">대상에 맞게 골라 주세요. 모의면접 앱의 '오늘 수업' 설정과는 따로 정해요. 네이버 유료 고객은 이 설정과 관계없이 항상 심화예요.</p>
       <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;margin:6px 0"><input type="radio" name="companyDepth" value="off" style="width:auto;margin-top:4px"><span><b>끔</b><br><span style="font-size:12.5px;color:var(--muted)">지원 기업 칸 없음 · 고등학생, 1회성 특강</span></span></label>
       <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400;margin:6px 0"><input type="radio" name="companyDepth" value="basic" style="width:auto;margin-top:4px"><span><b>기본</b><br><span style="font-size:12.5px;color:var(--muted)">기업명만 반영, 검색 없음 · 일반 대학 수업</span></span></label>
@@ -3356,7 +3356,7 @@ async function renderNotifyTab(content) {
     const dep = (data.config && data.config.companyDepth) || 'basic';
     document.querySelectorAll('input[name="companyDepth"]').forEach(r => { r.checked = r.value === dep; });
   } catch (e) { console.error(e); }
-  // 🔎 기업 분석 수준 — 고르는 즉시 저장 (다른 설정은 그대로)
+  //  기업 분석 수준 — 고르는 즉시 저장 (다른 설정은 그대로)
   document.querySelectorAll('input[name="companyDepth"]').forEach(r => r.addEventListener('change', async () => {
     const msg = document.getElementById('companyDepthSavedMsg');
     try {
@@ -3515,8 +3515,8 @@ function jobMatchHtml(jm) {
   return `<div class="field-block" style="background:var(--green-light);padding:10px 12px;border-radius:8px">
     <div class="fb-label">채용공고 매칭 — 일치도: ${escapeHtml(jm.matchLevel)}</div>
     <div class="star-row">
-      ${(jm.matchedKeywords || []).map(k => `<span class="star-tag ok">✓ ${escapeHtml(k)}</span>`).join('')}
-      ${(jm.missingKeywords || []).map(k => `<span class="star-tag miss">✗ ${escapeHtml(k)}</span>`).join('')}
+      ${(jm.matchedKeywords || []).map(k => `<span class="star-tag ok"> ${escapeHtml(k)}</span>`).join('')}
+      ${(jm.missingKeywords || []).map(k => `<span class="star-tag miss"> ${escapeHtml(k)}</span>`).join('')}
     </div>
   </div>`;
 }
@@ -3564,7 +3564,7 @@ function reviewItemBlockHtml(item, idx, total) {
         <span style="font-size:12px;font-weight:700;background:rgba(255,255,255,.16);border-radius:999px;padding:2px 10px">${framework}</span>
         ${item.hiringType ? `<span class="star-tag ${item.hiringType === 'blind' ? 'miss' : 'ok'}">${item.hiringType === 'blind' ? '블라인드 채용' : '일반 채용'}</span>` : ''}
       </div>
-      ${Array.isArray(item.memo) && item.memo.length ? `<div class="field-block" style="background:var(--navy-light);padding:10px 12px;border-radius:8px"><div class="fb-label">💡 학생이 적은 재료 메모 (코칭 참고용)</div>${item.memo.map(m => `<p style="margin:2px 0;font-size:13px"><b>${escapeHtml(m.label)}</b> ${escapeHtml(m.value)}</p>`).join('')}</div>` : ''}
+      ${Array.isArray(item.memo) && item.memo.length ? `<div class="field-block" style="background:var(--navy-light);padding:10px 12px;border-radius:8px"><div class="fb-label"> 학생이 적은 재료 메모 (코칭 참고용)</div>${item.memo.map(m => `<p style="margin:2px 0;font-size:13px"><b>${escapeHtml(m.label)}</b> ${escapeHtml(m.value)}</p>`).join('')}</div>` : ''}
       <div class="field-block">
         <div class="fb-label">자소서 문항</div>
         <p style="white-space:pre-wrap">${escapeHtml(item.question)}</p>
@@ -3583,7 +3583,7 @@ function reviewItemBlockHtml(item, idx, total) {
       ${item.selfIntent ? `<div class="field-block"><div class="fb-label">학생 자가진단 — 보여주고 싶었던 점</div><p>${escapeHtml(item.selfIntent)}</p></div>` : ''}
       ${d.intentGapComment ? `<div class="field-block" style="background:var(--warn-bg);padding:10px 12px;border-radius:8px"><div class="fb-label">자가진단 vs 실제 답변 코멘트</div><p>${escapeHtml(d.intentGapComment)}</p></div>` : ''}
       ${item.previousAnswer ? `<div class="field-block"><div class="fb-label">Before → After 비교</div><p style="white-space:pre-wrap;line-height:1.9">${diffHtml(item.previousAnswer, item.answer)}</p>${d.revisionComment ? `<p style="margin-top:8px;font-size:13px;color:var(--navy)"><b>수정 평가:</b> ${escapeHtml(d.revisionComment)}</p>` : ''}</div>` : ''}
-      ${d.charLimitNote ? `<div class="field-block" style="background:var(--warn-bg);padding:10px 12px;border-radius:8px"><div class="fb-label">⚠ 글자수 초과 (제한 ${item.charLimit}자)</div><p>${escapeHtml(d.charLimitNote)}</p></div>` : ''}
+      ${d.charLimitNote ? `<div class="field-block" style="background:var(--warn-bg);padding:10px 12px;border-radius:8px"><div class="fb-label"> 글자수 초과 (제한 ${item.charLimit}자)</div><p>${escapeHtml(d.charLimitNote)}</p></div>` : ''}
 
       <div class="field-block" style="background:var(--navy-light);padding:10px 12px;border-radius:8px">
         <div class="fb-label">면접관 시점 — 이 답변으로 추론되는 평소 모습</div>
@@ -3599,7 +3599,7 @@ function reviewItemBlockHtml(item, idx, total) {
       <textarea class="edit-polished" data-idx="${idx}" style="min-height:120px">${escapeHtml(d.polishedText)}</textarea>
 
       ${(Array.isArray(d.defenseQuestions) ? d.defenseQuestions : []).map((dq, k) => `
-      <label>🛡️ 방어 테스트 ${k + 1} · "${escapeHtml(dq.sentence || '')}" 에 대한 질문 (수정 가능)</label>
+      <label> 방어 테스트 ${k + 1} · "${escapeHtml(dq.sentence || '')}" 에 대한 질문 (수정 가능)</label>
       <textarea class="edit-def-q" data-idx="${idx}" data-k="${k}">${escapeHtml(dq.question || '')}</textarea>`).join('')}
       <label>예상 꼬리질문 · 이유형 (수정 가능)</label>
       <textarea class="edit-fu-reason" data-idx="${idx}">${escapeHtml((d.followUpQuestions || {}).reasonType)}</textarea>
@@ -3621,7 +3621,7 @@ function buildReviewCard(record, presetName) {
         <span style="font-weight:700;color:var(--navy);font-size:15px">${escapeHtml(record.studentName) || '(이름 없음)'}</span>
         <span class="star-tag ok" style="margin-left:6px">${escapeHtml(presetName || '기본')}</span>
         ${record.studentInstitution ? `<span class="star-tag ok" style="margin-left:4px">${escapeHtml(record.studentInstitution)}</span>` : ''}
-        ${record.clientCode ? `<span class="star-tag" style="margin-left:4px;background:#FFF4DC;color:#9A6200">👤 개인 고객 ${escapeHtml(record.clientCode)}${record.clientMemo ? ' · ' + escapeHtml(record.clientMemo) : ''}</span>` : ''}
+        ${record.clientCode ? `<span class="star-tag" style="margin-left:4px;background:#FFF4DC;color:#9A6200"> 개인 고객 ${escapeHtml(record.clientCode)}${record.clientMemo ? ' · ' + escapeHtml(record.clientMemo) : ''}</span>` : ''}
         <span style="font-size:12px;color:var(--muted);margin-left:8px">문항 ${items.length}개 · 코드 ${escapeHtml(record.code) || '-'} · ${moaDate(record.createdAt, 'time')} · 클릭해서 펼치기</span>
       </summary>
       <div style="margin-top:14px">
@@ -3899,7 +3899,7 @@ async function renderResultsTab(content) {
     const row = document.createElement('div');
     row.className = 'preset-item';
     row.innerHTML = `
-      <div><b>${escapeHtml(it.studentName) || '(이름 없음)'}</b> — 문항 ${it.itemCount || 1}개${it.direct ? '<span class="star-tag ok" style="margin-left:6px">바로 결과</span>' : ''}${it.clientCode ? '<span class="star-tag" style="margin-left:6px;background:#FFF4DC;color:#9A6200">👤 개인 고객</span>' : ''}${expiredBadge}<div style="font-size:12px;color:var(--muted)">${moaDate(it.approvedAt, 'time')}${it.code ? ' · 확인코드 <b style="color:var(--green);letter-spacing:1px">' + escapeHtml(it.code) + '</b>' : ''}</div></div>
+      <div><b>${escapeHtml(it.studentName) || '(이름 없음)'}</b> — 문항 ${it.itemCount || 1}개${it.direct ? '<span class="star-tag ok" style="margin-left:6px">바로 결과</span>' : ''}${it.clientCode ? '<span class="star-tag" style="margin-left:6px;background:#FFF4DC;color:#9A6200"> 개인 고객</span>' : ''}${expiredBadge}<div style="font-size:12px;color:var(--muted)">${moaDate(it.approvedAt, 'time')}${it.code ? ' · 확인코드 <b style="color:var(--green);letter-spacing:1px">' + escapeHtml(it.code) + '</b>' : ''}</div></div>
       <div class="btn-row" style="margin:8px 0 0;flex-wrap:wrap;gap:6px;width:100%">
         <a href="${link}" target="_blank" class="btn-secondary" style="text-decoration:none;padding:8px 14px;border-radius:8px">결과 보기</a>
         <button class="btn-secondary copy-student-btn" style="padding:8px 12px;font-size:13px">학생 링크 복사</button>
@@ -3976,7 +3976,7 @@ async function renderResultsTab(content) {
         groupWrap.style.marginBottom = '14px';
         const summary = document.createElement('summary');
         summary.style.cursor = 'pointer';
-        summary.innerHTML = `<b style="color:var(--navy)">📁 ${escapeHtml(name)}</b> <span class="star-tag ok">${groupItems.length}명</span>`;
+        summary.innerHTML = `<b style="color:var(--navy)"> ${escapeHtml(name)}</b> <span class="star-tag ok">${groupItems.length}명</span>`;
         groupWrap.appendChild(summary);
         const inner = document.createElement('div');
         inner.style.marginTop = '8px';
@@ -3998,7 +3998,7 @@ async function renderResultsTab(content) {
 
 // ---------- 2026 채용 트렌드 (2026-10-05 본부 인계) ----------
 // 핵심: 경험의 성찰 + 직무 증거 + 자기 말투. AI 사용을 막는 게 아니라 "AI 티를 빼고 내 이야기로 바꾸는" 도우미.
-// AI 상투어 목록은 원장 화면(?master=1)의 "🤖 AI 상투어 목록"에서 고칠 수 있어요. (저장 안 했으면 아래 기본 목록)
+// AI 상투어 목록은 원장 화면(?master=1)의 " AI 상투어 목록"에서 고칠 수 있어요. (저장 안 했으면 아래 기본 목록)
 const CLICHE_DEFAULTS = [
   { w: '귀사에 기여', alt: ['입사 첫해 맡을 ○○ 업무에서', '제가 맡은 일의 결과로'] },
   { w: '귀사의 발전', alt: ['○○팀의 목표', '맡은 업무의 결과'] },
@@ -4065,8 +4065,8 @@ function trendLiveHtml(text) {
   const hits = clicheUnique(clicheScan(text));
   const tone = toneStats(text);
   if (!hits.length && !tone.uniform) return '';
-  return `${hits.length ? `<div class="tl-row"><b>🤖 AI 상투어 ${hits.length}개</b> — ${hits.slice(0, 3).map(h => `「${escapeHtml(h.w)}」${h.alt[0] ? ` → <span class="tl-alt">${escapeHtml(h.alt[0])}</span>` : ''}`).join(' · ')}${hits.length > 3 ? ` 외 ${hits.length - 3}개` : ''}<br><span class="tl-sub">어느 회사에나 쓸 수 있는 말이에요. 내가 실제로 한 행동으로 바꿔 보세요.</span></div>` : ''}
-    ${tone.uniform ? `<div class="tl-row"><b>📏 내 말투 지표</b> — ${escapeHtml(TONE_NOTE)}<br><span class="tl-sub">${TONE_DISCLAIMER}</span></div>` : ''}`;
+  return `${hits.length ? `<div class="tl-row"><b> AI 상투어 ${hits.length}개</b> — ${hits.slice(0, 3).map(h => `「${escapeHtml(h.w)}」${h.alt[0] ? ` → <span class="tl-alt">${escapeHtml(h.alt[0])}</span>` : ''}`).join(' · ')}${hits.length > 3 ? ` 외 ${hits.length - 3}개` : ''}<br><span class="tl-sub">어느 회사에나 쓸 수 있는 말이에요. 내가 실제로 한 행동으로 바꿔 보세요.</span></div>` : ''}
+    ${tone.uniform ? `<div class="tl-row"><b> 내 말투 지표</b> — ${escapeHtml(TONE_NOTE)}<br><span class="tl-sub">${TONE_DISCLAIMER}</span></div>` : ''}`;
 }
 // 점검표에 더할 줄: AI 상투어 · 성찰 · 직무 증거 (화면·요약 카드·워드 공용)
 function trendRows(item) {
@@ -4093,9 +4093,9 @@ function trendCoachHtml(item) {
   const jobWeak = j && !(j.linked && j.hasResult) && j.tip;
   if (!refl.length && !jobWeak) return '';
   return `<div class="trend-coach">
-    ${refl.length ? `<p class="tc-h">💭 성찰 보완 질문 <span>— 답을 한두 줄 덧붙이면 글이 '내 이야기'가 돼요</span></p>
+    ${refl.length ? `<p class="tc-h"> 성찰 보완 질문 <span>— 답을 한두 줄 덧붙이면 글이 '내 이야기'가 돼요</span></p>
     ${refl.map(r => `<div class="tc-q"><b>${escapeHtml(r.experience)}</b><span>${escapeHtml(r.question)}</span></div>`).join('')}` : ''}
-    ${jobWeak ? `<p class="tc-h" style="margin-top:${refl.length ? 12 : 0}px">🎯 직무 증거 <span>— 기업이 가장 먼저 보는 건 직무 관련 경험이에요</span></p><div class="tc-q"><span>${escapeHtml(j.tip)}</span></div>` : ''}
+    ${jobWeak ? `<p class="tc-h" style="margin-top:${refl.length ? 12 : 0}px"> 직무 증거 <span>— 기업이 가장 먼저 보는 건 직무 관련 경험이에요</span></p><div class="tc-q"><span>${escapeHtml(j.tip)}</span></div>` : ''}
   </div>`;
 }
 function toneResultHtml(item) {
@@ -4103,7 +4103,7 @@ function toneResultHtml(item) {
   if (tone.n < 3) return '';
   return `<div class="result-block"><h3>내 말투 지표 <span style="font-weight:400;font-size:12px;color:var(--muted)">(${TONE_DISCLAIMER})</span></h3>
     <p class="rs-soft">제출한 답변 · 문장 ${tone.n}개 · 평균 ${tone.avg}자 · 길이 변화 ${tone.cv < 0.2 ? '적음' : tone.cv < 0.35 ? '보통' : '풍부'}</p>
-    ${tone.uniform ? `<p class="rs-soft" style="margin-top:6px">📏 ${escapeHtml(TONE_NOTE)}</p>` : ''}</div>`;
+    ${tone.uniform ? `<p class="rs-soft" style="margin-top:6px"> ${escapeHtml(TONE_NOTE)}</p>` : ''}</div>`;
 }
 // 꼬리질문 → 모의면접으로 넘기기 (이름·연락처 없이 질문과 핵심 문장만, 주소 # 뒤에 담아 서버로 보내지 않음)
 function b64urlJson(obj) {
@@ -4125,7 +4125,7 @@ function interviewHandoffHtml(item) {
   if (!tid) return '';
   const label = item.questionType === '이력서항목' ? '경력·활동' : ((CLIENT_ITEM_LABELS && CLIENT_ITEM_LABELS[item.questionType]) || item.questionType || '자소서');
   const url = INTERVIEW_APP_URL + '?t=' + encodeURIComponent(tid) + '#fq=' + b64urlJson({ q: qs, s: sents, l: label });
-  return `<a class="rs-handoff" href="${url}" target="_blank" rel="noopener">🎤 이 꼬리질문으로 모의면접 연습하기<span>질문 ${qs.length}개가 모의면접 앱에 바로 들어가요 · 자소서 문장을 외웠는지도 함께 봐 드려요</span></a>`;
+  return `<a class="rs-handoff" href="${url}" target="_blank" rel="noopener"> 이 꼬리질문으로 모의면접 연습하기<span>질문 ${qs.length}개가 모의면접 앱에 바로 들어가요 · 자소서 문장을 외웠는지도 함께 봐 드려요</span></a>`;
 }
 
 // ---------- 학생 결과 열람 화면 ----------
@@ -4182,9 +4182,9 @@ function proofSheetHtml(item, asParts) {
         <div class="proof-note-head"><span class="mk-n ${n.kind}" style="vertical-align:0;margin:0">${n.num}</span>${escapeHtml(n.label)}${n.pos < 0 && n.quote ? ' <span class="nopos">(원문 위치 표시 없음)</span>' : ''}</div>
         ${n.pos < 0 && n.quote ? `<div class="quote">"${escapeHtml(n.quote)}"</div>` : ''}
         ${n.body ? `<div>${escapeHtml(n.body)}</div>` : ''}
-        ${n.fix ? `<div class="fix">✏️ 이렇게: ${escapeHtml(n.fix)}</div>` : ''}
+        ${n.fix ? `<div class="fix"> 이렇게: ${escapeHtml(n.fix)}</div>` : ''}
       </div>`).join('')
-    : `<div class="proof-note ok">✅ 따로 표시할 문장이 없어요. 아래 개선 방향과 다듬은 문장을 확인해 보세요.</div>`;
+    : `<div class="proof-note ok"> 따로 표시할 문장이 없어요. 아래 개선 방향과 다듬은 문장을 확인해 보세요.</div>`;
   if (asParts) return { html, notes: placed.concat(unplaced), lenInfo };
   return `<div class="proof-wrap">
     <div class="proof-paper">
@@ -4290,11 +4290,11 @@ function exInnerHtml(st) {
   if (st.finalText && !st.editing) {
     return `
     <div class="ex-final ex-done">
-      <h4>✅ 완성된 내 글 <span>형광펜 없이 깨끗하게 정리했어요. 이제 이 글을 복사해서 제출하세요.</span></h4>
+      <h4> 완성된 내 글 <span>형광펜 없이 깨끗하게 정리했어요. 이제 이 글을 복사해서 제출하세요.</span></h4>
       <p class="ex-text" style="padding:0">${exStaticHtml(st.finalText)}</p>
       <div class="ex-actions ex-interactive">
-        <button type="button" class="btn-primary ex-copy-final" data-exkey="${st.key}">📋 완성된 글 복사</button>
-        <button type="button" class="btn-secondary ex-reedit" data-exkey="${st.key}">✏️ 다시 고치기</button>
+        <button type="button" class="btn-primary ex-copy-final" data-exkey="${st.key}"> 완성된 글 복사</button>
+        <button type="button" class="btn-secondary ex-reedit" data-exkey="${st.key}"> 다시 고치기</button>
         <span class="ex-count">${exPlain(st.finalText).length}자${lim ? ` / ${lim}자` : ''}</span>
       </div>
     </div>
@@ -4305,8 +4305,8 @@ function exInnerHtml(st) {
     <div class="ex-progress ex-interactive"><div class="ex-bar"><i style="width:${pct}%"></i></div><span>내 경험으로 바꾼 곳 <b>${done} / ${n}</b> · 완성도 <b>${pct}%</b></span></div>` : ''}
     <p class="ex-text">${textHtml}</p>
     <div class="ex-actions ex-interactive">
-      ${n ? `<button type="button" class="btn-primary ex-finish" data-exkey="${st.key}" ${done && !st.busy ? '' : 'disabled'}>${st.busy ? '완성하는 중... (30초~1분)' : '✨ 내 글로 완성하기'}</button>` : ''}
-      <button type="button" class="btn-secondary ex-copy" data-exkey="${st.key}">📋 복사하기</button>
+      ${n ? `<button type="button" class="btn-primary ex-finish" data-exkey="${st.key}" ${done && !st.busy ? '' : 'disabled'}>${st.busy ? '완성하는 중... (30초~1분)' : ' 내 글로 완성하기'}</button>` : ''}
+      <button type="button" class="btn-secondary ex-copy" data-exkey="${st.key}"> 복사하기</button>
       <span class="ex-count">${plain.length}자${lim ? ` / ${lim}자` : ''}</span>
     </div>
 `;
@@ -4331,8 +4331,8 @@ function exSheetHtml(st) {
   return `<div class="ex-sheet-bg ex-close" data-exkey="${st.key}"></div>
   <div class="ex-sheet ex-interactive" role="dialog" aria-label="예시를 내 경험으로 바꾸기">
     <div class="ex-grab"></div>
-    <div class="ex-sh-top"><b>형광펜 ${st.open + 1} / ${n}</b><button type="button" class="ex-sh-x ex-close" data-exkey="${st.key}" aria-label="닫기">✕</button></div>
-    <div class="ex-ed-head">💡 ${escapeHtml(sl.hint || '이 자리에 내 실제 경험을 넣어요')}</div>
+    <div class="ex-sh-top"><b>형광펜 ${st.open + 1} / ${n}</b><button type="button" class="ex-sh-x ex-close" data-exkey="${st.key}" aria-label="닫기"></button></div>
+    <div class="ex-ed-head"> ${escapeHtml(sl.hint || '이 자리에 내 실제 경험을 넣어요')}</div>
     <div class="ex-now">…${escapeHtml(b)}<mark>${escapeHtml(sl.value || sl.example)}</mark>${escapeHtml(a)}…</div>
     ${sl.options.length ? `<div class="ex-step">① 내 경험과 가장 가까운 보기를 누르세요</div>
     <div class="ex-opts">${sl.options.map((o, i) => `<button type="button" class="ex-opt${sl.value === o ? ' on' : ''}" data-exkey="${st.key}" data-opt="${i}">${escapeHtml(o)}</button>`).join('')}</div>
@@ -4547,7 +4547,7 @@ function resultContentHtml(record) {
         <div class="rs-refer">
           <p class="rs-review-h">친구에게도 알려 주세요</p>
           <p>친구는 <b>5,000원 할인 쿠폰</b>, 소개해 주신 분께는 <b>AI 모의면접 1회</b>를 선물로 드려요. 친구가 예약 후 입장할 때 '지인 소개'를 고르고 ${record.studentName ? `<b>${escapeHtml(record.studentName)}</b>` : '내'} 이름을 적으면 돼요.</p>
-          <button type="button" class="rs-refer-btn" id="rsReferBtn" data-name="${escapeHtml(record.studentName || '')}">${SHARE_LABEL.replace('💬 ', '')} · 친구 소개 문구</button>
+          <button type="button" class="rs-refer-btn" id="rsReferBtn" data-name="${escapeHtml(record.studentName || '')}">${SHARE_LABEL.replace(' ', '')} · 친구 소개 문구</button>
         </div>
       </div>` : ''}
       ${record.trackerProgramId ? `
@@ -4652,8 +4652,8 @@ function wItemHtml(item, idx, total) {
     <p style="margin:0 0 2pt;font-size:9.5pt;font-weight:bold;color:${n.kind === 'p' ? W.purple : n.kind === 'a' ? '#6B7280' : '#D97706'}">${n.num}. ${escapeHtml(n.label)}</p>
     ${n.pos < 0 && n.quote ? `<p style="margin:0 0 2pt;font-size:9pt;color:${W.muted}">"${escapeHtml(n.quote)}"</p>` : ''}
     ${n.body ? `<p style="margin:0 0 2pt;font-size:9.5pt;line-height:150%">${escapeHtml(n.body)}</p>` : ''}
-    ${n.fix ? `<p style="margin:0 0 8pt;font-size:9.5pt;color:${W.green}">✏️ 이렇게: ${escapeHtml(n.fix)}</p>` : '<p style="margin:0 0 6pt"></p>'}`).join('')
-    : `<p style="margin:0;font-size:9.5pt;color:${W.green}">✅ 따로 표시할 문장이 없어요.</p>`;
+    ${n.fix ? `<p style="margin:0 0 8pt;font-size:9.5pt;color:${W.green}"> 이렇게: ${escapeHtml(n.fix)}</p>` : '<p style="margin:0 0 6pt"></p>'}`).join('')
+    : `<p style="margin:0;font-size:9.5pt;color:${W.green}"> 따로 표시할 문장이 없어요.</p>`;
   // 점검표
   const rows = [];
   const labels = FRAMEWORK_LABELS[item.frameworkUsed || 'STAR'] || FRAMEWORK_LABELS.STAR;
@@ -4667,7 +4667,7 @@ function wItemHtml(item, idx, total) {
   let checkRows = '';
   for (let i = 0; i < rows.length; i += 2) {
     checkRows += '<tr style="page-break-inside:avoid">' + [rows[i], rows[i + 1]].map(r => r
-      ? `<td width="50%" style="padding:4pt 8pt;border:0.75pt solid ${W.line};font-size:10pt;font-family:${W.font}"><p style="margin:0;${i + 2 < rows.length ? 'page-break-after:avoid' : ''}"><b style="color:${r[0] ? W.green : W.warn}">${r[0] ? '✓' : '⚠'}</b> ${escapeHtml(r[1])}</p></td>`
+      ? `<td width="50%" style="padding:4pt 8pt;border:0.75pt solid ${W.line};font-size:10pt;font-family:${W.font}"><p style="margin:0;${i + 2 < rows.length ? 'page-break-after:avoid' : ''}"><b style="color:${r[0] ? W.green : W.warn}">${r[0] ? '' : ''}</b> ${escapeHtml(r[1])}</p></td>`
       : `<td width="50%" style="border:0.75pt solid ${W.line}">&nbsp;</td>`).join('') + '</tr>';
   }
   const fu = item.followUpQuestions || {};
@@ -4681,16 +4681,16 @@ function wItemHtml(item, idx, total) {
     wBox('면접관 시점 — 이 답변으로 추론되는 평소 모습', wEsc(item.interviewerInference), W.light2, W.navy) +
     wBox('잘된 점', wEsc(item.strengths), W.greenBg, W.green) +
     wBox('개선 방향', wEsc(item.improvements), W.warnBg, W.warn) +
-    (item.charLimitNote ? wBox(`⚠ 글자수 초과 (제한 ${item.charLimit}자)`, wEsc(item.charLimitNote), W.warnBg, W.warn) : '') +
+    (item.charLimitNote ? wBox(` 글자수 초과 (제한 ${item.charLimit}자)`, wEsc(item.charLimitNote), W.warnBg, W.warn) : '') +
     (item.intentGapComment ? wBox('내가 밝힌 의도 vs 실제 답변', wEsc(item.intentGapComment), W.warnBg, W.warn) : '') +
     (() => { // 2026-10-05 성찰 보완 질문 · 직무 증거
       const refl = (Array.isArray(item.reflection) ? item.reflection : []).filter(r => r && !r.hasReflection && r.question);
       const j = item.jobEvidence; const jw = j && !(j.linked && j.hasResult) && j.tip;
-      return (refl.length ? wBox('💭 성찰 보완 질문', refl.map(r => `<b>${wEsc(r.experience)}</b> — ${wEsc(r.question)}`).join('<br>'), W.light2, W.navy) : '') + (jw ? wBox('🎯 직무 증거', wEsc(j.tip), W.light2, W.navy) : '');
+      return (refl.length ? wBox(' 성찰 보완 질문', refl.map(r => `<b>${wEsc(r.experience)}</b> — ${wEsc(r.question)}`).join('<br>'), W.light2, W.navy) : '') + (jw ? wBox(' 직무 증거', wEsc(j.tip), W.light2, W.navy) : '');
     })();
   const commentLen = [item.interviewerInference, item.strengths, item.improvements, item.charLimitNote, item.intentGapComment].map(x => String(x || '').length).reduce((a, b) => a + b, 0);
   // 반 쪽(약 900자) 이하면 통째로 같은 쪽에, 더 길면 워드가 잘라 버리지 않게 넘김 허용
-  const commentHtml = commentLen <= 900 ? wSection(wTitle('💬 ③ 선생님 코멘트'), commentBody) : wTitle('💬 ③ 선생님 코멘트') + commentBody;
+  const commentHtml = commentLen <= 900 ? wSection(wTitle(' ③ 선생님 코멘트'), commentBody) : wTitle(' ③ 선생님 코멘트') + commentBody;
   const defs = (Array.isArray(item.defenseQuestions) ? item.defenseQuestions : []).filter(d => d && d.sentence && d.question);
   return `
     ${idx > 0 ? `<br clear="all" style="mso-special-character:line-break;page-break-before:always">` : ''}
@@ -4698,7 +4698,7 @@ function wItemHtml(item, idx, total) {
       <td style="background:${W.light};padding:5pt 10pt;font-family:${W.font};font-size:10pt;font-weight:bold;color:${W.purple}"><p style="margin:0;page-break-after:avoid">문항 ${idx + 1}${total > 1 ? ' / ' + total : ''} · ${escapeHtml(typeLabel)}</p></td></tr></table>
     <p style="page-break-after:avoid;margin:0 0 10pt;font-size:11pt;font-weight:bold;line-height:160%;font-family:${W.font}">${wEsc(item.question)}</p>
 
-    ${wTitle('📝 ① 내가 쓴 글 — 교정지와 선생님 메모')}
+    ${wTitle(' ① 내가 쓴 글 — 교정지와 선생님 메모')}
     <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse"><tr>
       <td width="60%" valign="top" style="border:0.75pt solid ${W.line};padding:8pt 10pt;font-family:${W.font}">
         <p style="margin:0 0 4pt;font-size:9pt;font-weight:bold;color:${W.muted}">${isCv ? '경력·활동 항목' : '제출한 답변'} · ${escapeHtml(ps.lenInfo)}</p>
@@ -4707,11 +4707,11 @@ function wItemHtml(item, idx, total) {
         <p style="margin:0 0 6pt;font-size:9pt;font-weight:bold;color:${W.muted}">여백 메모</p>${notesHtml}</td>
     </tr></table>
 
-    ${wSection(wTitle(`☑️ ② 점검표 · ${escapeHtml(item.frameworkUsed || 'STAR')} 구조`), `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">${checkRows}</table>`)}
+    ${wSection(wTitle(` ② 점검표 · ${escapeHtml(item.frameworkUsed || 'STAR')} 구조`), `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">${checkRows}</table>`)}
 
     ${commentHtml}
 
-    ${wTitle(fin.left ? '✏️ ④ 다듬은 초안 — 노란 부분을 내 경험으로 바꾸면 완성' : '✅ ④ 완성된 내 글')}
+    ${wTitle(fin.left ? ' ④ 다듬은 초안 — 노란 부분을 내 경험으로 바꾸면 완성' : ' ④ 완성된 내 글')}
     <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse"><tr>
       <td style="border:1.5pt solid ${W.green};padding:10pt 12pt;font-family:${W.font}">
         <p style="margin:0;font-size:11pt;line-height:185%">${fin.html}</p>
@@ -4720,8 +4720,8 @@ function wItemHtml(item, idx, total) {
     ${fin.left ? `<p style="margin:4pt 0 0;font-size:9pt;color:#8A6D00;font-family:${W.font}">🟨 노란 부분(예시 ${fin.left}곳)은 AI가 넣은 예시예요. 내 실제 경험으로 바꿔 써야 면접에서 흔들리지 않아요.</p>` : ''}
 
 
-    ${fuRows ? wSection(wTitle('🎤 ⑤ 예상 꼬리질문 (면접 대비)'), `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">${fuRows}</table>`) : ''}
-    ${defs.length ? wSection(wTitle('🛡️ 이 문장, 면접에서 말할 수 있나요?'), defs.map(d => wBox('📌 "' + escapeHtml(exPlain(d.sentence)) + '"', '면접관: ' + escapeHtml(d.question), '#FFFFFF', W.purple)).join('')) : ''}`;
+    ${fuRows ? wSection(wTitle(' ⑤ 예상 꼬리질문 (면접 대비)'), `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">${fuRows}</table>`) : ''}
+    ${defs.length ? wSection(wTitle(' 이 문장, 면접에서 말할 수 있나요?'), defs.map(d => wBox(' "' + escapeHtml(exPlain(d.sentence)) + '"', '면접관: ' + escapeHtml(d.question), '#FFFFFF', W.purple)).join('')) : ''}`;
 }
 function buildWordHtml(record) {
   const items = record.items || [];
@@ -4753,8 +4753,8 @@ function buildWordHtml(record) {
 // buildWordHtml이 만든 표·문단을 워드 표준 형식(OOXML)으로 옮겨 .docx로 묶음 → MS 워드·한컴·구글 문서·폰 모두 열림.
 const DX = { pageW: 11906, pageH: 16838, margin: 1000, font: '맑은 고딕' };
 DX.textW = DX.pageW - DX.margin * 2;
-// 한글(HWP)은 이모지(📝·🎤 등)를 읽다 멈추는 경우가 있고, 문서 어투 원칙상 이모지를 쓰지 않으므로 워드 파일에서는 빼고 ✓·⚠ 같은 기호만 남김
-function dxNoEmoji(t) { return String(t).replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\uFE0F\u200D]/gu, c => (c === '✓' || c === '⚠') ? c : ''); }
+// 한글(HWP)은 이모지(· 등)를 읽다 멈추는 경우가 있고, 문서 어투 원칙상 이모지를 쓰지 않으므로 워드 파일에서는 빼고 · 같은 기호만 남김
+function dxNoEmoji(t) { return String(t).replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\uFE0F\u200D]/gu, c => (c === '' || c === '') ? c : ''); }
 function dxEsc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 function dxStyle(el) {
   const o = {};
