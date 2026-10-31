@@ -4589,9 +4589,12 @@ const CENTER_LINKS = [
   ['면접·자소서 팁', '인스타그램 @jinromoa', 'https://www.instagram.com/jinromoa'],
   ['문의', '카카오톡 채널 · 진로모아', 'https://pf.kakao.com/_kxaUaX']
 ];
+// 센터 안내 숨기기 (2026-10-31 · 2차): 허브 입장 코드에서 강사가 고르면 허브가 ?nc=1 을 붙여 넘김 → 이 탭에서 기억, 파일 안내를 넣지 않음
+const CENTER_HIDE = (() => { try { if (/[?&]nc=1/.test(location.search)) sessionStorage.setItem('moa-nc', '1'); return sessionStorage.getItem('moa-nc') === '1'; } catch (e) { return /[?&]nc=1/.test(location.search); } })();
 const CENTER_TITLE = '자소서 준비를 이어가고 싶다면';
 const CENTER_LEAD = '진로모아커리어센터에서 1:1 첨삭과 모의면접으로 다음 단계를 함께 준비합니다.';
 function wCenterBox() {
+  if (CENTER_HIDE) return '';
   return `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:16pt 0 0"><tr style="page-break-inside:avoid">
     <td width="4" style="background:${W.purple};width:4pt">&nbsp;</td>
     <td style="background:${W.light2};padding:9pt 12pt;font-family:${W.font}">
@@ -4601,6 +4604,7 @@ function wCenterBox() {
     </td></tr></table>`;
 }
 function centerBoxPrintHtml() {
+  if (CENTER_HIDE) return '';
   return `<div style="break-inside:avoid;page-break-inside:avoid;margin-top:22px;padding:12px 16px;border-top:3px solid #643DF2;border-radius:6px;background:#F1EDFE;font-size:12.5px;line-height:1.7;color:#1a2130">
     <div style="font-weight:800;color:#3A1F9E;font-size:13.5px">${CENTER_TITLE}</div>
     <div style="margin:2px 0 6px">${CENTER_LEAD}</div>
