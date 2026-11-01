@@ -2782,7 +2782,11 @@ async function renderStudentSubmitForm() {
   if (CLIENT) { retryLimit = 'unlimited'; institutions = []; } // 개인 고객은 서버에서 1회 제출로 잠금
   const countKey = 'moa_resume_submit_count_' + TEACHER_ID;
   const usedCount = parseInt(localStorage.getItem(countKey) || '0', 10);
-  const limitNum = retryLimit === 'unlimited' ? Infinity : (parseInt(retryLimit, 10) + 1);
+  // 강사·원장님 기기 (2026-11-01): 이 기기에 강사 확인(원장님 암호·강사 승인 키)이 저장돼 있으면
+  // 학생 화면을 미리 보거나 시연할 때 제출 횟수 제한을 적용하지 않음 (횟수도 세지 않음)
+  let staffDevice = false;
+  try { staffDevice = !CLIENT && !!(localStorage.getItem('moa_staff_pin') || localStorage.getItem('moa_staff_key')); } catch (e) {}
+  const limitNum = (retryLimit === 'unlimited' || staffDevice) ? Infinity : (parseInt(retryLimit, 10) + 1);
 
   if (usedCount >= limitNum) {
     app.innerHTML = `
@@ -2804,6 +2808,7 @@ async function renderStudentSubmitForm() {
     ${classQt() ? `<div class="card" style="border-left:4px solid var(--navy);padding:12px 16px;font-size:14px;line-height:1.6">오늘 특강은 <b>${escapeHtml(CLIENT_ITEM_LABELS[classQt()] || classQt())}</b> 문항으로 진행합니다.</div>` : ''}
     <div class="card">
       <h2>첨삭 요청</h2>
+      ${staffDevice ? `<div style="font-size:13px;color:var(--muted);background:#F4F1FE;border-radius:10px;padding:10px 14px;margin:0 0 12px;line-height:1.6">강사 확인이 된 기기입니다. 미리 보기·시연을 위해 제출 횟수 제한 없이 이용하실 수 있습니다.</div>` : ''}
       ${CLIENT ? `<p style="font-size:13px;color:var(--muted);margin:-4px 0 14px;line-height:1.7">첨삭받을 문항을 <b>모두 모아서 한 번에</b> 제출해 주세요. 문항 유형을 눌러 칸마다 쓰면 되고, 최대 ${(CLIENT.maxItems || CLIENT.items.length)}개까지 넣을 수 있어요. <b style="color:var(--text)">제출은 한 번만 가능하고, 제출 후에는 수정할 수 없어요.</b></p>` : `<p style="font-size:13px;color:var(--muted);margin:-4px 0 14px">자소서 문항이 여러 개면 문항 유형을 눌러 칸마다 쓰고, 한 번에 제출해 주세요. ${limitNum === Infinity ? '' : limitNum === 1 ? '이 기기에서는 <b>한 번만</b> 제출할 수 있으니, ' : `이 기기에서는 <b>최대 ${limitNum}번</b>까지만 제출할 수 있으니, `}신중하게 작성한 뒤 제출해 주세요.</p>`}
       <label>이름</label>
       <input type="text" id="studentNameInput" placeholder="본인 이름을 입력해 주세요">
@@ -3091,7 +3096,7 @@ async function renderStudentSubmitForm() {
       });
 
       if (CLIENT) { CLIENT.used = Object.assign({}, CLIENT.used, { resume: { at: Date.now(), reviewCode: reviewRes.code || "" } }); renderClientDone(reviewRes.code, true); return; }
-      localStorage.setItem(countKey, String(usedCount + 1));
+      if (!staffDevice) localStorage.setItem(countKey, String(usedCount + 1));
       if (reviewRes.resultId) {
         // 검수 없이 바로 결과: 확인 코드를 남겨 두고 결과 화면으로 이동
         STUDENT_DRAFT = null; stuDraftClear(); AI_DRAFT_KEEP.clear();
