@@ -167,16 +167,60 @@ h2{font-size:26px}
 .card{overflow-y:auto;scrollbar-width:none}
 
 @media (prefers-reduced-motion:reduce){.card,.card.on{transition:none}.on .para i{animation:none;transform:none}.phone .ta::after,.spin,.on .fakebtn.go{animation:none}}
+/* 영상 표지 (2026-11-03): 처음 열었을 때 '자동 재생되는 영상형 안내'임을 알 수 있게 재생 버튼 표지를 먼저 보여 줌 */
+.cover{position:fixed;inset:0;z-index:10;background:#fff;display:flex;justify-content:center}
+.cover[hidden]{display:none}
+.cover-in{width:100%;max-width:520px;display:flex;flex-direction:column;gap:16px;padding:calc(env(safe-area-inset-top,0px) + 20px) max(20px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 20px) max(20px,env(safe-area-inset-left,0px))}
+.poster{position:relative;flex:1;max-height:440px;min-height:260px;border:0;border-radius:20px;background:var(--ink);color:#fff;font:inherit;text-align:left;cursor:pointer;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;padding:22px 20px}
+.poster:focus-visible{outline:3px solid var(--lime);outline-offset:3px}
+.poster .ps{font-size:13px;font-weight:900;color:var(--lime);letter-spacing:.04em}
+.poster .pt{font-size:26px;font-weight:900;line-height:1.3;letter-spacing:-.02em;margin-top:8px}
+.poster .play{position:absolute;left:50%;top:56%;width:84px;height:84px;margin:-42px 0 0 -42px;border-radius:50%;background:var(--app);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 10px rgba(100,61,242,.28);animation:ring 1.8s ease-out infinite}
+.poster .play svg{width:34px;height:34px;margin-left:5px;fill:#fff}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(100,61,242,.55)}100%{box-shadow:0 0 0 22px rgba(100,61,242,0)}}
+.poster .pb{display:flex;justify-content:space-between;align-items:flex-end;font-size:12.5px;font-weight:700;color:rgba(255,255,255,.75)}
+.poster .dur{background:rgba(0,0,0,.55);color:#fff;border-radius:6px;padding:3px 8px;font-variant-numeric:tabular-nums}
+.poster .pbar{position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(255,255,255,.18)}
+.cover .lead{font-size:15px}
+.startbtn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;border:0;border-radius:14px;background:var(--app);color:#fff;font:inherit;font-weight:900;font-size:17px;cursor:pointer}
+.startbtn svg{width:16px;height:16px;fill:#fff}
+.startbtn:focus-visible{outline:3px solid var(--lime);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){.poster .play{animation:none}}
+@media (max-height:700px){.poster .pt{font-size:21px}.poster .play{width:68px;height:68px;margin:-34px 0 0 -34px}.cover-in{gap:11px}}
+
+/* 재생 막대 (영상처럼 일시정지·남은 시간) */
+.bars i{height:5px;border-radius:3px}
+.ctl{display:flex;align-items:center;gap:10px;margin-top:8px;position:relative;z-index:2}
+.pp{display:flex;align-items:center;gap:6px;min-height:40px;padding:0 14px 0 11px;border:1.5px solid var(--app);border-radius:999px;background:#fff;color:var(--app);font:inherit;font-size:13px;font-weight:900;cursor:pointer}
+.pp svg{width:14px;height:14px;fill:currentColor}
+.pp:focus-visible{outline:3px solid var(--lime);outline-offset:2px}
+.tm{font-size:13px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.ctl .hint{flex:1;text-align:right}
+.paused .bars i b{transition:none!important}
+.pg,.skip{white-space:nowrap}
+@media (max-height:700px){.ctl{margin-top:4px}.pp{min-height:36px;font-size:12.5px}}
 </style>
 </head>
 <body>
+<div class="cover" id="cover">
+  <div class="cover-in">
+    <div class="top" style="margin-top:0"><span class="brand">MOA FORMULA · 자소서 첨삭 1분 투어</span></div>
+    <button type="button" class="poster" id="poster" aria-label="투어 영상 재생하기">
+      <div><div class="ps">30초 영상형 안내</div><div class="pt">195자 답변이<br>완성본이 되기까지</div></div>
+      <span class="play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 4l15 8-15 8z"/></svg></span>
+      <div class="pb"><span>6장면 · 소리 없음</span><span class="dur" id="cdur">0:30</span></div>
+      <span class="pbar" aria-hidden="true"></span>
+    </button>
+    <p class="lead">재생하면 장면이 <b>자동으로 넘어갑니다</b>. 화면 오른쪽·왼쪽을 누르면 앞뒤로 이동하고, 언제든 멈출 수 있습니다.</p>
+    <button type="button" class="startbtn" id="start"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l15 8-15 8z"/></svg>재생하기</button>
+  </div>
+</div>
 <div class="stage">
   <div class="bars" id="bars"></div>
   <div class="top"><span class="brand">MOA FORMULA · 자소서 첨삭 1분 투어</span><span class="rt"><span class="pg" id="pg">1 / 6</span><button class="skip" id="skip" type="button">건너뛰기</button></span></div>
 
   <div class="cards" id="cards">
     <section class="card" data-dur="5200" aria-label="1. 학생이 쓴 답변 한 단락">
-      <div class="autoplay" aria-hidden="true"><span class="dot"></span>자동으로 넘어갑니다</div>
       <div class="step">학생이 쓴 자소서 답변</div>
       <h2>한 단락, <span class="num" id="n195">0</span>자면<br>충분합니다</h2>
       <div class="phone">
@@ -249,7 +293,11 @@ h2{font-size:26px}
     </section>
   </div>
 
-  <p class="hint" id="hint">화면 오른쪽을 누르면 다음, 왼쪽을 누르면 이전 장면</p>
+  <div class="ctl" id="ctl">
+    <button type="button" class="pp" id="pp" aria-label="일시정지"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg><span>일시정지</span></button>
+    <span class="tm" id="tm">0:00 / 0:30</span>
+    <span class="hint" id="hint">오른쪽 누르면 다음</span>
+  </div>
 </div>
 
 <script>
@@ -275,6 +323,36 @@ moaUse('tour');
     4(){const l=[...document.querySelectorAll('#chat .ln')];l.forEach(x=>x.classList.remove('lit'));l.forEach((x,i)=>later(()=>x.classList.add('lit'),300+i*1200))}
   };
 
+  const durs=cards.map(c=>+c.dataset.dur), TOTAL=durs.reduce((a,b)=>a+b,0);
+  const pp=document.getElementById('pp'), tm=document.getElementById('tm'), stage=document.querySelector('.stage');
+  const fmt=ms=>{const t=Math.round(ms/1000);return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')};
+  const PAUSE_ICO='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg><span>일시정지</span>';
+  const PLAY_ICO='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4l15 8-15 8z"/></svg><span>이어 보기</span>';
+  let paused=false,left=0,startAt=0;
+  const before=i=>durs.slice(0,i).reduce((a,b)=>a+b,0);
+  const elapsed=()=>{const d=durs[cur]||0;if(!d)return TOTAL;const used=paused?d-left:d-left+(Date.now()-startAt);return before(cur)+Math.min(d,used)};
+  const drawTime=()=>{tm.textContent=fmt(elapsed())+' / '+fmt(TOTAL)};
+  function setPP(){
+    const last=cur===cards.length-1;
+    pp.style.visibility=last?'hidden':'';
+    pp.innerHTML=paused?PLAY_ICO:PAUSE_ICO;pp.setAttribute('aria-label',paused?'이어 보기':'일시정지');
+    stage.classList.toggle('paused',paused);
+  }
+  function run(){ // 현재 장면의 남은 시간(left)만큼 막대를 채우고 다음 장면으로
+    const f=bars.children[cur].firstChild,d=durs[cur];
+    startAt=Date.now();
+    f.style.transition='none';f.style.width=((d-left)/d*100)+'%';
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{f.style.transition='width '+left+'ms linear';f.style.width='100%'}));
+    timer=setTimeout(()=>show(cur+1),left);
+  }
+  function pause(){
+    if(paused||!durs[cur])return;
+    clearTimeout(timer);left=Math.max(0,left-(Date.now()-startAt));paused=true;
+    const f=bars.children[cur].firstChild;f.style.transition='none';f.style.width=((durs[cur]-left)/durs[cur]*100)+'%';
+    setPP();drawTime();
+  }
+  function resume(){if(!paused)return;paused=false;setPP();if(durs[cur])run()}
+
   function show(i){
     if(i<0||i>=cards.length)return;
     clearT();cur=i;
@@ -282,17 +360,29 @@ moaUse('tour');
     document.getElementById('pg').textContent=(i+1)+' / '+cards.length;
     nav.style.display=i===cards.length-1?'none':'';document.getElementById('hint').style.visibility=i===cards.length-1?'hidden':'';
     [...bars.children].forEach((b,k)=>{b.classList.toggle('done',k<i);const f=b.firstChild;f.style.transition='none';f.style.width=k<i?'100%':'0';});
-    const dur=+cards[i].dataset.dur;
+    const dur=durs[i];
     if(scenes[i])scenes[i]();
-    if(dur){const f=bars.children[i].firstChild;requestAnimationFrame(()=>{f.style.transition='width '+dur+'ms linear';f.style.width='100%'});timer=setTimeout(()=>show(i+1),dur)}
-    else bars.children[i].classList.add('done');
+    left=dur;startAt=Date.now();
+    if(dur){if(!paused)run()}
+    else{bars.children[i].classList.add('done');paused=false}
+    setPP();drawTime();
   }
   nav.children[0].onclick=()=>show(Math.max(0,cur-1));
   nav.children[1].onclick=()=>show(Math.min(cards.length-1,cur+1));
-  document.getElementById('skip').onclick=()=>show(cards.length-1);
-  document.getElementById('again').onclick=()=>show(0);
-  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight')nav.children[1].click();if(e.key==='ArrowLeft')nav.children[0].click()});
-  show(0);
+  document.getElementById('skip').onclick=()=>{paused=false;show(cards.length-1)};
+  document.getElementById('again').onclick=()=>{paused=false;show(0)};
+  pp.onclick=()=>paused?resume():pause();
+  document.addEventListener('keydown',e=>{if(document.getElementById('cover').hidden){if(e.key==='ArrowRight')nav.children[1].click();if(e.key==='ArrowLeft')nav.children[0].click();if(e.key===' '){e.preventDefault();pp.click()}}});
+  // 다른 앱으로 갔다 오면 멈춘 자리에서 기다림
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});
+  setInterval(()=>{if(cur>=0&&!paused)drawTime()},250);
+  document.getElementById('cdur').textContent=fmt(TOTAL);
+
+  // 영상 표지 → [재생하기]를 눌러야 시작
+  const cover=document.getElementById('cover');
+  const begin=()=>{if(cover.hidden)return;cover.hidden=true;moaUse('tour_play');show(0);pp.focus({preventScroll:true})};
+  document.getElementById('poster').onclick=begin;
+  document.getElementById('start').onclick=begin;
 })();
 </script>
 </body>
