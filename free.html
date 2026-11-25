@@ -64,7 +64,8 @@ select,input{width:100%;border:1.5px solid var(--line);border-radius:14px;paddin
 select:focus,input:focus{outline:none;border-color:var(--ink)}
 .field{display:flex;flex-direction:column;gap:6px}
 .left{font-size:13px;color:var(--muted)}
-.btn.app{background:var(--app)}
+.btn.app{background:var(--app);justify-content:center;gap:0}
+.btn.app::before{content:none}
 .exrow{margin:0 0 6px}
 .exnote{font-size:13px;color:var(--muted,#5B6478);line-height:1.5}
 .btn[disabled]{opacity:.55;cursor:default}
